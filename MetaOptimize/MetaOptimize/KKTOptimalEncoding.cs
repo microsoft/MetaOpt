@@ -133,8 +133,6 @@ namespace ZenLib
 
             var term = this.TotalDemandMetVariable - totalMet;
             var nu = Symbolic<Real>();
-            constraints.Add(nu <= (Real)100000);
-            constraints.Add(nu >= new Real(-100000));
             this.EqualityTerms.Add(nu * (Real)(1 - this.FlowVariables.Count));
             constraints.Add(term == (Real)0);
         }
@@ -216,13 +214,9 @@ namespace ZenLib
                     constraints.Add(this.FlowVariables[pair] == (Real)0);
 
                     var nu = Symbolic<Real>();
-                    constraints.Add(nu <= (Real)100000);
-                    constraints.Add(nu >= new Real(-100000));
                     this.EqualityTerms.Add(nu);
 
                     nu = Symbolic<Real>();
-                    constraints.Add(nu <= (Real)100000);
-                    constraints.Add(nu >= new Real(-100000));
                     this.EqualityTerms.Add(nu);
                 }
             }
@@ -246,8 +240,6 @@ namespace ZenLib
                 constraints.Add(term == (Real)0);
 
                 var nu = Symbolic<Real>();
-                constraints.Add(nu <= (Real)100000);
-                constraints.Add(nu >= new Real(-100000));
                 this.EqualityTerms.Add(nu * (new Real(1 - paths.Count)));
             }
         }
