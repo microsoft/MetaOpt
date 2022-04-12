@@ -1,0 +1,5 @@
+D:\wanrisk\c_mcf\obj\Debug\net6.0\c_mcf.csproj.AssemblyReference.cache
+D:\wanrisk\c_mcf\obj\Debug\net6.0\c_mcf.GeneratedMSBuildEditorConfig.editorconfig
+D:\wanrisk\c_mcf\obj\Debug\net6.0\c_mcf.AssemblyInfoInputs.cache
+D:\wanrisk\c_mcf\obj\Debug\net6.0\c_mcf.AssemblyInfo.cs
+D:\wanrisk\c_mcf\obj\Debug\net6.0\c_mcf.csproj.CoreCompileInputs.cache
