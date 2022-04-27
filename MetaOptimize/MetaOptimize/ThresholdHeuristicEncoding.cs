@@ -4,15 +4,10 @@
 
 namespace ZenLib
 {
-    using System;
-    using System.Collections.Generic;
-    using System.Linq;
-    using static ZenLib.Zen;
-
-    /// <summary>
+    /* /// <summary>
     /// A class that encodes the threshold heuristic encoding.
     /// </summary>
-    public class ThresholdHeuristicEncoding : INetworkEncoding<Zen<bool>, Zen<Real>, ZenSolution>
+    public class ThresholdHeuristicEncoding : INetworkEncoder
     {
         /// <summary>
         /// The topology for the network.
@@ -404,16 +399,6 @@ namespace ZenLib
                         Console.WriteLine($"allocation[h] for [{string.Join(",", path)}] = {heur}");
                 }
             }
-
-            /* foreach (var (pair, variable) in this.FlowVariables)
-            {
-                Console.WriteLine($"flow for {pair} = {solution.Get(variable)}");
-            }
-
-            foreach (var (pair, variable) in this.HeuristicVariables)
-            {
-                Console.WriteLine($"heuristic for {pair} = {solution.Get(variable)}");
-            } */
         }
-    }
+    } */
 }

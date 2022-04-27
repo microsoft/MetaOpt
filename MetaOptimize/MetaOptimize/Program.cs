@@ -20,6 +20,8 @@ namespace ZenLib
         /// <returns></returns>
         public static void Main(string[] args)
         {
+            // RunTests();
+
             // create a topology
             //   b
             //  / \
@@ -44,34 +46,52 @@ namespace ZenLib
             }
 
             // create the optimal encoding.
-            var optimalEncoding = new OptimalEncoding2(topology, demandVariables);
-            var optimalConstraints = optimalEncoding.Constraints();
-            // var optimalObjective = optimalEncoding.MaximizationObjective();
+            var optimalEncoder = new OptimalEncoder(topology, demandVariables);
+            var optimalEncoding = optimalEncoder.Encoding();
 
-            // create a heuristic encoding.
-            // var heuristicEncoding = new ThresholdHeuristicEncoding(topology, demandVariables, threshold: 5, ensureLocalOptimum: true);
-            // var heuristicConstraints = heuristicEncoding.Constraints();
-            // var heuristicObjective = heuristicEncoding.MaximizationObjective();
+            // solve the problem.
+            var solution1 = Zen.Maximize(optimalEncoding.MaximizationObjective, subjectTo: optimalEncoding.FeasibilityConstraints);
+            var solution2 = optimalEncoding.OptimalConstraints.Solve();
 
-            // collect all the constraints
-            var constraints = optimalConstraints;
-
-            // solve the problem
-            // var solution = Zen.Maximize(optimalObjective, subjectTo: constraints);
-            var solution = constraints.Solve();
-
-            if (!solution.IsSatisfiable())
+            // print the solution.
+            if (!solution1.IsSatisfiable() || !solution2.IsSatisfiable())
             {
                 Console.WriteLine($"No solution found!");
                 Environment.Exit(1);
             }
 
-            Console.WriteLine("Optimal:");
-            optimalEncoding.DisplaySolution(solution);
+            Console.WriteLine("Optimal (max SMT):");
+            optimalEncoder.DisplaySolution(solution1);
 
-            // Console.WriteLine();
-            // Console.WriteLine("Heuristic:");
-            // heuristicEncoding.DisplaySolution(solution);
+            Console.WriteLine();
+
+            Console.WriteLine("Optimal (KKT):");
+            optimalEncoder.DisplaySolution(solution2);
+        }
+
+        /// <summary>
+        /// Test out a few simple optimization examples with KKT.
+        /// </summary>
+        private static void RunTests()
+        {
+            var x = Zen.Symbolic<Real>("x");
+            var y = Zen.Symbolic<Real>("y");
+
+            var encoder = new KktOptimizationEncoder(new HashSet<Zen<Real>>() { x, y });
+
+            // x + 2y == 10
+            encoder.AddEqZeroConstraint(new Polynomial(new PolynomialTerm(1, x), new PolynomialTerm(2, y), new PolynomialTerm(-10)));
+
+            // x >= 0, y>= 0
+            encoder.AddLeqZeroConstraint(new Polynomial(new PolynomialTerm(-1, x)));
+            encoder.AddLeqZeroConstraint(new Polynomial(new PolynomialTerm(-1, y)));
+
+            // maximize y - x by minimizing x - y
+            var constraints = encoder.MinimizationConstraints(new Polynomial(new PolynomialTerm(1, x), new PolynomialTerm(-1, y)));
+
+            // solve and print.
+            var solution = constraints.Solve();
+            Console.WriteLine($"x={solution.Get(x)}, y={solution.Get(y)}");
         }
     }
 }

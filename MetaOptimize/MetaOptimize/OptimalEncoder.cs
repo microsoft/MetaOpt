@@ -12,7 +12,7 @@ namespace ZenLib
     /// <summary>
     /// A class for the optimal encoding.
     /// </summary>
-    public class OptimalEncoding2
+    public class OptimalEncoder : INetworkEncoder
     {
         /// <summary>
         /// The topology for the network.
@@ -45,9 +45,9 @@ namespace ZenLib
         public Zen<Real> TotalDemandMetVariable { get; set; }
 
         /// <summary>
-        /// Name to variable mapping.
+        /// The set of variables used in the encoding.
         /// </summary>
-        private BiDictionary<string, Zen<Real>> variableMapping;
+        private ISet<Zen<Real>> variables = new HashSet<Zen<Real>>();
 
         /// <summary>
         /// The kkt encoder used to construct the encoding.
@@ -55,14 +55,12 @@ namespace ZenLib
         private KktOptimizationEncoder kktEncoder;
 
         /// <summary>
-        /// Create a new instance of the <see cref="OptimalEncoding2"/> class.
+        /// Create a new instance of the <see cref="OptimalEncoder"/> class.
         /// </summary>
         /// <param name="topology">The network topology.</param>
         /// <param name="demandVariables">The shared demand variables.</param>
-        public OptimalEncoding2(Topology topology, Dictionary<(string, string), Zen<Real>> demandVariables)
+        public OptimalEncoder(Topology topology, Dictionary<(string, string), Zen<Real>> demandVariables)
         {
-            this.variableMapping = new BiDictionary<string, Zen<Real>>();
-
             this.Topology = topology;
             this.SimplePaths = new Dictionary<(string, string), IList<IList<string>>>();
 
@@ -70,12 +68,12 @@ namespace ZenLib
             this.DemandVariables = demandVariables;
             foreach (var demandVar in this.DemandVariables)
             {
-                this.variableMapping.Associate("demand_" + demandVar.Key.Item1 + "_" + demandVar.Key.Item2, demandVar.Value);
+                this.variables.Add(demandVar.Value);
             }
 
             // establish the total demand met variable.
-            this.TotalDemandMetVariable = Symbolic<Real>();
-            this.variableMapping.Associate("total_demand_met", this.TotalDemandMetVariable);
+            this.TotalDemandMetVariable = Symbolic<Real>("total_demand_met");
+            this.variables.Add(this.TotalDemandMetVariable);
 
             this.FlowVariables = new Dictionary<(string, string), Zen<Real>>();
             this.FlowPathVariables = new Dictionary<IList<string>, Zen<Real>>();
@@ -84,116 +82,108 @@ namespace ZenLib
                 var simplePaths = this.Topology.SimplePaths(pair.Item1, pair.Item2).ToList();
 
                 // establish the flow variable.
-                this.FlowVariables[pair] = Symbolic<Real>();
-                this.variableMapping.Associate("flow_" + pair.Item1 + "_" + pair.Item2, this.FlowVariables[pair]);
+                this.FlowVariables[pair] = Symbolic<Real>("flow_" + pair.Item1 + "_" + pair.Item2);
+                this.variables.Add(this.FlowVariables[pair]);
 
                 this.SimplePaths[pair] = simplePaths;
 
                 foreach (var simplePath in simplePaths)
                 {
                     // establish the flow path variables.
-                    this.FlowPathVariables[simplePath] = Symbolic<Real>();
-                    this.variableMapping.Associate("flowpath_" + string.Join("_", simplePath), this.FlowPathVariables[simplePath]);
+                    this.FlowPathVariables[simplePath] = Symbolic<Real>("flowpath_" + string.Join("_", simplePath));
+                    this.variables.Add(this.FlowPathVariables[simplePath]);
                 }
             }
 
-            this.kktEncoder = new KktOptimizationEncoder(this.variableMapping);
-        }
-
-        /// <summary>
-        /// Computes the optimization objective.
-        /// </summary>
-        /// <returns>The optimization objective.</returns>
-        public Zen<Real> MaximizationObjective()
-        {
-            return this.TotalDemandMetVariable;
+            this.kktEncoder = new KktOptimizationEncoder(this.variables);
         }
 
         /// <summary>
         /// Encode the problem.
         /// </summary>
         /// <returns>The constraints and maximization objective.</returns>
-        public Zen<bool> Constraints()
+        public OptimizationEncoding Encoding()
         {
-            var constraints = new List<Zen<bool>>();
+            this.EnsureTotalDemandMetIsSum();
+            this.EnsureDemandsAreBoundedByMaximumCapacity();
+            this.EnsureAllFlowVariablesAreNonNegativeAndLessThanDemand();
+            this.EnsureAllFlowPathVariablesAreNonNegative();
+            this.EnsureUnconnectedNodesHaveNoFlowOrDemand();
+            this.EnsureFlowMetPerNodePairIsTheSumOverAllPaths();
+            this.EnsureSumOverPathsIsBoundedByCapacity();
 
-            this.EnsureTotalDemandMetIsSum(constraints);
-            this.EnsureDemandsAreBoundedByMaximumCapacity(constraints);
-            this.EnsureAllFlowVariablesAreNonNegativeAndLessThanDemand(constraints);
-            this.EnsureAllFlowPathVariablesAreNonNegative(constraints);
-            this.EnsureUnconnectedNodesHaveNoFlowOrDemand(constraints);
-            this.EnsureFlowMetPerNodePairIsTheSumOverAllPaths(constraints);
-            this.EnsureSumOverPathsIsBoundedByCapacity(constraints);
-
-            var objective = new Polynomial(new List<PolynomialTerm> { new PolynomialTerm(-1, this.variableMapping.GetKey(this.TotalDemandMetVariable)) });
-            return this.kktEncoder.MinimizationConstraints(objective);
-
-            // return this.kktEncoder.Constraints();
+            var minObjective = new Polynomial(new List<PolynomialTerm> { new PolynomialTerm(-1, this.TotalDemandMetVariable) });
+            return new OptimizationEncoding
+            {
+                FeasibilityConstraints = this.kktEncoder.Constraints(),
+                OptimalConstraints = this.kktEncoder.MinimizationConstraints(minObjective),
+                MaximizationObjective = this.TotalDemandMetVariable,
+            };
         }
 
         /// <summary>
         /// Ensure the total demand met is set as the sum of flow variables.
         /// </summary>
-        /// <param name="constraints">The encoding constraints.</param>
-        internal void EnsureTotalDemandMetIsSum(IList<Zen<bool>> constraints)
+        internal void EnsureTotalDemandMetIsSum()
         {
             var terms = new List<PolynomialTerm>();
             foreach (var pair in this.Topology.GetNodePairs())
             {
-                terms.Add(new PolynomialTerm(1, this.variableMapping.GetKey(this.FlowVariables[pair])));
+                terms.Add(new PolynomialTerm(1, this.FlowVariables[pair]));
             }
 
-            terms.Add(new PolynomialTerm(-1, this.variableMapping.GetKey(this.TotalDemandMetVariable)));
+            terms.Add(new PolynomialTerm(-1, this.TotalDemandMetVariable));
             this.kktEncoder.AddEqZeroConstraint(new Polynomial(terms));
         }
 
         /// <summary>
         /// This is used to ensure demands are finite.
         /// </summary>
-        /// <param name="constraints">The encoding constraints.</param>
-        internal void EnsureDemandsAreBoundedByMaximumCapacity(IList<Zen<bool>> constraints)
+        internal void EnsureDemandsAreBoundedByMaximumCapacity()
         {
             foreach (var (_, variable) in this.DemandVariables)
             {
-                var terms = new List<PolynomialTerm>();
-                terms.Add(new PolynomialTerm(1, this.variableMapping.GetKey(variable)));
-                terms.Add(new PolynomialTerm(-1 * (this.Topology.MaximiumCapacity() * this.Topology.Graph.Vertices.Count())));
-                this.kktEncoder.AddLeqZeroConstraint(new Polynomial(terms));
+                this.kktEncoder.AddLeqZeroConstraint(new Polynomial(new List<PolynomialTerm>()
+                {
+                    new PolynomialTerm(1, variable),
+                    new PolynomialTerm(-1 * (this.Topology.MaximiumCapacity() * this.Topology.Graph.Vertices.Count())),
+                }));
             }
         }
 
         /// <summary>
         /// Ensure that f_k >= 0 and no more than d_k.
         /// </summary>
-        /// <param name="constraints">The encoding constraints.</param>
-        internal void EnsureAllFlowVariablesAreNonNegativeAndLessThanDemand(IList<Zen<bool>> constraints)
+        internal void EnsureAllFlowVariablesAreNonNegativeAndLessThanDemand()
         {
             foreach (var (pair, variable) in this.FlowVariables)
             {
-                var terms = new List<PolynomialTerm>();
-                terms.Add(new PolynomialTerm(-1, this.variableMapping.GetKey(variable)));
-                this.kktEncoder.AddLeqZeroConstraint(new Polynomial(terms));
+                this.kktEncoder.AddLeqZeroConstraint(new Polynomial(new List<PolynomialTerm>()
+                {
+                    new PolynomialTerm(-1, variable),
+                }));
 
-                terms = new List<PolynomialTerm>();
-                terms.Add(new PolynomialTerm(1, this.variableMapping.GetKey(variable)));
-                terms.Add(new PolynomialTerm(-1, this.variableMapping.GetKey(this.DemandVariables[pair])));
-                this.kktEncoder.AddLeqZeroConstraint(new Polynomial(terms));
+                this.kktEncoder.AddLeqZeroConstraint(new Polynomial(new List<PolynomialTerm>()
+                {
+                    new PolynomialTerm(1, variable),
+                    new PolynomialTerm(-1, this.DemandVariables[pair]),
+                }));
             }
         }
 
         /// <summary>
         /// Ensure that all per-path encoding variables f_k^p >= 0.
         /// </summary>
-        /// <param name="constraints">The encoding constraints.</param>
-        internal void EnsureAllFlowPathVariablesAreNonNegative(IList<Zen<bool>> constraints)
+        internal void EnsureAllFlowPathVariablesAreNonNegative()
         {
             foreach (var (pair, paths) in this.SimplePaths)
             {
                 foreach (var path in paths)
                 {
-                    var terms = new List<PolynomialTerm>();
-                    terms.Add(new PolynomialTerm(-1, this.variableMapping.GetKey(this.FlowPathVariables[path])));
-                    this.kktEncoder.AddLeqZeroConstraint(new Polynomial(terms));
+                    this.kktEncoder.AddLeqZeroConstraint(new Polynomial(new List<PolynomialTerm>()
+                    {
+                        new PolynomialTerm(-1, this.FlowPathVariables[path]),
+                    }));
                 }
             }
         }
@@ -201,20 +191,21 @@ namespace ZenLib
         /// <summary>
         /// Ensure that nodes that are not connected have no flow.
         /// </summary>
-        /// <param name="constraints">The encoding constraints.</param>
-        internal void EnsureUnconnectedNodesHaveNoFlowOrDemand(IList<Zen<bool>> constraints)
+        internal void EnsureUnconnectedNodesHaveNoFlowOrDemand()
         {
             foreach (var (pair, paths) in this.SimplePaths)
             {
                 if (paths.Count == 0)
                 {
-                    var terms = new List<PolynomialTerm>();
-                    terms.Add(new PolynomialTerm(1, this.variableMapping.GetKey(this.DemandVariables[pair])));
-                    this.kktEncoder.AddEqZeroConstraint(new Polynomial(terms));
+                    this.kktEncoder.AddEqZeroConstraint(new Polynomial(new List<PolynomialTerm>()
+                    {
+                        new PolynomialTerm(1, this.DemandVariables[pair]),
+                    }));
 
-                    terms = new List<PolynomialTerm>();
-                    terms.Add(new PolynomialTerm(1, this.variableMapping.GetKey(this.FlowVariables[pair])));
-                    this.kktEncoder.AddEqZeroConstraint(new Polynomial(terms));
+                    this.kktEncoder.AddEqZeroConstraint(new Polynomial(new List<PolynomialTerm>()
+                    {
+                        new PolynomialTerm(1, this.FlowVariables[pair]),
+                    }));
                 }
             }
         }
@@ -222,18 +213,17 @@ namespace ZenLib
         /// <summary>
         /// Ensure that the flow f_k = sum_p f_k^p.
         /// </summary>
-        /// <param name="constraints">The encoding constraints.</param>
-        internal void EnsureFlowMetPerNodePairIsTheSumOverAllPaths(IList<Zen<bool>> constraints)
+        internal void EnsureFlowMetPerNodePairIsTheSumOverAllPaths()
         {
             foreach (var (pair, paths) in this.SimplePaths)
             {
                 var terms = new List<PolynomialTerm> { new PolynomialTerm(0) };
                 foreach (var path in paths)
                 {
-                    terms.Add(new PolynomialTerm(1, this.variableMapping.GetKey(this.FlowPathVariables[path])));
+                    terms.Add(new PolynomialTerm(1, this.FlowPathVariables[path]));
                 }
 
-                terms.Add(new PolynomialTerm(-1, this.variableMapping.GetKey(this.FlowVariables[pair])));
+                terms.Add(new PolynomialTerm(-1, this.FlowVariables[pair]));
                 this.kktEncoder.AddEqZeroConstraint(new Polynomial(terms));
             }
         }
@@ -241,8 +231,7 @@ namespace ZenLib
         /// <summary>
         /// Ensure all paths that traverse an edge, total do not exceed its capacity.
         /// </summary>
-        /// <param name="constraints">The encoding constraints.</param>
-        internal void EnsureSumOverPathsIsBoundedByCapacity(IList<Zen<bool>> constraints)
+        internal void EnsureSumOverPathsIsBoundedByCapacity()
         {
             var sumPerEdge = new Dictionary<Edge, Polynomial>();
             foreach (var edge in this.Topology.GetAllEdges())
@@ -259,7 +248,7 @@ namespace ZenLib
                         var source = path[i];
                         var target = path[i + 1];
                         var edge = this.Topology.GetEdge(source, target);
-                        var term = new PolynomialTerm(1, this.variableMapping.GetKey(this.FlowPathVariables[path]));
+                        var term = new PolynomialTerm(1, this.FlowPathVariables[path]);
                         sumPerEdge[edge].PolynomialTerms.Add(term);
                     }
                 }
@@ -275,7 +264,7 @@ namespace ZenLib
         /// <summary>
         /// Display a solution to this encoding.
         /// </summary>
-        /// <param name="solution"></param>
+        /// <param name="solution">The solution.</param>
         public void DisplaySolution(ZenSolution solution)
         {
             Console.WriteLine($"total demand met: {solution.Get(this.TotalDemandMetVariable)}");
@@ -294,11 +283,6 @@ namespace ZenLib
                     Console.WriteLine($"allocation for [{string.Join(",", path)}] = {flow}");
                 }
             }
-
-            /* foreach (var (pair, variable) in this.FlowVariables)
-            {
-                Console.WriteLine($"flow for {pair} = {solution.Get(variable)}");
-            } */
         }
     }
 }

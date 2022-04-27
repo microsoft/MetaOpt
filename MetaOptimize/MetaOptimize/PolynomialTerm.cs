@@ -14,7 +14,7 @@ namespace ZenLib
         /// <summary>
         /// The variable name.
         /// </summary>
-        public string Variable { get; set; }
+        public Zen<Real> Variable { get; set; }
 
         /// <summary>
         /// The coefficient for the term.
@@ -34,7 +34,7 @@ namespace ZenLib
         {
             this.Coefficient = coefficient;
             this.Exponent = 0;
-            this.Variable = string.Empty;
+            this.Variable = null;
         }
 
         /// <summary>
@@ -42,7 +42,7 @@ namespace ZenLib
         /// </summary>
         /// <param name="coefficient">The constant coefficient.</param>
         /// <param name="variable">The variable name.</param>
-        public PolynomialTerm(Real coefficient, string variable)
+        public PolynomialTerm(Real coefficient, Zen<Real> variable)
         {
             this.Coefficient = coefficient;
             this.Variable = variable;
@@ -55,7 +55,7 @@ namespace ZenLib
         /// <param name="coefficient">The constant coefficient.</param>
         /// <param name="variable">The variable name.</param>
         /// <param name="exponent">The exponent.</param>
-        public PolynomialTerm(Real coefficient, string variable, byte exponent)
+        public PolynomialTerm(Real coefficient, Zen<Real> variable, byte exponent)
         {
             this.Coefficient = coefficient;
             this.Variable = variable;
@@ -67,7 +67,7 @@ namespace ZenLib
         /// </summary>
         /// <param name="variables">The variable mapping.</param>
         /// <returns>A real Zen expression.</returns>
-        public Zen<Real> AsZen(BiDictionary<string, Zen<Real>> variables)
+        public Zen<Real> AsZen(ISet<Zen<Real>> variables)
         {
             if (this.Exponent == 0)
             {
@@ -76,8 +76,7 @@ namespace ZenLib
 
             if (this.Exponent == 1)
             {
-                var variable = variables.GetValue(this.Variable);
-                return this.Coefficient * variable;
+                return this.Coefficient * this.Variable;
             }
 
             throw new System.Exception($"exponent can only be 0 or 1.");
@@ -88,9 +87,9 @@ namespace ZenLib
         /// </summary>
         /// <param name="variable">The variable.</param>
         /// <returns>The result as a polynomial.</returns>
-        public Real Derivative(string variable)
+        public Real Derivative(Zen<Real> variable)
         {
-            if (this.Exponent == 0 || this.Variable != variable)
+            if (this.Exponent == 0 || !this.Variable.Equals(variable))
             {
                 return 0;
             }

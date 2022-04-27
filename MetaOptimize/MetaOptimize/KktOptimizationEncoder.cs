@@ -36,13 +36,13 @@ namespace ZenLib
         /// <summary>
         /// The variables in the encoding.
         /// </summary>
-        public BiDictionary<string, Zen<Real>> Variables;
+        public ISet<Zen<Real>> Variables;
 
         /// <summary>
         /// Creates a new instance of the <see cref="KktOptimizationEncoder"/> class.
         /// </summary>
         /// <param name="variables">The encoding variables.</param>
-        public KktOptimizationEncoder(BiDictionary<string, Zen<Real>> variables)
+        public KktOptimizationEncoder(ISet<Zen<Real>> variables)
         {
             this.Variables = variables;
             this.leqZeroConstraints = new List<Polynomial>();
@@ -105,7 +105,7 @@ namespace ZenLib
                 this.nuVariables.Add(Zen.Symbolic<Real>());
             }
 
-            foreach (var variable in this.Variables.ForwardMap.Keys)
+            foreach (var variable in this.Variables)
             {
                 Zen<Real> total = objective.Derivative(variable);
 

@@ -4,30 +4,21 @@
 
 namespace ZenLib
 {
-    using System;
-    using System.Collections.Generic;
-
     /// <summary>
     /// A class for the optimal encoding.
     /// </summary>
-    public interface INetworkEncoding<TBool, TMax, TSolution>
+    public interface INetworkEncoder
     {
-        /// <summary>
-        /// Computes the optimization objective.
-        /// </summary>
-        /// <returns>The optimization objective.</returns>
-        public TMax MaximizationObjective();
-
         /// <summary>
         /// Encode the problem.
         /// </summary>
         /// <returns>The constraints and maximization objective.</returns>
-        public TBool Constraints();
+        public OptimizationEncoding Encoding();
 
         /// <summary>
         /// Display a solution to this encoding.
         /// </summary>
-        /// <param name="solution"></param>
-        public void DisplaySolution(TSolution solution);
+        /// <param name="solution">The solution.</param>
+        public void DisplaySolution(ZenSolution solution);
     }
 }

@@ -35,11 +35,20 @@ namespace ZenLib
         }
 
         /// <summary>
+        /// Creates a new instance of the <see cref="Polynomial"/> class.
+        /// </summary>
+        /// <param name="polynomialTerms">The terms.</param>
+        public Polynomial(params PolynomialTerm[] polynomialTerms)
+        {
+            PolynomialTerms = new List<PolynomialTerm>(polynomialTerms);
+        }
+
+        /// <summary>
         /// Convert this polynomial to a Zen form.
         /// </summary>
         /// <param name="variables">The variable mapping.</param>
         /// <returns>A real Zen expression.</returns>
-        public Zen<Real> AsZen(BiDictionary<string, Zen<Real>> variables)
+        public Zen<Real> AsZen(ISet<Zen<Real>> variables)
         {
             var p = Zen.Constant(new Real(0));
             foreach (var term in this.PolynomialTerms)
@@ -55,7 +64,7 @@ namespace ZenLib
         /// </summary>
         /// <param name="variable">The variable.</param>
         /// <returns>The result as a polynomial.</returns>
-        public Real Derivative(string variable)
+        public Real Derivative(Zen<Real> variable)
         {
             return this.PolynomialTerms.Select(x => x.Derivative(variable)).Aggregate((a, b) => a + b);
         }
