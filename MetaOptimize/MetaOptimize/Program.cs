@@ -40,13 +40,13 @@ namespace ZenLib
             var demandVariables = new Dictionary<(string, string), Zen<Real>>();
             foreach (var pair in topology.GetNodePairs())
             {
-                demandVariables[pair] = Zen.Symbolic<Real>();
+                demandVariables[pair] = Zen.Symbolic<Real>("demand" + pair.Item1 + "_" + pair.Item2);
             }
 
             // create the optimal encoding.
-            var optimalEncoding = new KKTOptimalEncoding(topology, demandVariables);
+            var optimalEncoding = new OptimalEncoding2(topology, demandVariables);
             var optimalConstraints = optimalEncoding.Constraints();
-            var optimalObjective = optimalEncoding.MaximizationObjective();
+            // var optimalObjective = optimalEncoding.MaximizationObjective();
 
             // create a heuristic encoding.
             // var heuristicEncoding = new ThresholdHeuristicEncoding(topology, demandVariables, threshold: 5, ensureLocalOptimum: true);
@@ -54,7 +54,7 @@ namespace ZenLib
             // var heuristicObjective = heuristicEncoding.MaximizationObjective();
 
             // collect all the constraints
-            var constraints = Zen.And(optimalConstraints.ToArray());
+            var constraints = optimalConstraints;
 
             // solve the problem
             // var solution = Zen.Maximize(optimalObjective, subjectTo: constraints);

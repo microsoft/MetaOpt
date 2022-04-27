@@ -2,7 +2,7 @@
 
   <PropertyGroup>
 	<OutputType>Exe</OutputType>
-	<TargetFramework>net5.0</TargetFramework>
+	<TargetFramework>net6.0</TargetFramework>
 	<Copyright>© Microsoft Corporation. All rights reserved.</Copyright>
     <Company>Microsoft</Company>
   </PropertyGroup>
@@ -20,7 +20,7 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
     <PackageReference Include="QuikGraph" Version="2.3.0" />
-    <PackageReference Include="ZenLib" Version="2.1.9" />
+    <PackageReference Include="ZenLib" Version="2.2.2" />
   </ItemGroup>
 
   <ItemGroup>

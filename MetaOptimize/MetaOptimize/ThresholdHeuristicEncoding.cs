@@ -130,7 +130,7 @@ namespace ZenLib
         /// Encode the problem.
         /// </summary>
         /// <returns>The constraints and maximization objective.</returns>
-        public IList<Zen<bool>> Constraints()
+        public Zen<bool> Constraints()
         {
             var constraints = new List<Zen<bool>>();
 
@@ -152,7 +152,7 @@ namespace ZenLib
                 this.EnsureNoSpareCapacityGoesUnused(constraints);
             }
 
-            return constraints;
+            return Zen.And(constraints.ToArray());
         }
 
         /// <summary>

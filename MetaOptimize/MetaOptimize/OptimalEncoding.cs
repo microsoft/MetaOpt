@@ -45,7 +45,7 @@ namespace ZenLib
         public Zen<Real> TotalDemandMetVariable { get; set; }
 
         /// <summary>
-        /// Create a new instance of the <see cref="ThresholdHeuristicEncoding"/> class.
+        /// Create a new instance of the <see cref="OptimalEncoding"/> class.
         /// </summary>
         /// <param name="topology">The network topology.</param>
         /// <param name="demandVariables">The shared demand variables.</param>
@@ -91,7 +91,7 @@ namespace ZenLib
         /// Encode the problem.
         /// </summary>
         /// <returns>The constraints and maximization objective.</returns>
-        public IList<Zen<bool>> Constraints()
+        public Zen<bool> Constraints()
         {
             var constraints = new List<Zen<bool>>();
 
@@ -103,7 +103,7 @@ namespace ZenLib
             this.EnsureFlowMetPerNodePairIsTheSumOverAllPaths(constraints);
             this.EnsureSumOverPathsIsBoundedByCapacity(constraints);
 
-            return constraints;
+            return Zen.And(constraints.ToArray());
         }
 
         /// <summary>

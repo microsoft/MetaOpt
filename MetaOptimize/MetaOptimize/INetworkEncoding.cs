@@ -10,7 +10,7 @@ namespace ZenLib
     /// <summary>
     /// A class for the optimal encoding.
     /// </summary>
-    public interface INetworkEncoding<TConstraint, TMax, TSolution>
+    public interface INetworkEncoding<TBool, TMax, TSolution>
     {
         /// <summary>
         /// Computes the optimization objective.
@@ -22,7 +22,7 @@ namespace ZenLib
         /// Encode the problem.
         /// </summary>
         /// <returns>The constraints and maximization objective.</returns>
-        public IList<TConstraint> Constraints();
+        public TBool Constraints();
 
         /// <summary>
         /// Display a solution to this encoding.
