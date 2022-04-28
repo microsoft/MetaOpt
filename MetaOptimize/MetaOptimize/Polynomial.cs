@@ -15,32 +15,32 @@ namespace ZenLib
         /// <summary>
         /// The polynomial terms.
         /// </summary>
-        public List<PolynomialTerm> PolynomialTerms { get; set; }
+        public List<Term> Terms { get; set; }
 
         /// <summary>
         /// Creates a new instance of the <see cref="Polynomial"/> class.
         /// </summary>
         public Polynomial()
         {
-            this.PolynomialTerms = new List<PolynomialTerm>();
+            this.Terms = new List<Term>();
         }
 
         /// <summary>
         /// Creates a new instance of the <see cref="Polynomial"/> class.
         /// </summary>
         /// <param name="polynomialTerms">The terms.</param>
-        public Polynomial(List<PolynomialTerm> polynomialTerms)
+        public Polynomial(List<Term> polynomialTerms)
         {
-            PolynomialTerms = polynomialTerms;
+            Terms = polynomialTerms;
         }
 
         /// <summary>
         /// Creates a new instance of the <see cref="Polynomial"/> class.
         /// </summary>
         /// <param name="polynomialTerms">The terms.</param>
-        public Polynomial(params PolynomialTerm[] polynomialTerms)
+        public Polynomial(params Term[] polynomialTerms)
         {
-            PolynomialTerms = new List<PolynomialTerm>(polynomialTerms);
+            Terms = new List<Term>(polynomialTerms);
         }
 
         /// <summary>
@@ -51,7 +51,7 @@ namespace ZenLib
         public Zen<Real> AsZen(ISet<Zen<Real>> variables)
         {
             var p = Zen.Constant(new Real(0));
-            foreach (var term in this.PolynomialTerms)
+            foreach (var term in this.Terms)
             {
                 p = p + term.AsZen(variables);
             }
@@ -66,7 +66,7 @@ namespace ZenLib
         /// <returns>The result as a polynomial.</returns>
         public Real Derivative(Zen<Real> variable)
         {
-            return this.PolynomialTerms.Select(x => x.Derivative(variable)).Aggregate((a, b) => a + b);
+            return this.Terms.Select(x => x.Derivative(variable)).Aggregate((a, b) => a + b);
         }
 
         /// <summary>
@@ -75,7 +75,7 @@ namespace ZenLib
         /// <returns>The string representation.</returns>
         public override string ToString()
         {
-            return string.Join(" + ", this.PolynomialTerms.Select(x => x.ToString()));
+            return string.Join(" + ", this.Terms.Select(x => x.ToString()));
         }
     }
 }
