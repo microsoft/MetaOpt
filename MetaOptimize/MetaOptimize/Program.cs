@@ -46,12 +46,18 @@ namespace ZenLib
             }
 
             // create the optimal encoding.
-            var optimalEncoder = new OptimalEncoder(topology, demandVariables);
-            var optimalEncoding = optimalEncoder.Encoding();
+            var encoder = new ThresholdEncoder(topology, demandVariables, 5);
+            var encoding = encoder.Encoding();
+
+            encoding.FeasibilityConstraints = Zen.And(
+                encoding.FeasibilityConstraints,
+                demandVariables[("a", "b")] == new Real(4),
+                demandVariables[("a", "d")] == new Real(0),
+                encoder.AlphaVariables.Select(a => Zen.Or(a.Value == (Real)0, a.Value == (Real)1)).Aggregate(Zen.And));
 
             // solve the problem.
-            var solution1 = Zen.Maximize(optimalEncoding.MaximizationObjective, subjectTo: optimalEncoding.FeasibilityConstraints);
-            var solution2 = optimalEncoding.OptimalConstraints.Solve();
+            var solution1 = Zen.Maximize(encoding.MaximizationObjective, subjectTo: encoding.FeasibilityConstraints);
+            var solution2 = encoding.OptimalConstraints.Solve();
 
             // print the solution.
             if (!solution1.IsSatisfiable() || !solution2.IsSatisfiable())
@@ -61,12 +67,12 @@ namespace ZenLib
             }
 
             Console.WriteLine("Optimal (max SMT):");
-            optimalEncoder.DisplaySolution(solution1);
+            encoder.DisplaySolution(solution1);
 
             Console.WriteLine();
 
             Console.WriteLine("Optimal (KKT):");
-            optimalEncoder.DisplaySolution(solution2);
+            encoder.DisplaySolution(solution2);
         }
 
         /// <summary>
@@ -80,14 +86,14 @@ namespace ZenLib
             var encoder = new KktOptimizationEncoder(new HashSet<Zen<Real>>() { x, y });
 
             // x + 2y == 10
-            encoder.AddEqZeroConstraint(new Polynomial(new PolynomialTerm(1, x), new PolynomialTerm(2, y), new PolynomialTerm(-10)));
+            encoder.AddEqZeroConstraint(new Polynomial(new Term(1, x), new Term(2, y), new Term(-10)));
 
             // x >= 0, y>= 0
-            encoder.AddLeqZeroConstraint(new Polynomial(new PolynomialTerm(-1, x)));
-            encoder.AddLeqZeroConstraint(new Polynomial(new PolynomialTerm(-1, y)));
+            encoder.AddLeqZeroConstraint(new Polynomial(new Term(-1, x)));
+            encoder.AddLeqZeroConstraint(new Polynomial(new Term(-1, y)));
 
             // maximize y - x by minimizing x - y
-            var constraints = encoder.MinimizationConstraints(new Polynomial(new PolynomialTerm(1, x), new PolynomialTerm(-1, y)));
+            var constraints = encoder.MinimizationConstraints(new Polynomial(new Term(1, x), new Term(-1, y)));
 
             // solve and print.
             var solution = constraints.Solve();

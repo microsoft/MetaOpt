@@ -9,7 +9,7 @@ namespace ZenLib
     /// <summary>
     /// A polynomial term.
     /// </summary>
-    public class PolynomialTerm
+    public class Term
     {
         /// <summary>
         /// The variable name.
@@ -27,10 +27,10 @@ namespace ZenLib
         public byte Exponent { get; set; }
 
         /// <summary>
-        /// Creates a new instance of the <see cref="PolynomialTerm"/> class.
+        /// Creates a new instance of the <see cref="Term"/> class.
         /// </summary>
         /// <param name="coefficient">The constant coefficient.</param>
-        public PolynomialTerm(Real coefficient)
+        public Term(Real coefficient)
         {
             this.Coefficient = coefficient;
             this.Exponent = 0;
@@ -38,11 +38,11 @@ namespace ZenLib
         }
 
         /// <summary>
-        /// Creates a new instance of the <see cref="PolynomialTerm"/> class.
+        /// Creates a new instance of the <see cref="Term"/> class.
         /// </summary>
         /// <param name="coefficient">The constant coefficient.</param>
         /// <param name="variable">The variable name.</param>
-        public PolynomialTerm(Real coefficient, Zen<Real> variable)
+        public Term(Real coefficient, Zen<Real> variable)
         {
             this.Coefficient = coefficient;
             this.Variable = variable;
@@ -50,12 +50,12 @@ namespace ZenLib
         }
 
         /// <summary>
-        /// Creates a new instance of the <see cref="PolynomialTerm"/> class.
+        /// Creates a new instance of the <see cref="Term"/> class.
         /// </summary>
         /// <param name="coefficient">The constant coefficient.</param>
         /// <param name="variable">The variable name.</param>
         /// <param name="exponent">The exponent.</param>
-        public PolynomialTerm(Real coefficient, Zen<Real> variable, byte exponent)
+        public Term(Real coefficient, Zen<Real> variable, byte exponent)
         {
             this.Coefficient = coefficient;
             this.Variable = variable;
