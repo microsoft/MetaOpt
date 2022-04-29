@@ -22,7 +22,8 @@ namespace ZenLib
         {
             // RunTests();
             // RunOptimal();
-            RunPop();
+            // RunPop();
+            RunOptimalPopDiff();
         }
 
         /// <summary>
@@ -130,6 +131,67 @@ namespace ZenLib
 
             Console.WriteLine("Optimal (KKT):");
             encoder.DisplaySolution(solution2);
+        }
+
+        /// <summary>
+        /// Run the optimal - pop encoding.
+        /// </summary>
+        private static void RunOptimalPopDiff()
+        {
+            // create a topology
+            //   b
+            //  / \
+            // a   d
+            //  \ /
+            //   c
+            var topology = new Topology();
+            topology.AddNode("a");
+            topology.AddNode("b");
+            topology.AddNode("c");
+            topology.AddNode("d");
+            topology.AddEdge("a", "b", capacity: 10);
+            topology.AddEdge("a", "c", capacity: 10);
+            topology.AddEdge("b", "d", capacity: 10);
+            topology.AddEdge("c", "d", capacity: 10);
+
+            // create the demand partitioning.
+            var demandPartitions = new Dictionary<(string, string), int>()
+            {
+                { ("a", "b"), 0 },
+                { ("a", "d"), 0 },
+                { ("a", "c"), 1 },
+                { ("b", "d"), 1 },
+                { ("c", "d"), 1 },
+            };
+
+            // create the optimal encoding.
+            var optEncoder = new OptimalEncoder(topology);
+            var optEncoding = optEncoder.Encoding();
+
+            // create the pop encoding.
+            var popEncoder = new PopEncoder(topology, 2, demandPartitions);
+            var popEncoding = popEncoder.Encoding();
+
+            // solve the problem.
+            var constraints = Zen.And(optEncoding.OptimalConstraints, popEncoding.OptimalConstraints);
+
+            var objective = optEncoder.TotalDemandMetVariable - popEncoder.PartitionEncoders.Select(x => x.TotalDemandMetVariable).Aggregate(Zen.Plus);
+            var solution = Zen.Maximize(objective, constraints);
+
+            // print the solution.
+            if (!solution.IsSatisfiable())
+            {
+                Console.WriteLine($"No solution found!");
+                Environment.Exit(1);
+            }
+
+            Console.WriteLine("Optimal (Opt):");
+            optEncoder.DisplaySolution(solution);
+
+            Console.WriteLine();
+
+            Console.WriteLine("Optimal (Pop):");
+            popEncoder.DisplaySolution(solution);
         }
 
         /// <summary>
