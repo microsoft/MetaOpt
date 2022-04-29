@@ -21,7 +21,15 @@ namespace ZenLib
         public static void Main(string[] args)
         {
             // RunTests();
+            // RunOptimal();
+            RunPop();
+        }
 
+        /// <summary>
+        /// Run the optimal encoding.
+        /// </summary>
+        private static void RunOptimal()
+        {
             // create a topology
             //   b
             //  / \
@@ -38,22 +46,71 @@ namespace ZenLib
             topology.AddEdge("b", "d", capacity: 10);
             topology.AddEdge("c", "d", capacity: 10);
 
-            // create the demand variables shared between encodings.
-            var demandVariables = new Dictionary<(string, string), Zen<Real>>();
-            foreach (var pair in topology.GetNodePairs())
+            // add some demand constraints.
+            var demandConstraints = new Dictionary<(string, string), Real>()
             {
-                demandVariables[pair] = Zen.Symbolic<Real>("demand" + pair.Item1 + "_" + pair.Item2);
-            }
+                { ("a", "b"), 1 },
+                { ("a", "c"), 1 },
+            };
 
             // create the optimal encoding.
-            var encoder = new ThresholdEncoder(topology, demandVariables, 5);
+            var encoder = new OptimalEncoder(topology, demandConstraints);
             var encoding = encoder.Encoding();
 
-            encoding.FeasibilityConstraints = Zen.And(
-                encoding.FeasibilityConstraints,
-                demandVariables[("a", "b")] == new Real(4),
-                demandVariables[("a", "d")] == new Real(0),
-                encoder.AlphaVariables.Select(a => Zen.Or(a.Value == (Real)0, a.Value == (Real)1)).Aggregate(Zen.And));
+            // solve the problem.
+            var solution1 = Zen.Maximize(encoding.MaximizationObjective, subjectTo: encoding.FeasibilityConstraints);
+            var solution2 = encoding.OptimalConstraints.Solve();
+
+            // print the solution.
+            if (!solution1.IsSatisfiable() || !solution2.IsSatisfiable())
+            {
+                Console.WriteLine($"No solution found!");
+                Environment.Exit(1);
+            }
+
+            Console.WriteLine("Optimal (max SMT):");
+            encoder.DisplaySolution(solution1);
+
+            Console.WriteLine();
+
+            Console.WriteLine("Optimal (KKT):");
+            encoder.DisplaySolution(solution2);
+        }
+
+        /// <summary>
+        /// Run the pop encoding.
+        /// </summary>
+        private static void RunPop()
+        {
+            // create a topology
+            //   b
+            //  / \
+            // a   d
+            //  \ /
+            //   c
+            var topology = new Topology();
+            topology.AddNode("a");
+            topology.AddNode("b");
+            topology.AddNode("c");
+            topology.AddNode("d");
+            topology.AddEdge("a", "b", capacity: 10);
+            topology.AddEdge("a", "c", capacity: 10);
+            topology.AddEdge("b", "d", capacity: 10);
+            topology.AddEdge("c", "d", capacity: 10);
+
+            // create the demand partitioning.
+            var demandPartitions = new Dictionary<(string, string), int>()
+            {
+                { ("a", "b"), 0 },
+                { ("a", "d"), 0 },
+                { ("a", "c"), 1 },
+                { ("b", "d"), 1 },
+                { ("c", "d"), 1 },
+            };
+
+            // create the optimal encoding.
+            var encoder = new PopEncoder(topology, 2, demandPartitions);
+            var encoding = encoder.Encoding();
 
             // solve the problem.
             var solution1 = Zen.Maximize(encoding.MaximizationObjective, subjectTo: encoding.FeasibilityConstraints);
@@ -83,7 +140,7 @@ namespace ZenLib
             var x = Zen.Symbolic<Real>("x");
             var y = Zen.Symbolic<Real>("y");
 
-            var encoder = new KktOptimizationEncoder(new HashSet<Zen<Real>>() { x, y });
+            var encoder = new KktOptimizationGenerator(new HashSet<Zen<Real>>() { x, y });
 
             // x + 2y == 10
             encoder.AddEqZeroConstraint(new Polynomial(new Term(1, x), new Term(2, y), new Term(-10)));

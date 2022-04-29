@@ -72,7 +72,7 @@ namespace ZenLib
         /// <summary>
         /// The kkt encoder used to construct the encoding.
         /// </summary>
-        private KktOptimizationEncoder kktEncoder;
+        private KktOptimizationGenerator kktEncoder;
 
         /// <summary>
         /// Create a new instance of the <see cref="ThresholdEncoder"/> class.
@@ -133,7 +133,7 @@ namespace ZenLib
                 }
             }
 
-            this.kktEncoder = new KktOptimizationEncoder(this.variables);
+            this.kktEncoder = new KktOptimizationGenerator(this.variables);
         }
 
         /// <summary>
@@ -184,7 +184,7 @@ namespace ZenLib
         /// </summary>
         internal void EnsureDemandsAreBoundedByMaximumCapacity()
         {
-            var maxDemand = this.Topology.MaximiumCapacity() * this.Topology.Graph.Vertices.Count();
+            var maxDemand = this.Topology.TotalCapacity();
             foreach (var (_, variable) in this.DemandVariables)
             {
                 this.kktEncoder.AddLeqZeroConstraint(new Polynomial(new Term(1, variable), new Term(-1 * maxDemand)));
@@ -216,7 +216,7 @@ namespace ZenLib
         /// </summary>
         internal void EnsureAllHeuristicAndAlphaVariablesRelated()
         {
-            var maxDemand = this.Topology.MaximiumCapacity() * this.Topology.Graph.Vertices.Count();
+            var maxDemand = this.Topology.TotalCapacity();
             foreach (var (pair, heuristicVariable) in this.HeuristicVariables)
             {
                 var alphaVariable = this.AlphaVariables[pair];
@@ -228,11 +228,11 @@ namespace ZenLib
                 this.kktEncoder.AddLeqZeroConstraint(new Polynomial(new Term(-1, heuristicVariable)));
                 this.kktEncoder.AddLeqZeroConstraint(new Polynomial(new Term(1, heuristicVariable), new Term(-1, demandVariable)));
                 this.kktEncoder.AddLeqZeroConstraint(new Polynomial(new Term(1, heuristicVariable), new Term(-1 * this.Threshold)));
-                this.kktEncoder.AddLeqZeroConstraint(new Polynomial(new Term(1, heuristicVariable), new Term(-maxDemand, alphaVariable)));
-                this.kktEncoder.AddLeqZeroConstraint(new Polynomial(new Term(1, demandVariable), new Term(-maxDemand), new Term(maxDemand, alphaVariable), new Term(-1, heuristicVariable)));
-                this.kktEncoder.AddLeqZeroConstraint(new Polynomial(new Term(1, flowVariable), new Term(-maxDemand), new Term(maxDemand, alphaVariable)));
-                this.kktEncoder.AddLeqZeroConstraint(new Polynomial(new Term(1, demandVariable), new Term(-1 * this.Threshold), new Term(-maxDemand), new Term(maxDemand, alphaVariable)));
-                this.kktEncoder.AddLeqZeroConstraint(new Polynomial(new Term(-maxDemand, alphaVariable), new Term(-1, demandVariable), new Term(this.Threshold)));
+                this.kktEncoder.AddLeqZeroConstraint(new Polynomial(new Term(1, heuristicVariable), new Term(-1 * maxDemand, alphaVariable)));
+                this.kktEncoder.AddLeqZeroConstraint(new Polynomial(new Term(1, demandVariable), new Term(-1 * maxDemand), new Term(maxDemand, alphaVariable), new Term(-1, heuristicVariable)));
+                this.kktEncoder.AddLeqZeroConstraint(new Polynomial(new Term(1, flowVariable), new Term(-1 * maxDemand), new Term(maxDemand, alphaVariable)));
+                this.kktEncoder.AddLeqZeroConstraint(new Polynomial(new Term(1, demandVariable), new Term(-1 * this.Threshold), new Term(-1 * maxDemand), new Term(maxDemand, alphaVariable)));
+                this.kktEncoder.AddLeqZeroConstraint(new Polynomial(new Term(-1 * maxDemand, alphaVariable), new Term(-1, demandVariable), new Term(this.Threshold)));
             }
         }
 
@@ -330,7 +330,7 @@ namespace ZenLib
 
             foreach (var (edge, total) in sumPerEdge)
             {
-                total.Terms.Add(new Term(-edge.Capacity));
+                total.Terms.Add(new Term(-1 * edge.Capacity));
                 this.kktEncoder.AddLeqZeroConstraint(total);
             }
         }

@@ -1,17 +1,16 @@
-﻿// <copyright file="KktOptimizationEncoder.cs" company="Microsoft">
+﻿// <copyright file="KktOptimizationGenerator.cs" company="Microsoft">
 // Copyright (c) Microsoft. All rights reserved.
 // </copyright>
 
 namespace ZenLib
 {
-    using System;
     using System.Collections.Generic;
     using System.Linq;
 
     /// <summary>
     /// An optimization encoder that automatically derives the KKT conditions.
     /// </summary>
-    public class KktOptimizationEncoder
+    public class KktOptimizationGenerator
     {
         /// <summary>
         /// The constraints for polynomial less than or equal to zero.
@@ -39,10 +38,10 @@ namespace ZenLib
         public ISet<Zen<Real>> Variables;
 
         /// <summary>
-        /// Creates a new instance of the <see cref="KktOptimizationEncoder"/> class.
+        /// Creates a new instance of the <see cref="KktOptimizationGenerator"/> class.
         /// </summary>
         /// <param name="variables">The encoding variables.</param>
-        public KktOptimizationEncoder(ISet<Zen<Real>> variables)
+        public KktOptimizationGenerator(ISet<Zen<Real>> variables)
         {
             this.Variables = variables;
             this.leqZeroConstraints = new List<Polynomial>();

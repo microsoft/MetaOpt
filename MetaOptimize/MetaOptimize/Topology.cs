@@ -17,14 +17,14 @@ namespace ZenLib
         /// <summary>
         /// The underlying graph.
         /// </summary>
-        public AdjacencyGraph<string, TaggedEdge<string, long>> Graph { get; set; }
+        public AdjacencyGraph<string, TaggedEdge<string, Real>> Graph { get; set; }
 
         /// <summary>
         /// Creates a new instance of the <see cref="Topology"/> class.
         /// </summary>
         public Topology()
         {
-            this.Graph = new AdjacencyGraph<string, TaggedEdge<string, long>>(allowParallelEdges: false);
+            this.Graph = new AdjacencyGraph<string, TaggedEdge<string, Real>>(allowParallelEdges: false);
         }
 
         /// <summary>
@@ -42,9 +42,9 @@ namespace ZenLib
         /// <param name="source">The source node.</param>
         /// <param name="target">The target node.</param>
         /// <param name="capacity">The capacity of the edge.</param>
-        public void AddEdge(string source, string target, long capacity)
+        public void AddEdge(string source, string target, Real capacity)
         {
-            this.Graph.AddEdge(new TaggedEdge<string, long>(source, target, capacity));
+            this.Graph.AddEdge(new TaggedEdge<string, Real>(source, target, capacity));
         }
 
         /// <summary>
@@ -151,15 +151,36 @@ namespace ZenLib
         /// The maximum capacity on any edge in the topology.
         /// </summary>
         /// <returns>The maximum capacity.</returns>
-        public long MaximiumCapacity()
+        public Real TotalCapacity()
         {
-            var maxCapacity = 0L;
+            var totalCapacity = new Real(0);
             foreach (var edge in this.GetAllEdges())
             {
-                maxCapacity = Math.Max(maxCapacity, edge.Capacity);
+                totalCapacity = totalCapacity + edge.Capacity;
             }
 
-            return maxCapacity;
+            return totalCapacity;
+        }
+
+        /// <summary>
+        /// Split the capacity of each edge in the topology.
+        /// </summary>
+        /// <param name="k">The number of copies of the topology.</param>
+        /// <returns>A new toplogy with 1/k capacity for each edge.</returns>
+        public Topology SplitCapacity(int k)
+        {
+            var t = new Topology();
+            foreach (var node in this.GetAllNodes())
+            {
+                t.AddNode(node);
+            }
+
+            foreach (var edge in this.GetAllEdges())
+            {
+                t.AddEdge(edge.Source, edge.Target, edge.Capacity * new Real(1, k));
+            }
+
+            return t;
         }
     }
 
@@ -171,7 +192,7 @@ namespace ZenLib
         /// <summary>
         /// The underlying tagged edge.
         /// </summary>
-        internal TaggedEdge<string, long> TaggedEdge { get; set; }
+        internal TaggedEdge<string, Real> TaggedEdge { get; set; }
 
         /// <summary>
         /// The source of the edge.
@@ -186,7 +207,7 @@ namespace ZenLib
         /// <summary>
         /// The capacity of the edge.
         /// </summary>
-        public long Capacity { get => this.TaggedEdge.Tag; }
+        public Real Capacity { get => this.TaggedEdge.Tag; }
 
         /// <summary>
         /// Equality for edges.
