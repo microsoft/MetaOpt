@@ -38,16 +38,23 @@ namespace ZenLib
         public ISet<Zen<Real>> Variables;
 
         /// <summary>
+        /// The variables to avoid taking the derivative for.
+        /// </summary>
+        public ISet<Zen<Real>> AvoidDerivativeVariables;
+
+        /// <summary>
         /// Creates a new instance of the <see cref="KktOptimizationGenerator"/> class.
         /// </summary>
         /// <param name="variables">The encoding variables.</param>
-        public KktOptimizationGenerator(ISet<Zen<Real>> variables)
+        /// <param name="avoidDerivativeVariables">The variables to avoid the deriviatve for.</param>
+        public KktOptimizationGenerator(ISet<Zen<Real>> variables, ISet<Zen<Real>> avoidDerivativeVariables)
         {
             this.Variables = variables;
             this.leqZeroConstraints = new List<Polynomial>();
             this.eqZeroConstraints = new List<Polynomial>();
             this.lambdaVariables = new List<Zen<Real>>();
             this.nuVariables = new List<Zen<Real>>();
+            this.AvoidDerivativeVariables = avoidDerivativeVariables;
         }
 
         /// <summary>
@@ -106,6 +113,11 @@ namespace ZenLib
 
             foreach (var variable in this.Variables)
             {
+                if (this.AvoidDerivativeVariables.Contains(variable))
+                {
+                    continue;
+                }
+
                 Zen<Real> total = objective.Derivative(variable);
 
                 for (int i = 0; i < this.leqZeroConstraints.Count; i++)

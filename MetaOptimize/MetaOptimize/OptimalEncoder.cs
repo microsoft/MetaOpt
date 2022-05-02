@@ -102,7 +102,8 @@ namespace ZenLib
                 }
             }
 
-            this.kktEncoder = new KktOptimizationGenerator(this.variables);
+            var demandVariables = new HashSet<Zen<Real>>(this.DemandVariables.Values);
+            this.kktEncoder = new KktOptimizationGenerator(this.variables, demandVariables);
         }
 
         /// <summary>

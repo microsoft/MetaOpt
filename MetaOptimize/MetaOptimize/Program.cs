@@ -172,8 +172,10 @@ namespace ZenLib
             var popEncoder = new PopEncoder(topology, 2, demandPartitions);
             var popEncoding = popEncoder.Encoding();
 
+            var demandConstraints = topology.GetNodePairs().Select(pair => optEncoder.DemandVariables[pair] == popEncoder.PartitionEncoders.Select(x => x.DemandVariables[pair]).Aggregate(Zen.Plus));
+
             // solve the problem.
-            var constraints = Zen.And(optEncoding.OptimalConstraints, popEncoding.OptimalConstraints);
+            var constraints = Zen.And(optEncoding.OptimalConstraints, popEncoding.OptimalConstraints, Zen.And(demandConstraints.ToArray()));
 
             var objective = optEncoder.TotalDemandMetVariable - popEncoder.PartitionEncoders.Select(x => x.TotalDemandMetVariable).Aggregate(Zen.Plus);
             var solution = Zen.Maximize(objective, constraints);
@@ -202,7 +204,7 @@ namespace ZenLib
             var x = Zen.Symbolic<Real>("x");
             var y = Zen.Symbolic<Real>("y");
 
-            var encoder = new KktOptimizationGenerator(new HashSet<Zen<Real>>() { x, y });
+            var encoder = new KktOptimizationGenerator(new HashSet<Zen<Real>>() { x, y }, new HashSet<Zen<Real>>());
 
             // x + 2y == 10
             encoder.AddEqZeroConstraint(new Polynomial(new Term(1, x), new Term(2, y), new Term(-10)));
