@@ -91,6 +91,16 @@ namespace ZenLib
         /// </summary>
         /// <param name="objective">The objective.</param>
         /// <returns>The result as a Zen boolean expression.</returns>
+        public Zen<bool> MaximizationConstraints(Polynomial objective)
+        {
+            return this.MinimizationConstraints(objective.Negate());
+        }
+
+        /// <summary>
+        /// Get the KKT constraints for minimal solution.
+        /// </summary>
+        /// <param name="objective">The objective.</param>
+        /// <returns>The result as a Zen boolean expression.</returns>
         public Zen<bool> MinimizationConstraints(Polynomial objective)
         {
             var feasibilityConstraints = this.Constraints();

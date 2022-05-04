@@ -100,6 +100,15 @@ namespace ZenLib
         }
 
         /// <summary>
+        /// Negate this polynomial term.
+        /// </summary>
+        /// <returns></returns>
+        public Term Negate()
+        {
+            return new Term(-1 * this.Coefficient, this.Variable, this.Exponent);
+        }
+
+        /// <summary>
         /// Convert this term to a string.
         /// </summary>
         /// <returns>The string representation.</returns>

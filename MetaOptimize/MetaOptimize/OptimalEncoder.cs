@@ -6,13 +6,12 @@ namespace ZenLib
 {
     using System;
     using System.Collections.Generic;
-    using System.Linq;
     using static ZenLib.Zen;
 
     /// <summary>
     /// A class for the optimal encoding.
     /// </summary>
-    public class OptimalEncoder : INetworkEncoder
+    public class OptimalEncoder : IEncoder
     {
         /// <summary>
         /// The topology for the network.
@@ -20,9 +19,14 @@ namespace ZenLib
         public Topology Topology { get; set; }
 
         /// <summary>
+        /// The maximum number of paths to use between any two nodes.
+        /// </summary>
+        public int K { get; set; }
+
+        /// <summary>
         /// The enumeration of paths between all pairs of nodes.
         /// </summary>
-        public Dictionary<(string, string), IList<IList<string>>> SimplePaths { get; set; }
+        public Dictionary<(string, string), string[][]> Paths { get; set; }
 
         /// <summary>
         /// The demand constraints in terms of constant values.
@@ -42,7 +46,7 @@ namespace ZenLib
         /// <summary>
         /// The flow variables for a given path in the network (f_k^p).
         /// </summary>
-        public Dictionary<IList<string>, Zen<Real>> FlowPathVariables { get; set; }
+        public Dictionary<string[], Zen<Real>> FlowPathVariables { get; set; }
 
         /// <summary>
         /// The total demand met variable.
@@ -63,11 +67,13 @@ namespace ZenLib
         /// Create a new instance of the <see cref="OptimalEncoder"/> class.
         /// </summary>
         /// <param name="topology">The network topology.</param>
+        /// <param name="k">The max number of paths between nodes.</param>
         /// <param name="demandConstraints">Any concrete demand constraints.</param>
-        public OptimalEncoder(Topology topology, Dictionary<(string, string), Real> demandConstraints = null)
+        public OptimalEncoder(Topology topology, int k, Dictionary<(string, string), Real> demandConstraints = null)
         {
             this.Topology = topology;
-            this.SimplePaths = new Dictionary<(string, string), IList<IList<string>>>();
+            this.K = k;
+            this.Paths = new Dictionary<(string, string), string[][]>();
             this.DemandConstraints = demandConstraints ?? new Dictionary<(string, string), Real>();
 
             // establish the demand variables.
@@ -83,18 +89,17 @@ namespace ZenLib
             this.variables.Add(this.TotalDemandMetVariable);
 
             this.FlowVariables = new Dictionary<(string, string), Zen<Real>>();
-            this.FlowPathVariables = new Dictionary<IList<string>, Zen<Real>>();
+            this.FlowPathVariables = new Dictionary<string[], Zen<Real>>(new PathComparer());
             foreach (var pair in this.Topology.GetNodePairs())
             {
-                var simplePaths = this.Topology.SimplePaths(pair.Item1, pair.Item2).ToList();
-
                 // establish the flow variable.
                 this.FlowVariables[pair] = Symbolic<Real>("flow_" + pair.Item1 + "_" + pair.Item2);
                 this.variables.Add(this.FlowVariables[pair]);
 
-                this.SimplePaths[pair] = simplePaths;
+                var paths = this.Topology.ShortestKPaths(this.K, pair.Item1, pair.Item2);
+                this.Paths[pair] = paths;
 
-                foreach (var simplePath in simplePaths)
+                foreach (var simplePath in paths)
                 {
                     // establish the flow path variables.
                     this.FlowPathVariables[simplePath] = Symbolic<Real>("flowpath_" + string.Join("_", simplePath));
@@ -148,7 +153,7 @@ namespace ZenLib
             }
 
             // Ensure that f_k^p geq 0.
-            foreach (var (pair, paths) in this.SimplePaths)
+            foreach (var (pair, paths) in this.Paths)
             {
                 foreach (var path in paths)
                 {
@@ -158,9 +163,9 @@ namespace ZenLib
 
             // Ensure that nodes that are not connected have no flow or demand.
             // This is needed for not fully connected topologies.
-            foreach (var (pair, paths) in this.SimplePaths)
+            foreach (var (pair, paths) in this.Paths)
             {
-                if (paths.Count == 0)
+                if (paths.Length == 0)
                 {
                     this.kktEncoder.AddEqZeroConstraint(new Polynomial(new Term(1, this.DemandVariables[pair])));
                     this.kktEncoder.AddEqZeroConstraint(new Polynomial(new Term(1, this.FlowVariables[pair])));
@@ -168,7 +173,7 @@ namespace ZenLib
             }
 
             // Ensure that the flow f_k = sum_p f_k^p.
-            foreach (var (pair, paths) in this.SimplePaths)
+            foreach (var (pair, paths) in this.Paths)
             {
                 var poly = new Polynomial(new Term(0));
                 foreach (var path in paths)
@@ -188,11 +193,11 @@ namespace ZenLib
                 sumPerEdge[edge] = new Polynomial(new Term(0));
             }
 
-            foreach (var (pair, paths) in this.SimplePaths)
+            foreach (var (pair, paths) in this.Paths)
             {
                 foreach (var path in paths)
                 {
-                    for (int i = 0; i < path.Count - 1; i++)
+                    for (int i = 0; i < path.Length - 1; i++)
                     {
                         var source = path[i];
                         var target = path[i + 1];
@@ -205,50 +210,54 @@ namespace ZenLib
 
             foreach (var (edge, total) in sumPerEdge)
             {
-                total.Terms.Add(new Term(-1 * edge.Capacity));
+                total.Terms.Add(new Term(-1 * edge.CapacityReal));
                 this.kktEncoder.AddLeqZeroConstraint(total);
             }
 
             // Optimization objective is the total demand met.
             // Return the encoding, including the feasibility constraints, objective, and KKT conditions.
-            var minObjective = new Polynomial(new Term(-1, this.TotalDemandMetVariable));
+            var maxObjective = new Polynomial(new Term(1, this.TotalDemandMetVariable));
             return new OptimizationEncoding
             {
                 FeasibilityConstraints = this.kktEncoder.Constraints(),
-                OptimalConstraints = this.kktEncoder.MinimizationConstraints(minObjective),
+                OptimalConstraints = this.kktEncoder.MaximizationConstraints(maxObjective),
                 MaximizationObjective = this.TotalDemandMetVariable,
+                DemandExpressions = this.DemandVariables,
             };
         }
 
         /// <summary>
-        /// Display a solution to this encoding.
+        /// Get the optimization solution from the solver solution.
         /// </summary>
         /// <param name="solution">The solution.</param>
-        public void DisplaySolution(ZenSolution solution)
+        public OptimizationSolution GetSolution(ZenSolution solution)
         {
-            Console.WriteLine($"total demand met: {solution.Get(this.TotalDemandMetVariable)}");
+            var demands = new Dictionary<(string, string), Real>();
+            var flows = new Dictionary<(string, string), Real>();
+            var flowPaths = new Dictionary<string[], Real>(new PathComparer());
 
             foreach (var (pair, variable) in this.DemandVariables)
             {
-                var demand = solution.Get(variable);
-                if (demand > 0)
-                    Console.WriteLine($"demand for {pair} = {demand}");
+                demands[pair] = solution.Get(variable);
             }
 
-            /* foreach (var (pair, variable) in this.FlowVariables)
+            foreach (var (pair, variable) in this.FlowVariables)
             {
-                Console.WriteLine($"flow for {pair} = {solution.Get(variable)}");
-            } */
-
-            foreach (var (pair, paths) in this.SimplePaths)
-            {
-                foreach (var path in paths)
-                {
-                    var flow = solution.Get(this.FlowPathVariables[path]);
-                    if (flow > 0)
-                        Console.WriteLine($"allocation for [{string.Join(",", path)}] = {flow}");
-                }
+                flows[pair] = solution.Get(variable);
             }
+
+            foreach (var (path, variable) in this.FlowPathVariables)
+            {
+                flowPaths[path] = solution.Get(variable);
+            }
+
+            return new OptimizationSolution
+            {
+                TotalDemandMet = solution.Get(this.TotalDemandMetVariable),
+                Demands = demands,
+                Flows = flows,
+                FlowsPaths = flowPaths,
+            };
         }
     }
 }

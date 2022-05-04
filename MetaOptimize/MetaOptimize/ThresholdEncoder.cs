@@ -12,7 +12,7 @@ namespace ZenLib
     /// <summary>
     /// A class for the threshold heuristic encoding.
     /// </summary>
-    public class ThresholdEncoder : INetworkEncoder
+    public class ThresholdEncoder : IEncoder
     {
         /// <summary>
         /// The topology for the network.
@@ -22,7 +22,7 @@ namespace ZenLib
         /// <summary>
         /// The enumeration of paths between all pairs of nodes.
         /// </summary>
-        public Dictionary<(string, string), IList<IList<string>>> SimplePaths { get; set; }
+        public Dictionary<(string, string), string[][]> SimplePaths { get; set; }
 
         /// <summary>
         /// The demand variables for the network (d_k).
@@ -37,7 +37,7 @@ namespace ZenLib
         /// <summary>
         /// The flow variables for a given path in the network (f_k^p).
         /// </summary>
-        public Dictionary<IList<string>, Zen<Real>> FlowPathVariables { get; set; }
+        public Dictionary<string[], Zen<Real>> FlowPathVariables { get; set; }
 
         /// <summary>
         /// The heuristic variables for the network (h_k).
@@ -83,7 +83,7 @@ namespace ZenLib
         public ThresholdEncoder(Topology topology, Dictionary<(string, string), Zen<Real>> demandVariables, Real threshold)
         {
             this.Topology = topology;
-            this.SimplePaths = new Dictionary<(string, string), IList<IList<string>>>();
+            this.SimplePaths = new Dictionary<(string, string), string[][]>();
             this.Threshold = threshold;
 
             // establish the demand variables.
@@ -98,15 +98,13 @@ namespace ZenLib
             this.variables.Add(this.TotalDemandMetVariable);
 
             this.FlowVariables = new Dictionary<(string, string), Zen<Real>>();
-            this.FlowPathVariables = new Dictionary<IList<string>, Zen<Real>>();
+            this.FlowPathVariables = new Dictionary<string[], Zen<Real>>(new PathComparer());
             this.HeuristicVariables = new Dictionary<(string, string), Zen<Real>>();
             this.HeuristicPathVariables = new Dictionary<IList<string>, Zen<Real>>();
             this.AlphaVariables = new Dictionary<(string, string), Zen<Real>>();
 
             foreach (var pair in this.Topology.GetNodePairs())
             {
-                var simplePaths = this.Topology.SimplePaths(pair.Item1, pair.Item2).ToList();
-
                 // establish the flow variable.
                 this.FlowVariables[pair] = Symbolic<Real>("flow_" + pair.Item1 + "_" + pair.Item2);
                 this.variables.Add(this.FlowVariables[pair]);
@@ -119,6 +117,7 @@ namespace ZenLib
                 this.AlphaVariables[pair] = Symbolic<Real>("alpha_" + pair.Item1 + "_" + pair.Item2);
                 this.variables.Add(this.AlphaVariables[pair]);
 
+                var simplePaths = this.Topology.SimplePaths(pair.Item1, pair.Item2);
                 this.SimplePaths[pair] = simplePaths;
 
                 foreach (var simplePath in simplePaths)
@@ -258,7 +257,7 @@ namespace ZenLib
         {
             foreach (var (pair, paths) in this.SimplePaths)
             {
-                if (paths.Count == 0)
+                if (paths.Length == 0)
                 {
                     this.kktEncoder.AddEqZeroConstraint(new Polynomial(new Term(1, this.DemandVariables[pair])));
                     this.kktEncoder.AddEqZeroConstraint(new Polynomial(new Term(1, this.FlowVariables[pair])));
@@ -317,7 +316,7 @@ namespace ZenLib
             {
                 foreach (var path in paths)
                 {
-                    for (int i = 0; i < path.Count - 1; i++)
+                    for (int i = 0; i < path.Length - 1; i++)
                     {
                         var source = path[i];
                         var target = path[i + 1];
@@ -330,49 +329,43 @@ namespace ZenLib
 
             foreach (var (edge, total) in sumPerEdge)
             {
-                total.Terms.Add(new Term(-1 * edge.Capacity));
+                total.Terms.Add(new Term(-1 * edge.CapacityReal));
                 this.kktEncoder.AddLeqZeroConstraint(total);
             }
         }
 
         /// <summary>
-        /// Display a solution to this encoding.
+        /// Get the optimization solution from the solver solution.
         /// </summary>
-        /// <param name="solution"></param>
-        public void DisplaySolution(ZenSolution solution)
+        /// <param name="solution">The solution.</param>
+        public OptimizationSolution GetSolution(ZenSolution solution)
         {
-            Console.WriteLine($"total demand met: {solution.Get(this.TotalDemandMetVariable)}");
+            var demands = new Dictionary<(string, string), Real>();
+            var flows = new Dictionary<(string, string), Real>();
+            var flowPaths = new Dictionary<string[], Real>(new PathComparer());
 
             foreach (var (pair, variable) in this.DemandVariables)
             {
-                Console.WriteLine($"demand for {pair} = {solution.Get(variable)}");
+                demands[pair] = solution.Get(variable);
             }
 
             foreach (var (pair, variable) in this.FlowVariables)
             {
-                Console.WriteLine($"flow for {pair} = {solution.Get(variable)}");
+                flows[pair] = solution.Get(variable) + solution.Get(this.HeuristicVariables[pair]);
             }
 
-            foreach (var (pair, variable) in this.HeuristicVariables)
+            foreach (var (path, variable) in this.FlowPathVariables)
             {
-                Console.WriteLine($"heuristic for {pair} = {solution.Get(variable)}");
+                flowPaths[path] = solution.Get(variable) + solution.Get(this.HeuristicPathVariables[path]);
             }
 
-            foreach (var (pair, variable) in this.AlphaVariables)
+            return new OptimizationSolution
             {
-                Console.WriteLine($"alpha for {pair} = {solution.Get(variable)}");
-            }
-
-            foreach (var (pair, paths) in this.SimplePaths)
-            {
-                foreach (var path in paths)
-                {
-                    var flow = solution.Get(this.FlowPathVariables[path]);
-                    var heur = solution.Get(this.HeuristicPathVariables[path]);
-                    Console.WriteLine($"allocation[f] for [{string.Join(",", path)}] = {flow}");
-                    Console.WriteLine($"allocation[h] for [{string.Join(",", path)}] = {heur}");
-                }
-            }
+                TotalDemandMet = solution.Get(this.TotalDemandMetVariable),
+                Demands = demands,
+                Flows = flows,
+                FlowsPaths = flowPaths,
+            };
         }
     }
 }

@@ -11,12 +11,17 @@ namespace ZenLib
     /// <summary>
     /// The Pop encoder for splitting a network capacity into pieces.
     /// </summary>
-    public class PopEncoder : INetworkEncoder
+    public class PopEncoder : IEncoder
     {
         /// <summary>
         /// The topology for the network.
         /// </summary>
         public Topology Topology { get; set; }
+
+        /// <summary>
+        /// The maximum number of paths to use between any two nodes.
+        /// </summary>
+        public int K { get; set; }
 
         /// <summary>
         /// The reduced capacity topology for the network.
@@ -31,7 +36,7 @@ namespace ZenLib
         /// <summary>
         /// Partitioning of the demands.
         /// </summary>
-        public Dictionary<(string, string), int> DemandPartitions { get; set; }
+        public IDictionary<(string, string), int> DemandPartitions { get; set; }
 
         /// <summary>
         /// The individual encoders for each partition.
@@ -42,9 +47,10 @@ namespace ZenLib
         /// Create a new instance of the <see cref="PopEncoder"/> class.
         /// </summary>
         /// <param name="topology">The network topology.</param>
+        /// <param name="k">The max number of paths between nodes.</param>
         /// <param name="numPartitions">The number of partitions.</param>
         /// <param name="demandPartitions">The demand partitions.</param>
-        public PopEncoder(Topology topology, int numPartitions, Dictionary<(string, string), int> demandPartitions)
+        public PopEncoder(Topology topology, int k, int numPartitions, IDictionary<(string, string), int> demandPartitions)
         {
             if (numPartitions <= 0)
             {
@@ -52,6 +58,7 @@ namespace ZenLib
             }
 
             this.Topology = topology;
+            this.K = k;
             this.ReducedTopology = topology.SplitCapacity(numPartitions);
             this.NumPartitions = numPartitions;
             this.DemandPartitions = demandPartitions;
@@ -70,7 +77,7 @@ namespace ZenLib
                     }
                 }
 
-                this.PartitionEncoders[i] = new OptimalEncoder(this.ReducedTopology, demandConstraints);
+                this.PartitionEncoders[i] = new OptimalEncoder(this.ReducedTopology, this.K, demandConstraints);
             }
         }
 
@@ -87,50 +94,51 @@ namespace ZenLib
                 encodings[i] = this.PartitionEncoders[i].Encoding();
             }
 
+            var demandExpressions = new Dictionary<(string, string), Zen<Real>>();
+            foreach (var pair in this.Topology.GetNodePairs())
+            {
+                demandExpressions[pair] = this.PartitionEncoders.Select(e => e.DemandVariables[pair]).Aggregate(Zen.Plus);
+            }
+
             return new OptimizationEncoding
             {
                 FeasibilityConstraints = encodings.Select(x => x.FeasibilityConstraints).Aggregate(Zen.And),
                 OptimalConstraints = encodings.Select(x => x.OptimalConstraints).Aggregate(Zen.And),
                 MaximizationObjective = encodings.Select(x => x.MaximizationObjective).Aggregate(Zen.Plus),
+                DemandExpressions = demandExpressions,
             };
         }
 
         /// <summary>
-        /// Display a solution to this encoding.
+        /// Get the optimization solution from the solver solution.
         /// </summary>
         /// <param name="solution">The solution.</param>
-        public void DisplaySolution(ZenSolution solution)
+        public OptimizationSolution GetSolution(ZenSolution solution)
         {
-            Console.WriteLine($"--------------------------");
-            Console.WriteLine($"Overall solution");
-            Console.WriteLine($"--------------------------");
+            var demands = new Dictionary<(string, string), Real>();
+            var flows = new Dictionary<(string, string), Real>();
+            var flowPaths = new Dictionary<string[], Real>(new PathComparer());
 
-            Console.WriteLine($"total demand met: {this.PartitionEncoders.Select(x => solution.Get(x.TotalDemandMetVariable)).Aggregate((a, b) => a + b)}");
+            var solutions = this.PartitionEncoders.Select(e => e.GetSolution(solution)).ToList();
 
             foreach (var pair in this.Topology.GetNodePairs())
             {
-                var demand = this.PartitionEncoders.Select(x => solution.Get(x.DemandVariables[pair])).Aggregate((a, b) => a + b);
-                if (demand > 0)
-                    Console.WriteLine($"demand for {pair} = {demand}");
+                demands[pair] = solutions.Select(s => s.Demands[pair]).Aggregate((a, b) => a + b);
+                flows[pair] = solutions.Select(s => s.Flows[pair]).Aggregate((a, b) => a + b);
             }
 
-            foreach (var (pair, paths) in this.PartitionEncoders[0].SimplePaths)
+            foreach (var path in solutions[0].FlowsPaths.Keys)
             {
-                foreach (var path in paths)
-                {
-                    var flow = this.PartitionEncoders.Select(x => solution.Get(x.FlowVariables[pair])).Aggregate((a, b) => a + b);
-                    if (flow > 0)
-                        Console.WriteLine($"allocation for [{string.Join(",", path)}] = {flow}");
-                }
+                flowPaths[path] = solutions.Select(s => s.FlowsPaths[path]).Aggregate((a, b) => a + b);
             }
 
-            for (int i = 0; i < this.NumPartitions; i++)
+            return new OptimizationSolution
             {
-                Console.WriteLine($"--------------------------");
-                Console.WriteLine($"Solution for partition {i}");
-                Console.WriteLine($"--------------------------");
-                this.PartitionEncoders[i].DisplaySolution(solution);
-            }
+                TotalDemandMet = solutions.Select(s => s.TotalDemandMet).Aggregate((a, b) => a + b),
+                Demands = demands,
+                Flows = flows,
+                FlowsPaths = flowPaths,
+            };
         }
     }
 }

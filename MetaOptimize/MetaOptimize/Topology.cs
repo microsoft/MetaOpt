@@ -7,7 +7,10 @@ namespace ZenLib
     using System;
     using System.Collections.Generic;
     using System.Collections.Immutable;
+    using System.Linq;
     using QuikGraph;
+    using QuikGraph.Algorithms;
+    using QuikGraph.Algorithms.ShortestPath;
 
     /// <summary>
     /// A simple topology class that wraps a graph.
@@ -15,16 +18,22 @@ namespace ZenLib
     public class Topology
     {
         /// <summary>
+        /// A random number generator.
+        /// </summary>
+        private Random random;
+
+        /// <summary>
         /// The underlying graph.
         /// </summary>
-        public AdjacencyGraph<string, TaggedEdge<string, Real>> Graph { get; set; }
+        public AdjacencyGraph<string, EquatableTaggedEdge<string, double>> Graph { get; set; }
 
         /// <summary>
         /// Creates a new instance of the <see cref="Topology"/> class.
         /// </summary>
         public Topology()
         {
-            this.Graph = new AdjacencyGraph<string, TaggedEdge<string, Real>>(allowParallelEdges: false);
+            this.random = new Random(0);
+            this.Graph = new AdjacencyGraph<string, EquatableTaggedEdge<string, double>>(allowParallelEdges: false);
         }
 
         /// <summary>
@@ -42,9 +51,9 @@ namespace ZenLib
         /// <param name="source">The source node.</param>
         /// <param name="target">The target node.</param>
         /// <param name="capacity">The capacity of the edge.</param>
-        public void AddEdge(string source, string target, Real capacity)
+        public void AddEdge(string source, string target, double capacity)
         {
-            this.Graph.AddEdge(new TaggedEdge<string, Real>(source, target, capacity));
+            this.Graph.AddEdge(new EquatableTaggedEdge<string, double>(source, target, capacity));
         }
 
         /// <summary>
@@ -121,8 +130,9 @@ namespace ZenLib
         /// <param name="source">The source node.</param>
         /// <param name="target">The target node.</param>
         /// <returns>All simple paths between the nodes.</returns>
-        public IEnumerable<IList<string>> SimplePaths(string source, string target)
+        public string[][] SimplePaths(string source, string target)
         {
+            var paths = new List<string[]>();
             var stack = new Stack<ImmutableList<string>>();
             stack.Push(ImmutableList.Create<string>().Add(source));
 
@@ -133,7 +143,7 @@ namespace ZenLib
 
                 if (current == target)
                 {
-                    yield return path;
+                    paths.Add(path.ToArray());
                     continue;
                 }
 
@@ -145,6 +155,49 @@ namespace ZenLib
                     }
                 }
             }
+
+            return paths.ToArray();
+        }
+
+        /// <summary>
+        /// Compute the shortest k paths from a source to a destination.
+        /// </summary>
+        /// <param name="k">The maximum number of paths.</param>
+        /// <param name="source">The source node.</param>
+        /// <param name="dest">The destination node.</param>
+        public string[][] ShortestKPaths(int k, string source, string dest)
+        {
+            var algorithm = new YenShortestPathsAlgorithm<string>(this.Graph, source, dest, k);
+
+            try
+            {
+                var paths = algorithm.Execute().Select(p =>
+                {
+                    return Enumerable.Concat(Enumerable.Repeat(source, 1), p.Select(e => e.Target)).ToArray();
+                });
+
+                return paths.ToArray();
+            }
+            catch (QuikGraph.NoPathFoundException)
+            {
+                return new string[0][];
+            }
+        }
+
+        /// <summary>
+        /// Randomly partition the pairs of nodes in the network.
+        /// </summary>
+        /// <param name="numPartitions">The number of partitions.</param>
+        /// <returns>The partition mapping.</returns>
+        public IDictionary<(string, string), int> RandomPartition(int numPartitions)
+        {
+            var mapping = new Dictionary<(string, string), int>();
+            foreach (var pair in this.GetNodePairs())
+            {
+                mapping[pair] = this.random.Next(numPartitions);
+            }
+
+            return mapping;
         }
 
         /// <summary>
@@ -156,7 +209,7 @@ namespace ZenLib
             var totalCapacity = new Real(0);
             foreach (var edge in this.GetAllEdges())
             {
-                totalCapacity = totalCapacity + edge.Capacity;
+                totalCapacity = totalCapacity + edge.CapacityReal;
             }
 
             return totalCapacity;
@@ -177,7 +230,7 @@ namespace ZenLib
 
             foreach (var edge in this.GetAllEdges())
             {
-                t.AddEdge(edge.Source, edge.Target, edge.Capacity * new Real(1, k));
+                t.AddEdge(edge.Source, edge.Target, edge.Capacity / k);
             }
 
             return t;
@@ -192,7 +245,7 @@ namespace ZenLib
         /// <summary>
         /// The underlying tagged edge.
         /// </summary>
-        internal TaggedEdge<string, Real> TaggedEdge { get; set; }
+        internal EquatableTaggedEdge<string, double> TaggedEdge { get; set; }
 
         /// <summary>
         /// The source of the edge.
@@ -207,7 +260,12 @@ namespace ZenLib
         /// <summary>
         /// The capacity of the edge.
         /// </summary>
-        public Real Capacity { get => this.TaggedEdge.Tag; }
+        public double Capacity { get => this.TaggedEdge.Tag; }
+
+        /// <summary>
+        /// The capacity of the edge.
+        /// </summary>
+        public Real CapacityReal { get => new Real((int)this.TaggedEdge.Tag); }
 
         /// <summary>
         /// Equality for edges.

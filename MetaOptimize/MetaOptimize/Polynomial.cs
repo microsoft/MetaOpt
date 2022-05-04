@@ -70,6 +70,15 @@ namespace ZenLib
         }
 
         /// <summary>
+        /// Negate the polynomial.
+        /// </summary>
+        /// <returns>The result as a polynomial.</returns>
+        public Polynomial Negate()
+        {
+            return new Polynomial(this.Terms.Select(x => x.Negate()).ToList());
+        }
+
+        /// <summary>
         /// Convert the polynomial to a string.
         /// </summary>
         /// <returns>The string representation.</returns>

@@ -4,6 +4,8 @@
 
 namespace ZenLib
 {
+    using System.Collections.Generic;
+
     /// <summary>
     /// The encoding of an optimization.
     /// </summary>
@@ -23,5 +25,10 @@ namespace ZenLib
         /// The maximization objective.
         /// </summary>
         public Zen<Real> MaximizationObjective { get; set; }
+
+        /// <summary>
+        /// The demand expression for any pair of nodes.
+        /// </summary>
+        public IDictionary<(string, string), Zen<Real>> DemandExpressions { get; set; }
     }
 }
