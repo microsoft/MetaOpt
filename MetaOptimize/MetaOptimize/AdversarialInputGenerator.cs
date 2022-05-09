@@ -2,10 +2,10 @@
 // Copyright (c) Microsoft. All rights reserved.
 // </copyright>
 
-namespace ZenLib
+namespace MetaOptimize
 {
     using System;
-    using System.Collections.Generic;
+    using ZenLib;
 
     /// <summary>
     /// Meta-optimization utility functions for maximizing optimality gaps.
@@ -33,6 +33,7 @@ namespace ZenLib
 
             var objective = optimalEncoding.MaximizationObjective - heuristicEncoding.MaximizationObjective;
             var zenSolution = Zen.Maximize(objective, constraints);
+            // var zenSolution = Zen.Solve(constraints);
 
             return (optimalEncoder.GetSolution(zenSolution), heuristicEncoder.GetSolution(zenSolution));
 

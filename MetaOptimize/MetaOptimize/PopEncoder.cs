@@ -2,11 +2,12 @@
 // Copyright (c) Microsoft. All rights reserved.
 // </copyright>
 
-namespace ZenLib
+namespace MetaOptimize
 {
     using System;
     using System.Collections.Generic;
     using System.Linq;
+    using ZenLib;
 
     /// <summary>
     /// The Pop encoder for splitting a network capacity into pieces.

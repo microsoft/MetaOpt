@@ -2,9 +2,10 @@
 // Copyright (c) Microsoft. All rights reserved.
 // </copyright>
 
-namespace ZenLib
+namespace MetaOptimize
 {
     using System.Collections.Generic;
+    using ZenLib;
 
     /// <summary>
     /// The encoding of an optimization.

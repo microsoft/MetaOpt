@@ -2,12 +2,12 @@
 // Copyright (c) Microsoft. All rights reserved.
 // </copyright>
 
-namespace ZenLib
+namespace MetaOptimize
 {
     using System;
     using System.Collections.Generic;
     using System.Linq;
-    using static ZenLib.Zen;
+    using ZenLib;
 
     /// <summary>
     /// A class for the threshold heuristic encoding.
@@ -94,7 +94,7 @@ namespace ZenLib
             }
 
             // establish the total demand met variable.
-            this.TotalDemandMetVariable = Symbolic<Real>("total_demand_met");
+            this.TotalDemandMetVariable = Zen.Symbolic<Real>("total_demand_met");
             this.variables.Add(this.TotalDemandMetVariable);
 
             this.FlowVariables = new Dictionary<(string, string), Zen<Real>>();
@@ -106,15 +106,15 @@ namespace ZenLib
             foreach (var pair in this.Topology.GetNodePairs())
             {
                 // establish the flow variable.
-                this.FlowVariables[pair] = Symbolic<Real>("flow_" + pair.Item1 + "_" + pair.Item2);
+                this.FlowVariables[pair] = Zen.Symbolic<Real>("flow_" + pair.Item1 + "_" + pair.Item2);
                 this.variables.Add(this.FlowVariables[pair]);
 
                 // establish the heuristic variable.
-                this.HeuristicVariables[pair] = Symbolic<Real>("heuristic_" + pair.Item1 + "_" + pair.Item2);
+                this.HeuristicVariables[pair] = Zen.Symbolic<Real>("heuristic_" + pair.Item1 + "_" + pair.Item2);
                 this.variables.Add(this.HeuristicVariables[pair]);
 
                 // establish the alpha variable.
-                this.AlphaVariables[pair] = Symbolic<Real>("alpha_" + pair.Item1 + "_" + pair.Item2);
+                this.AlphaVariables[pair] = Zen.Symbolic<Real>("alpha_" + pair.Item1 + "_" + pair.Item2);
                 this.variables.Add(this.AlphaVariables[pair]);
 
                 var simplePaths = this.Topology.SimplePaths(pair.Item1, pair.Item2);
@@ -123,11 +123,11 @@ namespace ZenLib
                 foreach (var simplePath in simplePaths)
                 {
                     // establish the flow path variables.
-                    this.FlowPathVariables[simplePath] = Symbolic<Real>("flowpath_" + string.Join("_", simplePath));
+                    this.FlowPathVariables[simplePath] = Zen.Symbolic<Real>("flowpath_" + string.Join("_", simplePath));
                     this.variables.Add(this.FlowPathVariables[simplePath]);
 
                     // establish the heuristic path variables.
-                    this.HeuristicPathVariables[simplePath] = Symbolic<Real>("heuristicpath_" + string.Join("_", simplePath));
+                    this.HeuristicPathVariables[simplePath] = Zen.Symbolic<Real>("heuristicpath_" + string.Join("_", simplePath));
                     this.variables.Add(this.HeuristicPathVariables[simplePath]);
                 }
             }

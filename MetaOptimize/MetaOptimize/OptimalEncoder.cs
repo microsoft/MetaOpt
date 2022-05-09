@@ -2,11 +2,11 @@
 // Copyright (c) Microsoft. All rights reserved.
 // </copyright>
 
-namespace ZenLib
+namespace MetaOptimize
 {
     using System;
     using System.Collections.Generic;
-    using static ZenLib.Zen;
+    using ZenLib;
 
     /// <summary>
     /// A class for the optimal encoding.
@@ -85,7 +85,7 @@ namespace ZenLib
             }
 
             // establish the total demand met variable.
-            this.TotalDemandMetVariable = Symbolic<Real>("total_demand_met");
+            this.TotalDemandMetVariable = Zen.Symbolic<Real>("total_demand_met");
             this.variables.Add(this.TotalDemandMetVariable);
 
             this.FlowVariables = new Dictionary<(string, string), Zen<Real>>();
@@ -93,7 +93,7 @@ namespace ZenLib
             foreach (var pair in this.Topology.GetNodePairs())
             {
                 // establish the flow variable.
-                this.FlowVariables[pair] = Symbolic<Real>("flow_" + pair.Item1 + "_" + pair.Item2);
+                this.FlowVariables[pair] = Zen.Symbolic<Real>("flow_" + pair.Item1 + "_" + pair.Item2);
                 this.variables.Add(this.FlowVariables[pair]);
 
                 var paths = this.Topology.ShortestKPaths(this.K, pair.Item1, pair.Item2);
@@ -102,7 +102,7 @@ namespace ZenLib
                 foreach (var simplePath in paths)
                 {
                     // establish the flow path variables.
-                    this.FlowPathVariables[simplePath] = Symbolic<Real>("flowpath_" + string.Join("_", simplePath));
+                    this.FlowPathVariables[simplePath] = Zen.Symbolic<Real>("flowpath_" + string.Join("_", simplePath));
                     this.variables.Add(this.FlowPathVariables[simplePath]);
                 }
             }

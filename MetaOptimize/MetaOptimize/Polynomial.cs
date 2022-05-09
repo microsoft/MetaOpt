@@ -2,10 +2,11 @@
 // Copyright (c) Microsoft. All rights reserved.
 // </copyright>
 
-namespace ZenLib
+namespace MetaOptimize
 {
     using System.Collections.Generic;
     using System.Linq;
+    using ZenLib;
 
     /// <summary>
     /// A polynomial such as 3x + 2y + 1.

@@ -2,10 +2,11 @@
 // Copyright (c) Microsoft. All rights reserved.
 // </copyright>
 
-namespace ZenLib
+namespace MetaOptimize
 {
     using System.Collections.Generic;
     using System.Linq;
+    using ZenLib;
 
     /// <summary>
     /// An optimization encoder that automatically derives the KKT conditions.

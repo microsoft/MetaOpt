@@ -2,15 +2,15 @@
 // Copyright (c) Microsoft. All rights reserved.
 // </copyright>
 
-namespace ZenLib
+namespace MetaOptimize
 {
     using System;
     using System.Collections.Generic;
     using System.Collections.Immutable;
     using System.Linq;
     using QuikGraph;
-    using QuikGraph.Algorithms;
     using QuikGraph.Algorithms.ShortestPath;
+    using ZenLib;
 
     /// <summary>
     /// A simple topology class that wraps a graph.
