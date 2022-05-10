@@ -29,6 +29,12 @@ namespace MetaOptimize.Cli
         public Heuristic Heuristic { get; set; }
 
         /// <summary>
+        /// The solver we want to use, default to Zen.
+        /// </summary>
+        [Option('c', "solver choice", Required = false, HelpText = "The solver that we want to use (Gurobi | Zen)")]
+        public SolverChoice SolverChoice { get; set; }
+
+        /// <summary>
         /// The number of pop slices to use.
         /// </summary>
         [Option('s', "slices", Default = 2, HelpText = "The number of pop slices to use.")]
@@ -61,5 +67,20 @@ namespace MetaOptimize.Cli
         /// The threshold heuristic.
         /// </summary>
         Threshold,
+    }
+    /// <summary>
+    /// The solver we want to use.
+    /// </summary>
+    public enum SolverChoice
+    {
+        /// <summary>
+        /// The Gurobi solver.
+        /// </summary>
+        Gurobi,
+
+        /// <summary>
+        /// The Zen solver.
+        /// </summary>
+        Zen,
     }
 }

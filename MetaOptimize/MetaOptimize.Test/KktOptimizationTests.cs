@@ -18,8 +18,9 @@ namespace MetaOptimize.Test
         /// Test that maximization works via the kkt conditions.
         /// </summary>
         [TestMethod]
-        public void TestMaximizeKkt1()
+        public void TestMaximizeKktUsingZen1()
         {
+            // Choose Solver and set variables.
             var solver = new SolverZen();
             var x = solver.CreateVariable("x");
             var y = solver.CreateVariable("y");

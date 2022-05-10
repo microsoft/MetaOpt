@@ -18,7 +18,7 @@ namespace MetaOptimize.Test
         /// Test that the optimality encoder works for a topology with one edge.
         /// </summary>
         [TestMethod]
-        public void TestOptimalityGapSimple()
+        public void TestOptimalityGapSimpleWithZen()
         {
             var topology = new Topology();
             topology.AddNode("a");
@@ -50,7 +50,7 @@ namespace MetaOptimize.Test
         /// Test that the optimal encoder works with a diamond topology.
         /// </summary>
         [TestMethod]
-        public void TestOptimalityGapDiamond()
+        public void TestOptimalityGapDiamondWithZen()
         {
             var topology = new Topology();
             topology.AddNode("a");
