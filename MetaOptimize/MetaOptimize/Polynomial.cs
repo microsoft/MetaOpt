@@ -11,50 +11,49 @@ namespace MetaOptimize
     /// <summary>
     /// A polynomial such as 3x + 2y + 1.
     /// </summary>
-    public class Polynomial
+    public class Polynomial<TVar>
     {
         /// <summary>
         /// The polynomial terms.
         /// </summary>
-        public List<Term> Terms { get; set; }
+        public List<Term<TVar>> Terms { get; set; }
 
         /// <summary>
-        /// Creates a new instance of the <see cref="Polynomial"/> class.
+        /// Creates a new instance of the <see cref="Polynomial{TVar}"/> class.
         /// </summary>
         public Polynomial()
         {
-            this.Terms = new List<Term>();
+            this.Terms = new List<Term<TVar>>();
         }
 
         /// <summary>
-        /// Creates a new instance of the <see cref="Polynomial"/> class.
+        /// Creates a new instance of the <see cref="Polynomial{TVar}"/> class.
         /// </summary>
         /// <param name="polynomialTerms">The terms.</param>
-        public Polynomial(List<Term> polynomialTerms)
+        public Polynomial(List<Term<TVar>> polynomialTerms)
         {
             Terms = polynomialTerms;
         }
 
         /// <summary>
-        /// Creates a new instance of the <see cref="Polynomial"/> class.
+        /// Creates a new instance of the <see cref="Polynomial{TVar}"/> class.
         /// </summary>
         /// <param name="polynomialTerms">The terms.</param>
-        public Polynomial(params Term[] polynomialTerms)
+        public Polynomial(params Term<TVar>[] polynomialTerms)
         {
-            Terms = new List<Term>(polynomialTerms);
+            Terms = new List<Term<TVar>>(polynomialTerms);
         }
 
         /// <summary>
         /// Convert this polynomial to a Zen form.
         /// </summary>
-        /// <param name="variables">The variable mapping.</param>
         /// <returns>A real Zen expression.</returns>
-        public Zen<Real> AsZen(ISet<Zen<Real>> variables)
+        public Zen<Real> AsZen()
         {
             var p = Zen.Constant(new Real(0));
             foreach (var term in this.Terms)
             {
-                p = p + term.AsZen(variables);
+                p = p + term.AsZen();
             }
 
             return p;
@@ -65,7 +64,7 @@ namespace MetaOptimize
         /// </summary>
         /// <param name="variable">The variable.</param>
         /// <returns>The result as a polynomial.</returns>
-        public Real Derivative(Zen<Real> variable)
+        public double Derivative(TVar variable)
         {
             return this.Terms.Select(x => x.Derivative(variable)).Aggregate((a, b) => a + b);
         }
@@ -74,9 +73,9 @@ namespace MetaOptimize
         /// Negate the polynomial.
         /// </summary>
         /// <returns>The result as a polynomial.</returns>
-        public Polynomial Negate()
+        public Polynomial<TVar> Negate()
         {
-            return new Polynomial(this.Terms.Select(x => x.Negate()).ToList());
+            return new Polynomial<TVar>(this.Terms.Select(x => x.Negate()).ToList());
         }
 
         /// <summary>

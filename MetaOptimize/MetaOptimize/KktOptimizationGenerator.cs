@@ -5,56 +5,61 @@
 namespace MetaOptimize
 {
     using System.Collections.Generic;
-    using System.Linq;
-    using ZenLib;
 
     /// <summary>
     /// An optimization encoder that automatically derives the KKT conditions.
     /// </summary>
-    public class KktOptimizationGenerator
+    public class KktOptimizationGenerator<TVar, TSolution>
     {
+        /// <summary>
+        /// The solver being used.
+        /// </summary>
+        private ISolver<TVar, TSolution> solver;
+
         /// <summary>
         /// The constraints for polynomial less than or equal to zero.
         /// </summary>
-        private IList<Polynomial> leqZeroConstraints;
+        private IList<Polynomial<TVar>> leqZeroConstraints;
 
         /// <summary>
         /// The constraints for polynomial equals zero.
         /// </summary>
-        private IList<Polynomial> eqZeroConstraints;
+        private IList<Polynomial<TVar>> eqZeroConstraints;
 
         /// <summary>
         /// The constructed lambda variables for the KKT conditions.
         /// </summary>
-        private IList<Zen<Real>> lambdaVariables;
+        private IList<TVar> lambdaVariables;
 
         /// <summary>
         /// The constructed nu variables for the KKT conditions.
         /// </summary>
-        private IList<Zen<Real>> nuVariables;
+        private IList<TVar> nuVariables;
 
         /// <summary>
         /// The variables in the encoding.
         /// </summary>
-        public ISet<Zen<Real>> Variables;
+        public ISet<TVar> Variables;
 
         /// <summary>
         /// The variables to avoid taking the derivative for.
         /// </summary>
-        public ISet<Zen<Real>> AvoidDerivativeVariables;
+        public ISet<TVar> AvoidDerivativeVariables;
 
         /// <summary>
-        /// Creates a new instance of the <see cref="KktOptimizationGenerator"/> class.
+        /// Creates a new instance of the <see cref="KktOptimizationGenerator{TVar, TSolution}"/> class.
         /// </summary>
         /// <param name="variables">The encoding variables.</param>
         /// <param name="avoidDerivativeVariables">The variables to avoid the deriviatve for.</param>
-        public KktOptimizationGenerator(ISet<Zen<Real>> variables, ISet<Zen<Real>> avoidDerivativeVariables)
+        /// <param name="solver">The solver.</param>
+        public KktOptimizationGenerator(ISolver<TVar, TSolution>  solver, ISet<TVar> variables, ISet<TVar> avoidDerivativeVariables)
         {
             this.Variables = variables;
-            this.leqZeroConstraints = new List<Polynomial>();
-            this.eqZeroConstraints = new List<Polynomial>();
-            this.lambdaVariables = new List<Zen<Real>>();
-            this.nuVariables = new List<Zen<Real>>();
+            this.solver = solver;
+            this.leqZeroConstraints = new List<Polynomial<TVar>>();
+            this.eqZeroConstraints = new List<Polynomial<TVar>>();
+            this.lambdaVariables = new List<TVar>();
+            this.nuVariables = new List<TVar>();
             this.AvoidDerivativeVariables = avoidDerivativeVariables;
         }
 
@@ -62,7 +67,7 @@ namespace MetaOptimize
         /// Add a constraint that a polynomial is less than or equal to zero.
         /// </summary>
         /// <param name="polynomial">The polynomial.</param>
-        public void AddLeqZeroConstraint(Polynomial polynomial)
+        public void AddLeqZeroConstraint(Polynomial<TVar> polynomial)
         {
             this.leqZeroConstraints.Add(polynomial);
         }
@@ -71,7 +76,7 @@ namespace MetaOptimize
         /// Add a constraint that a polynomial is equal to zero.
         /// </summary>
         /// <param name="polynomial">The polynomial.</param>
-        public void AddEqZeroConstraint(Polynomial polynomial)
+        public void AddEqZeroConstraint(Polynomial<TVar> polynomial)
         {
             this.eqZeroConstraints.Add(polynomial);
         }
@@ -80,11 +85,17 @@ namespace MetaOptimize
         /// Get the constraints for the encoding.
         /// </summary>
         /// <returns>The result as a Zen boolean expression.</returns>
-        public Zen<bool> Constraints()
+        public void AddConstraints()
         {
-            var leq = this.leqZeroConstraints.Select(c => c.AsZen(this.Variables) <= (Real)0).ToArray();
-            var eq = this.eqZeroConstraints.Select(c => c.AsZen(this.Variables) == (Real)0).ToArray();
-            return Zen.And(Zen.And(leq), Zen.And(eq));
+            foreach (var leqZeroConstraint in this.leqZeroConstraints)
+            {
+                this.solver.AddLeqZeroConstraint(leqZeroConstraint);
+            }
+
+            foreach (var eqZeroConstraint in this.eqZeroConstraints)
+            {
+                this.solver.AddEqZeroConstraint(eqZeroConstraint);
+            }
         }
 
         /// <summary>
@@ -92,9 +103,9 @@ namespace MetaOptimize
         /// </summary>
         /// <param name="objective">The objective.</param>
         /// <returns>The result as a Zen boolean expression.</returns>
-        public Zen<bool> MaximizationConstraints(Polynomial objective)
+        public void AddMaximizationConstraints(Polynomial<TVar> objective)
         {
-            return this.MinimizationConstraints(objective.Negate());
+            this.AddMinimizationConstraints(objective.Negate());
         }
 
         /// <summary>
@@ -102,24 +113,31 @@ namespace MetaOptimize
         /// </summary>
         /// <param name="objective">The objective.</param>
         /// <returns>The result as a Zen boolean expression.</returns>
-        public Zen<bool> MinimizationConstraints(Polynomial objective)
+        public void AddMinimizationConstraints(Polynomial<TVar> objective)
         {
-            var feasibilityConstraints = this.Constraints();
-
-            var constraints = new List<Zen<bool>>();
-
-            foreach (var leqConstraint in this.leqZeroConstraints)
+            foreach (var leqZeroConstraint in this.leqZeroConstraints)
             {
-                var lambda = Zen.Symbolic<Real>();
-                this.lambdaVariables.Add(lambda);
-
-                constraints.Add(lambda >= (Real)0);
-                constraints.Add(Zen.Or(lambda == (Real)0, leqConstraint.AsZen(this.Variables) == (Real)0));
+                this.solver.AddLeqZeroConstraint(leqZeroConstraint);
             }
 
-            foreach (var _ in this.eqZeroConstraints)
+            foreach (var eqZeroConstraint in this.eqZeroConstraints)
             {
-                this.nuVariables.Add(Zen.Symbolic<Real>());
+                this.solver.AddEqZeroConstraint(eqZeroConstraint);
+            }
+
+            for (int i = 0; i < this.leqZeroConstraints.Count; i++)
+            {
+                var leqConstraint = this.leqZeroConstraints[i];
+                var lambda = this.solver.CreateVariable("lambda_" + i);
+                this.lambdaVariables.Add(lambda);
+
+                this.solver.AddLeqZeroConstraint(new Polynomial<TVar>(new Term<TVar>(-1, lambda)));
+                this.solver.AddOrEqZeroConstraint(new Polynomial<TVar>(new Term<TVar>(1, lambda)), leqConstraint);
+            }
+
+            for (int i = 0; i < this.eqZeroConstraints.Count; i++)
+            {
+                this.nuVariables.Add(this.solver.CreateVariable("nu_" + i));
             }
 
             foreach (var variable in this.Variables)
@@ -129,24 +147,23 @@ namespace MetaOptimize
                     continue;
                 }
 
-                Zen<Real> total = objective.Derivative(variable);
+                var deriv = objective.Derivative(variable);
+                var total = new Polynomial<TVar>(new Term<TVar>(deriv));
 
                 for (int i = 0; i < this.leqZeroConstraints.Count; i++)
                 {
                     var derivative = this.leqZeroConstraints[i].Derivative(variable);
-                    total = total + derivative * this.lambdaVariables[i];
+                    total.Terms.Add(new Term<TVar>(derivative, this.lambdaVariables[i]));
                 }
 
                 for (int i = 0; i < this.eqZeroConstraints.Count; i++)
                 {
                     var derivative = this.eqZeroConstraints[i].Derivative(variable);
-                    total = total + derivative * this.nuVariables[i];
+                    total.Terms.Add(new Term<TVar>(derivative, this.nuVariables[i]));
                 }
 
-                constraints.Add(total == (Real)0);
+                this.solver.AddEqZeroConstraint(total);
             }
-
-            return Zen.And(feasibilityConstraints, Zen.And(constraints.ToArray()));
         }
     }
 }

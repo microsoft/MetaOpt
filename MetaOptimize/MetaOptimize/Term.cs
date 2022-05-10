@@ -4,23 +4,22 @@
 
 namespace MetaOptimize
 {
-    using System.Collections.Generic;
     using ZenLib;
 
     /// <summary>
     /// A polynomial term.
     /// </summary>
-    public class Term
+    public class Term<TVar>
     {
         /// <summary>
         /// The variable name.
         /// </summary>
-        public Zen<Real> Variable { get; set; }
+        public Option<TVar> Variable { get; set; }
 
         /// <summary>
         /// The coefficient for the term.
         /// </summary>
-        public Real Coefficient { get; set; }
+        public double Coefficient { get; set; }
 
         /// <summary>
         /// The exponent for the term.
@@ -28,56 +27,55 @@ namespace MetaOptimize
         public byte Exponent { get; set; }
 
         /// <summary>
-        /// Creates a new instance of the <see cref="Term"/> class.
+        /// Creates a new instance of the <see cref="Term{TVar}"/> class.
         /// </summary>
         /// <param name="coefficient">The constant coefficient.</param>
-        public Term(Real coefficient)
+        public Term(double coefficient)
         {
             this.Coefficient = coefficient;
             this.Exponent = 0;
-            this.Variable = null;
+            this.Variable = Option.None<TVar>();
         }
 
         /// <summary>
-        /// Creates a new instance of the <see cref="Term"/> class.
+        /// Creates a new instance of the <see cref="Term{TVar}"/> class.
         /// </summary>
         /// <param name="coefficient">The constant coefficient.</param>
         /// <param name="variable">The variable name.</param>
-        public Term(Real coefficient, Zen<Real> variable)
+        public Term(double coefficient, TVar variable)
         {
             this.Coefficient = coefficient;
-            this.Variable = variable;
+            this.Variable = Option.Some(variable);
             this.Exponent = 1;
         }
 
         /// <summary>
-        /// Creates a new instance of the <see cref="Term"/> class.
+        /// Creates a new instance of the <see cref="Term{TVar}"/> class.
         /// </summary>
         /// <param name="coefficient">The constant coefficient.</param>
         /// <param name="variable">The variable name.</param>
         /// <param name="exponent">The exponent.</param>
-        public Term(Real coefficient, Zen<Real> variable, byte exponent)
+        public Term(double coefficient, TVar variable, byte exponent)
         {
             this.Coefficient = coefficient;
-            this.Variable = variable;
+            this.Variable = Option.Some(variable);
             this.Exponent = exponent;
         }
 
         /// <summary>
         /// Convert this polynomial term to a Zen form.
         /// </summary>
-        /// <param name="variables">The variable mapping.</param>
         /// <returns>A real Zen expression.</returns>
-        public Zen<Real> AsZen(ISet<Zen<Real>> variables)
+        public Zen<Real> AsZen()
         {
             if (this.Exponent == 0)
             {
-                return this.Coefficient;
+                return new Real((int)this.Coefficient);
             }
 
             if (this.Exponent == 1)
             {
-                return this.Coefficient * this.Variable;
+                return new Real((int)this.Coefficient) * (dynamic)this.Variable.Value;
             }
 
             throw new System.Exception($"exponent can only be 0 or 1.");
@@ -88,9 +86,9 @@ namespace MetaOptimize
         /// </summary>
         /// <param name="variable">The variable.</param>
         /// <returns>The result as a polynomial.</returns>
-        public Real Derivative(Zen<Real> variable)
+        public double Derivative(TVar variable)
         {
-            if (this.Exponent == 0 || !this.Variable.Equals(variable))
+            if (this.Exponent == 0 || !this.Variable.HasValue || !this.Variable.Value.Equals(variable))
             {
                 return 0;
             }
@@ -104,9 +102,16 @@ namespace MetaOptimize
         /// Negate this polynomial term.
         /// </summary>
         /// <returns></returns>
-        public Term Negate()
+        public Term<TVar> Negate()
         {
-            return new Term(-1 * this.Coefficient, this.Variable, this.Exponent);
+            if (this.Variable.HasValue)
+            {
+                return new Term<TVar>(-1 * this.Coefficient, this.Variable.Value, this.Exponent);
+            }
+            else
+            {
+                return new Term<TVar>(-1 * this.Coefficient);
+            }
         }
 
         /// <summary>
@@ -121,7 +126,7 @@ namespace MetaOptimize
             }
             else
             {
-                var prefix = this.Coefficient == new Real(1) ? string.Empty : (this.Coefficient == new Real(-1) ? "-" : this.Coefficient.ToString() + "*");
+                var prefix = this.Coefficient == 1 ? string.Empty : (this.Coefficient == -1 ? "-" : this.Coefficient.ToString() + "*");
                 return $"{prefix}{this.Variable}";
             }
         }

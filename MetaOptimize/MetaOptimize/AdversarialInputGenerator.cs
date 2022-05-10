@@ -4,38 +4,41 @@
 
 namespace MetaOptimize
 {
-    using System;
-    using ZenLib;
-
     /// <summary>
     /// Meta-optimization utility functions for maximizing optimality gaps.
     /// </summary>
-    public static class AdversarialInputGenerator
+    public static class AdversarialInputGenerator<TVar, TSolution>
     {
         /// <summary>
         /// Find an adversarial input that maximizes the optimality gap between two optimizations.
         /// </summary>
         /// <param name="optimalEncoder">The optimal encoder.</param>
         /// <param name="heuristicEncoder">The heuristic encoder.</param>
-        /// <param name="relationshipConstraints">Any constraints relating variables in the two problems.</param>
         public static (OptimizationSolution, OptimizationSolution) MaximizeOptimalityGap(
-            IEncoder optimalEncoder,
-            IEncoder heuristicEncoder,
-            Func<OptimizationEncoding, OptimizationEncoding, Zen<bool>> relationshipConstraints)
+            IEncoder<TVar, TSolution> optimalEncoder,
+            IEncoder<TVar, TSolution> heuristicEncoder)
         {
             var optimalEncoding = optimalEncoder.Encoding();
             var heuristicEncoding = heuristicEncoder.Encoding();
 
-            var constraints = Zen.And(
-                optimalEncoding.OptimalConstraints,
-                heuristicEncoding.OptimalConstraints,
-                Zen.And(relationshipConstraints(optimalEncoding, heuristicEncoding)));
+            var solver = optimalEncoding.Solver;
+            solver.CombineWith(heuristicEncoding.Solver);
 
-            var objective = optimalEncoding.MaximizationObjective - heuristicEncoding.MaximizationObjective;
-            var zenSolution = Zen.Maximize(objective, constraints);
-            // var zenSolution = Zen.Solve(constraints);
+            foreach (var (pair, variable) in optimalEncoding.DemandVariables)
+            {
+                var heuristicVariable = heuristicEncoding.DemandVariables[pair];
+                solver.AddEqZeroConstraint(new Polynomial<TVar>(new Term<TVar>(1, variable), new Term<TVar>(-1, heuristicVariable)));
+            }
 
-            return (optimalEncoder.GetSolution(zenSolution), heuristicEncoder.GetSolution(zenSolution));
+            var objectiveVariable = solver.CreateVariable("objective");
+            solver.AddEqZeroConstraint(new Polynomial<TVar>(
+                new Term<TVar>(-1, objectiveVariable),
+                new Term<TVar>(1, optimalEncoding.MaximizationObjective),
+                new Term<TVar>(-1, heuristicEncoding.MaximizationObjective)));
+
+            var solution = solver.Maximize(objectiveVariable);
+
+            return (optimalEncoder.GetSolution(solution), heuristicEncoder.GetSolution(solution));
 
             /* if (!solution.IsSatisfiable())
             {

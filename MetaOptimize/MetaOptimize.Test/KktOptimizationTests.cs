@@ -20,22 +20,29 @@ namespace MetaOptimize.Test
         [TestMethod]
         public void TestMaximizeKkt1()
         {
-            var x = Zen.Symbolic<Real>("x");
-            var y = Zen.Symbolic<Real>("y");
+            var solver = new SolverZen();
+            var x = solver.CreateVariable("x");
+            var y = solver.CreateVariable("y");
 
-            var encoder = new KktOptimizationGenerator(new HashSet<Zen<Real>>() { x, y }, new HashSet<Zen<Real>>());
+            var encoder = new KktOptimizationGenerator<Zen<Real>, ZenSolution>(solver, new HashSet<Zen<Real>>() { x, y }, new HashSet<Zen<Real>>());
 
             // x + 2y == 10
-            encoder.AddEqZeroConstraint(new Polynomial(new Term(1, x), new Term(2, y), new Term(-10)));
+            encoder.AddEqZeroConstraint(new Polynomial<Zen<Real>>(new Term<Zen<Real>>(1, x), new Term<Zen<Real>>(2, y), new Term<Zen<Real>>(-10)));
 
             // x >= 0, y>= 0
-            encoder.AddLeqZeroConstraint(new Polynomial(new Term(-1, x)));
-            encoder.AddLeqZeroConstraint(new Polynomial(new Term(-1, y)));
+            encoder.AddLeqZeroConstraint(new Polynomial<Zen<Real>>(new Term<Zen<Real>>(-1, x)));
+            encoder.AddLeqZeroConstraint(new Polynomial<Zen<Real>>(new Term<Zen<Real>>(-1, y)));
 
             // maximize y - x
-            var constraints = encoder.MaximizationConstraints(new Polynomial(new Term(1, y), new Term(-1, x)));
+            encoder.AddMaximizationConstraints(new Polynomial<Zen<Real>>(new Term<Zen<Real>>(1, y), new Term<Zen<Real>>(-1, x)));
 
-            var solution = constraints.Solve();
+            // doesn't matter what we maximize here.
+            /* foreach (var c in solver.ConstraintExprs)
+            {
+                System.Console.WriteLine(c);
+            } */
+
+            var solution = solver.Maximize(solver.CreateVariable("objective"));
 
             Assert.AreEqual(0, solution.Get(x));
             Assert.AreEqual(5, solution.Get(y));

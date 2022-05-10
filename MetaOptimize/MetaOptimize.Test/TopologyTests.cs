@@ -6,7 +6,6 @@ namespace MetaOptimize.Test
 {
     using System.Linq;
     using Microsoft.VisualStudio.TestTools.UnitTesting;
-    using ZenLib;
 
     /// <summary>
     /// Some basic topology tests.

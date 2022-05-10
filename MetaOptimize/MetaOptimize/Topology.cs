@@ -204,12 +204,12 @@ namespace MetaOptimize
         /// The maximum capacity on any edge in the topology.
         /// </summary>
         /// <returns>The maximum capacity.</returns>
-        public Real TotalCapacity()
+        public double TotalCapacity()
         {
-            var totalCapacity = new Real(0);
+            double totalCapacity = 0;
             foreach (var edge in this.GetAllEdges())
             {
-                totalCapacity = totalCapacity + edge.CapacityReal;
+                totalCapacity = totalCapacity + edge.Capacity;
             }
 
             return totalCapacity;
@@ -261,11 +261,6 @@ namespace MetaOptimize
         /// The capacity of the edge.
         /// </summary>
         public double Capacity { get => this.TaggedEdge.Tag; }
-
-        /// <summary>
-        /// The capacity of the edge.
-        /// </summary>
-        public Real CapacityReal { get => new Real((int)this.TaggedEdge.Tag); }
 
         /// <summary>
         /// Equality for edges.

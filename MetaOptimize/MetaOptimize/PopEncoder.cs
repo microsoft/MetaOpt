@@ -12,7 +12,7 @@ namespace MetaOptimize
     /// <summary>
     /// The Pop encoder for splitting a network capacity into pieces.
     /// </summary>
-    public class PopEncoder : IEncoder
+    public class PopEncoder<TVar, TSolution> : IEncoder<TVar, TSolution>
     {
         /// <summary>
         /// The topology for the network.
@@ -42,16 +42,17 @@ namespace MetaOptimize
         /// <summary>
         /// The individual encoders for each partition.
         /// </summary>
-        public OptimalEncoder[] PartitionEncoders { get; set; }
+        public OptimalEncoder<TVar, TSolution>[] PartitionEncoders { get; set; }
 
         /// <summary>
-        /// Create a new instance of the <see cref="PopEncoder"/> class.
+        /// Create a new instance of the <see cref="PopEncoder{TVar, TSolution}"/> class.
         /// </summary>
+        /// <param name="solver">The solver to use.</param>
         /// <param name="topology">The network topology.</param>
         /// <param name="k">The max number of paths between nodes.</param>
         /// <param name="numPartitions">The number of partitions.</param>
         /// <param name="demandPartitions">The demand partitions.</param>
-        public PopEncoder(Topology topology, int k, int numPartitions, IDictionary<(string, string), int> demandPartitions)
+        public PopEncoder(Func<ISolver<TVar, TSolution>> solver, Topology topology, int k, int numPartitions, IDictionary<(string, string), int> demandPartitions)
         {
             if (numPartitions <= 0)
             {
@@ -64,21 +65,21 @@ namespace MetaOptimize
             this.NumPartitions = numPartitions;
             this.DemandPartitions = demandPartitions;
 
-            this.PartitionEncoders = new OptimalEncoder[this.NumPartitions];
+            this.PartitionEncoders = new OptimalEncoder<TVar, TSolution>[this.NumPartitions];
 
             for (int i = 0; i < this.NumPartitions; i++)
             {
-                var demandConstraints = new Dictionary<(string, string), Real>();
+                var demandConstraints = new Dictionary<(string, string), double>();
 
                 foreach (var demand in this.DemandPartitions)
                 {
                     if (demand.Value != i)
                     {
-                        demandConstraints[demand.Key] = new Real(0);
+                        demandConstraints[demand.Key] = 0;
                     }
                 }
 
-                this.PartitionEncoders[i] = new OptimalEncoder(this.ReducedTopology, this.K, demandConstraints);
+                this.PartitionEncoders[i] = new OptimalEncoder<TVar, TSolution>(solver(), this.ReducedTopology, this.K, demandConstraints);
             }
         }
 
@@ -86,27 +87,55 @@ namespace MetaOptimize
         /// Encode the problem.
         /// </summary>
         /// <returns>The constraints and maximization objective.</returns>
-        public OptimizationEncoding Encoding()
+        public OptimizationEncoding<TVar, TSolution> Encoding()
         {
-            var encodings = new OptimizationEncoding[NumPartitions];
+            var encodings = new OptimizationEncoding<TVar, TSolution>[NumPartitions];
 
+            // get all the separate encodings.
             for (int i = 0; i < this.NumPartitions; i++)
             {
                 encodings[i] = this.PartitionEncoders[i].Encoding();
             }
 
-            var demandExpressions = new Dictionary<(string, string), Zen<Real>>();
-            foreach (var pair in this.Topology.GetNodePairs())
+            // combine all the separate solvers.
+            var solver = this.PartitionEncoders[0].Solver;
+            for (int i = 1; i < this.NumPartitions; i++)
             {
-                demandExpressions[pair] = this.PartitionEncoders.Select(e => e.DemandVariables[pair]).Aggregate(Zen.Plus);
+                solver.CombineWith(this.PartitionEncoders[i].Solver);
             }
 
-            return new OptimizationEncoding
+            // create new demand variables as the sum of the individual partitions.
+            var demandVariables = new Dictionary<(string, string), TVar>();
+            foreach (var pair in this.Topology.GetNodePairs())
             {
-                FeasibilityConstraints = encodings.Select(x => x.FeasibilityConstraints).Aggregate(Zen.And),
-                OptimalConstraints = encodings.Select(x => x.OptimalConstraints).Aggregate(Zen.And),
-                MaximizationObjective = encodings.Select(x => x.MaximizationObjective).Aggregate(Zen.Plus),
-                DemandExpressions = demandExpressions,
+                var demandVariable = solver.CreateVariable("demand_pop_" + pair.Item1 + "_" + pair.Item2);
+                var polynomial = new Polynomial<TVar>(new Term<TVar>(-1, demandVariable));
+
+                foreach (var encoder in this.PartitionEncoders)
+                {
+                    polynomial.Terms.Add(new Term<TVar>(1, encoder.DemandVariables[pair]));
+                }
+
+                solver.AddEqZeroConstraint(polynomial);
+
+                demandVariables[pair] = demandVariable;
+            }
+
+            // compute the objective to optimize.
+            var objectiveVariable = solver.CreateVariable("objective_pop");
+            var objective = new Polynomial<TVar>(new Term<TVar>(-1, objectiveVariable));
+            foreach (var encoding in encodings)
+            {
+                objective.Terms.Add(new Term<TVar>(1, encoding.MaximizationObjective));
+            }
+
+            solver.AddEqZeroConstraint(objective);
+
+            return new OptimizationEncoding<TVar, TSolution>
+            {
+                Solver = solver,
+                MaximizationObjective = objectiveVariable,
+                DemandVariables = demandVariables,
             };
         }
 
@@ -114,11 +143,11 @@ namespace MetaOptimize
         /// Get the optimization solution from the solver solution.
         /// </summary>
         /// <param name="solution">The solution.</param>
-        public OptimizationSolution GetSolution(ZenSolution solution)
+        public OptimizationSolution GetSolution(TSolution solution)
         {
-            var demands = new Dictionary<(string, string), Real>();
-            var flows = new Dictionary<(string, string), Real>();
-            var flowPaths = new Dictionary<string[], Real>(new PathComparer());
+            var demands = new Dictionary<(string, string), double>();
+            var flows = new Dictionary<(string, string), double>();
+            var flowPaths = new Dictionary<string[], double>(new PathComparer());
 
             var solutions = this.PartitionEncoders.Select(e => e.GetSolution(solution)).ToList();
 

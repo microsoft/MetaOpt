@@ -5,31 +5,25 @@
 namespace MetaOptimize
 {
     using System.Collections.Generic;
-    using ZenLib;
 
     /// <summary>
     /// The encoding of an optimization.
     /// </summary>
-    public class OptimizationEncoding
+    public class OptimizationEncoding<TVar, TSolution>
     {
         /// <summary>
-        /// The feasibility constraints for the encoding.
+        /// The constraint solver implementation.
         /// </summary>
-        public Zen<bool> FeasibilityConstraints { get; set; }
-
-        /// <summary>
-        /// The optimality constraints based on the KKT conditions.
-        /// </summary>
-        public Zen<bool> OptimalConstraints { get; set; }
+        public ISolver<TVar, TSolution> Solver { get; set; }
 
         /// <summary>
         /// The maximization objective.
         /// </summary>
-        public Zen<Real> MaximizationObjective { get; set; }
+        public TVar MaximizationObjective { get; set; }
 
         /// <summary>
         /// The demand expression for any pair of nodes.
         /// </summary>
-        public IDictionary<(string, string), Zen<Real>> DemandExpressions { get; set; }
+        public IDictionary<(string, string), TVar> DemandVariables { get; set; }
     }
 }

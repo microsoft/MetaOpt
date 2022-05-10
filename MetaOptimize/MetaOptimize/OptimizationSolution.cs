@@ -5,7 +5,6 @@
 namespace MetaOptimize
 {
     using System.Collections.Generic;
-    using ZenLib;
 
     /// <summary>
     /// A solution to an optimization problem.
@@ -15,21 +14,21 @@ namespace MetaOptimize
         /// <summary>
         /// The total demand met by the optimization.
         /// </summary>
-        public Real TotalDemandMet { get; set; }
+        public double TotalDemandMet { get; set; }
 
         /// <summary>
         /// The demands for the problem.
         /// </summary>
-        public IDictionary<(string, string), Real> Demands { get; set; }
+        public IDictionary<(string, string), double> Demands { get; set; }
 
         /// <summary>
         /// The flow allocation for the problem.
         /// </summary>
-        public IDictionary<(string, string), Real> Flows { get; set; }
+        public IDictionary<(string, string), double> Flows { get; set; }
 
         /// <summary>
         /// The flow path allocation for the problem.
         /// </summary>
-        public IDictionary<string[], Real> FlowsPaths { get; set; }
+        public IDictionary<string[], double> FlowsPaths { get; set; }
     }
 }
