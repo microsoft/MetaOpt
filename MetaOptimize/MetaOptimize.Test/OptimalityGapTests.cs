@@ -19,7 +19,7 @@ namespace MetaOptimize.Test
         /// Test that the optimality encoder works for a topology with one edge.
         /// </summary>
         [TestMethod]
-        public void TestOptimialityGap()
+        public void TestOptimialityGapWithZen()
         {
             var topology = new Topology();
             topology.AddNode("a");

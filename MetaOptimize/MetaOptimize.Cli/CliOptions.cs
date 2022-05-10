@@ -29,9 +29,9 @@ namespace MetaOptimize.Cli
         public Heuristic Heuristic { get; set; }
 
         /// <summary>
-        /// The solver we want to use, default to Zen.
+        /// The solver we want to use.
         /// </summary>
-        [Option('c', "solver choice", Required = false, HelpText = "The solver that we want to use (Gurobi | Zen)")]
+        [Option('c', "solver choice", Required = true, HelpText = "The solver that we want to use (Gurobi | Zen)")]
         public SolverChoice SolverChoice { get; set; }
 
         /// <summary>

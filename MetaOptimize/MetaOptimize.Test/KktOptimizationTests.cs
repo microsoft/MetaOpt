@@ -20,7 +20,8 @@ namespace MetaOptimize.Test
         [TestMethod]
         public void TestMaximizeKktUsingZen1()
         {
-            // Choose Solver and set variables.
+            // Choose Solver and initialize variables.
+
             var solver = new SolverZen();
             var x = solver.CreateVariable("x");
             var y = solver.CreateVariable("y");
