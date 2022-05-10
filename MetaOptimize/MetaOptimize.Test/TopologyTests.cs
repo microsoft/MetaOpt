@@ -28,7 +28,7 @@ namespace MetaOptimize.Test
             topology.AddEdge("a", "c", capacity: 10);
             topology.AddEdge("b", "d", capacity: 10);
             topology.AddEdge("c", "d", capacity: 10);
-            // Gets all simple paths between two nodes.
+
             var paths = topology.SimplePaths("a", "d").ToArray();
 
             Assert.AreEqual(2, paths.Length);
