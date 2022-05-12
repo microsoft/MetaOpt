@@ -93,11 +93,15 @@ namespace MetaOptimize
         public GRBVar CreateVariable(string name)
         {
             GRBVar variable;
+            if (name == "")
+            {
+                throw new Exception("bug");
+            }
             try
             {
-                string new_name = name + "_index_" + this._variables.Count;
+                string new_name = name + "_" + this._variables.Count;
                 variable = _model.AddVar(
-                    0, Double.MaxValue, 0, GRB.CONTINUOUS,
+                    -1 * Math.Pow(10, 10), Math.Pow(10, 10), 0, GRB.CONTINUOUS,
                     new_name);
                 this._variables.Add(variable);
                 this._varNames.Add(new_name);
@@ -131,18 +135,6 @@ namespace MetaOptimize
             return obj;
         }
         /// <summary>
-        /// Get the resulting value assigned to a variable.
-        /// todo: wasn't sure how to handle the extra input,
-        /// so for now set it as a useless string.
-        /// </summary>
-        /// <param name="varName">the name of the variable.</param>
-        /// <param name="variable">The variable.</param>
-        /// <returns>The value as a double.</returns>
-        public double GetVariable(string varName, GRBVar variable)
-        {
-            return variable.X;
-        }
-        /// <summary>
         /// wrapper that does type conversions then calls the original function.
         /// </summary>
         /// <param name="polynomial"></param>
@@ -158,7 +150,7 @@ namespace MetaOptimize
         public void AddLeqZeroConstraint(GRBLinExpr polynomial)
         {
             this._model.AddConstr(polynomial, GRB.LESS_EQUAL,
-                (Double)0, "ineq_index:" + this._constraintIneq.Count);
+                (Double)0, "ineq_index_" + this._constraintIneq.Count);
             this._constraintIneq.Add(polynomial);
         }
         /// <summary>
@@ -185,7 +177,7 @@ namespace MetaOptimize
         public void AddEqZeroConstraint(GRBLinExpr polynomial)
         {
             this._model.AddConstr(polynomial, GRB.EQUAL,
-                (Double)0, "eq_index:" + this._constraintEq.Count);
+                (Double)0, "eq_index_" + this._constraintEq.Count);
             this._constraintEq.Add(polynomial);
         }
         /// <summary>
@@ -229,15 +221,14 @@ namespace MetaOptimize
             // Create an auxilary variable for each polynomial
             // Add it to the list of auxilary variables.
             var var_1 = this._model.AddVar(
-                    0, Double.MaxValue, 0, GRB.CONTINUOUS, "index:" + this._auxilaryVars.Count);
-            this._auxiliaryVarNames.Add("index:" + this._auxilaryVars.Count);
+                    -1 * Math.Pow(10, 10), Math.Pow(10, 10), 0, GRB.CONTINUOUS, "aux_" + this._auxilaryVars.Count);
+            this._auxiliaryVarNames.Add("aux_" + this._auxilaryVars.Count);
             this._auxilaryVars.Add(var_1);
             var var_2 = this._model.AddVar(
-                    0, Double.MaxValue, 0, GRB.CONTINUOUS, "index:" + this._auxilaryVars.Count);
-            this._auxiliaryVarNames.Add("index:" + this._auxilaryVars.Count);
+                    -1 * Math.Pow(10, 10), Math.Pow(10, 10), 0, GRB.CONTINUOUS, "aux_" + this._auxilaryVars.Count);
+            this._auxiliaryVarNames.Add("aux_" + this._auxilaryVars.Count);
             this._auxilaryVars.Add(var_2);
             GRBVar[] auxilaries = new GRBVar[] { var_1, var_2 };
-            double[] weights = new double[] { 0, 1 };
 
             // Create constraints that ensure the auxilary variables are equal
             // to the value of the polynomials.
@@ -248,6 +239,8 @@ namespace MetaOptimize
             this.AddEqZeroConstraint(polynomial1);
             this.AddEqZeroConstraint(polynomial2);
             // Add SOS constraint.
+            this._model.AddSOS(auxilaries, auxilaries.Select((x, i) => (Double)i).ToArray(),
+                        GRB.SOS_TYPE1);
             this._SOSauxilaries.Add(auxilaries);
         }
         /// <summary>
@@ -269,12 +262,12 @@ namespace MetaOptimize
                 // Warning: assumes all variables are of the same type.
                 foreach (var name in s._varNames)
                 {
-                    this._variables.Add(this._model.AddVar(0, Double.MaxValue, 0, GRB.CONTINUOUS,
+                    this._variables.Add(this._model.AddVar(-1 * Math.Pow(10, 10), Math.Pow(10, 10), 0, GRB.CONTINUOUS,
                         name));
                 }
                 foreach (var name in s._auxiliaryVarNames)
                 {
-                    this._auxilaryVars.Add(this._model.AddVar(0, Double.MaxValue, 0, GRB.CONTINUOUS,
+                    this._auxilaryVars.Add(this._model.AddVar(-1 * Math.Pow(10, 10), Math.Pow(10, 10), 0, GRB.CONTINUOUS,
                         name));
                 }
                 foreach (var constraint in s._constraintIneq)
@@ -321,6 +314,7 @@ namespace MetaOptimize
             this._model.SetObjective(obj, GRB.MAXIMIZE);
             this._model.Optimize();
             this._modelRun = true;
+            this._model.Write("model.lp");
             return this._model;
         }
         /// <summary>
