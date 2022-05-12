@@ -5,6 +5,8 @@
 namespace MetaOptimize.Test
 {
     using System;
+    using System.Threading.Tasks.Dataflow;
+    using Gurobi;
     using Microsoft.VisualStudio.TestTools.UnitTesting;
     using ZenLib;
 
@@ -44,8 +46,20 @@ namespace MetaOptimize.Test
             Assert.AreEqual(10, optimizationSolution.Flows[("a", "b")]);
             Assert.AreEqual(0, optimizationSolution.Demands[("b", "a")]);
             Assert.AreEqual(0, optimizationSolution.Flows[("b", "a")]);
-        }
 
+            // Test Gurobi now
+            var solverG = new SolverGuroubi();
+            var optimalEncoderG = new OptimalEncoder<GRBVar, GRBModel>(solverG, topology, k: 1);
+            var encodingG = optimalEncoderG.Encoding();
+            var solverSolutionG = encodingG.Solver.Maximize(encodingG.MaximizationObjective);
+            var optimizationSolutionG = optimalEncoderG.GetSolution(solverSolutionG);
+
+            Assert.AreEqual(10, optimizationSolutionG.TotalDemandMet);
+            Assert.AreEqual(10, optimizationSolutionG.Demands[("a", "b")]);
+            Assert.AreEqual(10, optimizationSolutionG.Flows[("a", "b")]);
+            Assert.AreEqual(0, optimizationSolutionG.Demands[("b", "a")]);
+            Assert.AreEqual(0, optimizationSolutionG.Flows[("b", "a")]);
+        }
         /// <summary>
         /// Test that the optimal encoder works with a diamond topology.
         /// </summary>
