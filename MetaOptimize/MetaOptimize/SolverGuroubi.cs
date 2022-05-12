@@ -13,7 +13,7 @@ namespace MetaOptimize
     /// <summary>
     /// Gurobi solver.
     /// Todo: may need to rethink the second argument to the class.
-    /// Right now assuming we have a dictionary that maps var names to 
+    /// Right now assuming we have a dictionary that maps var names to
     /// guroubi variables.
     /// </summary>
     public class SolverGuroubi : ISolver<GRBVar, SolverGuroubi>
