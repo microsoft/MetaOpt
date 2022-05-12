@@ -37,4 +37,10 @@
       <_Parameter1>$(MSBuildProjectName)Tests</_Parameter1>
     </AssemblyAttribute>
   </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="gurobi95.netstandard20">
+      <HintPath>C:\gurobi951\win64\lib\gurobi95.netstandard20.dll</HintPath>
+    </Reference>
+  </ItemGroup>
 </Project>
