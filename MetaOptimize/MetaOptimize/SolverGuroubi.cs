@@ -50,7 +50,7 @@ namespace MetaOptimize
         /// <summary>
         /// The gurobi model.
         /// </summary>
-        public GRBModel _model;
+        public GRBModel _model = null;
 
         /// <summary>
         /// Connects to Ishai's guroubi license.
@@ -70,8 +70,14 @@ namespace MetaOptimize
         /// </summary>
         public SolverGuroubi()
         {
-            this._env = SetupGurobi();
-            this._model = new GRBModel(this._env);
+            if (this._env == null)
+            {
+                this._env = SetupGurobi();
+            }
+            if (this._model == null)
+            {
+                this._model = new GRBModel(this._env);
+            }
         }
         /// <summary>
         /// Create a new variable with a given name.
@@ -80,7 +86,15 @@ namespace MetaOptimize
         /// <returns>The solver variable.</returns>
         public GRBVar CreateVariable(string name)
         {
-            var variable = this._model.AddVar(
+            if (this._env == null)
+            {
+                this._env = SetupGurobi();
+            }
+            if (this._model == null)
+            {
+                this._model = new GRBModel(this._env);
+            }
+            GRBVar variable = this._model.AddVar(
                     Double.MinValue, Double.MaxValue, 0, GRB.CONTINUOUS,
                     name + "_index_" + this._variables.Count);
             this._variables.Add(variable);
@@ -96,7 +110,7 @@ namespace MetaOptimize
             GRBLinExpr obj = 0;
             foreach (var term in poly.Terms)
             {
-                obj.AddTerm(term.Coefficient, term.Variable.Value);
+                obj.AddTerm(term.Coefficient, (dynamic)term.Variable.Value);
             }
             return obj;
         }
@@ -118,8 +132,16 @@ namespace MetaOptimize
         /// <param name="polynomial"></param>
         public void AddLeqZeroConstraint(Polynomial<GRBVar> polynomial)
         {
-            GRBLinExpr poly = convertPolynomialToLinExpr(polynomial);
-            AddLeqZeroConstraint(poly);
+            if (this._env == null)
+            {
+                this._env = SetupGurobi();
+            }
+            if (this._model == null)
+            {
+                this._model = new GRBModel(this._env);
+            }
+            GRBLinExpr poly = this.convertPolynomialToLinExpr(polynomial);
+            this.AddLeqZeroConstraint(poly);
         }
         /// <summary>
         /// Add a less than or equal to zero constraint.
@@ -136,8 +158,16 @@ namespace MetaOptimize
         /// <param name="polynomial"></param>
         public void AddEqZeroConstraint(Polynomial<GRBVar> polynomial)
         {
-            GRBLinExpr poly = convertPolynomialToLinExpr(polynomial);
-            AddEqZeroConstraint(poly);
+            if (this._env == null)
+            {
+                this._env = SetupGurobi();
+            }
+            if (this._model == null)
+            {
+                this._model = new GRBModel(this._env);
+            }
+            GRBLinExpr poly = this.convertPolynomialToLinExpr(polynomial);
+            this.AddEqZeroConstraint(poly);
         }
         /// <summary>
         /// Add a equal to zero constraint.
@@ -145,6 +175,14 @@ namespace MetaOptimize
         /// <param name="polynomial">The polynomial.</param>
         public void AddEqZeroConstraint(GRBLinExpr polynomial)
         {
+            if (this._env == null)
+            {
+                this._env = SetupGurobi();
+            }
+            if (this._model == null)
+            {
+                this._model = new GRBModel(this._env);
+            }
             this._constraintEq.Add(this._model.AddConstr(polynomial, GRB.EQUAL,
                 (Double)0, "eq_index:" + this._constraintEq.Count));
         }
@@ -156,9 +194,17 @@ namespace MetaOptimize
         /// <param name="polynomial2"></param>
         public void AddOrEqZeroConstraint(Polynomial<GRBVar> polynomial1, Polynomial<GRBVar> polynomial2)
         {
-            GRBLinExpr poly1 = convertPolynomialToLinExpr(polynomial1);
-            GRBLinExpr poly2 = convertPolynomialToLinExpr(polynomial2);
-            AddOrEqZeroConstraint(poly1, poly2);
+            if (this._env == null)
+            {
+                this._env = SetupGurobi();
+            }
+            if (this._model == null)
+            {
+                this._model = new GRBModel(this._env);
+            }
+            GRBLinExpr poly1 = this.convertPolynomialToLinExpr(polynomial1);
+            GRBLinExpr poly2 = this.convertPolynomialToLinExpr(polynomial2);
+            this.AddOrEqZeroConstraint(poly1, poly2);
         }
         /// <summary>
         /// Add or equals zero.
@@ -170,6 +216,14 @@ namespace MetaOptimize
         /// <param name="polynomial2">The second polynomial.</param>
         public void AddOrEqZeroConstraint(GRBLinExpr polynomial1, GRBLinExpr polynomial2)
         {
+            if (this._env == null)
+            {
+                this._env = SetupGurobi();
+            }
+            if (this._model == null)
+            {
+                this._model = new GRBModel(this._env);
+            }
             // Create an auxilary variable for each polynomial
             // Add it to the list of auxilary variables.
             var var_1 = this._model.AddVar(
@@ -203,6 +257,14 @@ namespace MetaOptimize
         /// <param name="otherSolver">The other solver.</param>
         public void CombineWith(ISolver<GRBVar, SolverGuroubi> otherSolver)
         {
+            if (this._env == null)
+            {
+                this._env = SetupGurobi();
+            }
+            if (this._model == null)
+            {
+                this._model = new GRBModel(this._env);
+            }
             if (otherSolver is SolverGuroubi s)
             {
                 // Warning: assumes all variables are of the same type.
@@ -245,6 +307,14 @@ namespace MetaOptimize
         /// <returns>A solution.</returns>
         public SolverGuroubi Maximize(GRBVar objectiveVariable)
         {
+            if (this._env == null)
+            {
+                this._env = SetupGurobi();
+            }
+            if (this._model == null)
+            {
+                this._model = new GRBModel(this._env);
+            }
             GRBLinExpr obj = 0;
             obj.AddTerm(1.0, objectiveVariable);
             this._model.SetObjective(obj, GRB.MAXIMIZE);
