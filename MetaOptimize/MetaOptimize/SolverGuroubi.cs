@@ -101,7 +101,7 @@ namespace MetaOptimize
             {
                 string new_name = name + "_" + this._variables.Count;
                 variable = _model.AddVar(
-                    -1 * Math.Pow(10, 10), Math.Pow(10, 10), 0, GRB.CONTINUOUS,
+                    Double.MinValue, Double.MaxValue, 0, GRB.CONTINUOUS,
                     new_name);
                 this._variables.Add(variable);
                 this._varNames.Add(new_name);
@@ -159,14 +159,6 @@ namespace MetaOptimize
         /// <param name="polynomial"></param>
         public void AddEqZeroConstraint(Polynomial<GRBVar> polynomial)
         {
-            if (this._env == null)
-            {
-                this._env = SetupGurobi();
-            }
-            if (this._model == null)
-            {
-                this._model = new GRBModel(this._env);
-            }
             GRBLinExpr poly = this.convertPolynomialToLinExpr(polynomial);
             this.AddEqZeroConstraint(poly);
         }
@@ -188,14 +180,6 @@ namespace MetaOptimize
         /// <param name="polynomial2"></param>
         public void AddOrEqZeroConstraint(Polynomial<GRBVar> polynomial1, Polynomial<GRBVar> polynomial2)
         {
-            if (this._env == null)
-            {
-                this._env = SetupGurobi();
-            }
-            if (this._model == null)
-            {
-                this._model = new GRBModel(this._env);
-            }
             GRBLinExpr poly1 = this.convertPolynomialToLinExpr(polynomial1);
             GRBLinExpr poly2 = this.convertPolynomialToLinExpr(polynomial2);
             this.AddOrEqZeroConstraint(poly1, poly2);
@@ -210,22 +194,14 @@ namespace MetaOptimize
         /// <param name="polynomial2">The second polynomial.</param>
         public void AddOrEqZeroConstraint(GRBLinExpr polynomial1, GRBLinExpr polynomial2)
         {
-            if (this._env == null)
-            {
-                this._env = SetupGurobi();
-            }
-            if (this._model == null)
-            {
-                this._model = new GRBModel(this._env);
-            }
             // Create an auxilary variable for each polynomial
             // Add it to the list of auxilary variables.
             var var_1 = this._model.AddVar(
-                    -1 * Math.Pow(10, 10), Math.Pow(10, 10), 0, GRB.CONTINUOUS, "aux_" + this._auxilaryVars.Count);
+                    Double.MinValue, Double.MaxValue, 0, GRB.CONTINUOUS, "aux_" + this._auxilaryVars.Count);
             this._auxiliaryVarNames.Add("aux_" + this._auxilaryVars.Count);
             this._auxilaryVars.Add(var_1);
             var var_2 = this._model.AddVar(
-                    -1 * Math.Pow(10, 10), Math.Pow(10, 10), 0, GRB.CONTINUOUS, "aux_" + this._auxilaryVars.Count);
+                    Double.MinValue, Double.MaxValue, 0, GRB.CONTINUOUS, "aux_" + this._auxilaryVars.Count);
             this._auxiliaryVarNames.Add("aux_" + this._auxilaryVars.Count);
             this._auxilaryVars.Add(var_2);
             GRBVar[] auxilaries = new GRBVar[] { var_1, var_2 };
@@ -262,8 +238,7 @@ namespace MetaOptimize
                 // Warning: assumes all variables are of the same type.
                 foreach (var name in s._varNames)
                 {
-                    this._variables.Add(this._model.AddVar(-1 * Math.Pow(10, 10), Math.Pow(10, 10), 0, GRB.CONTINUOUS,
-                        name));
+                    this.CreateVariable(name);
                 }
                 foreach (var name in s._auxiliaryVarNames)
                 {
@@ -272,15 +247,11 @@ namespace MetaOptimize
                 }
                 foreach (var constraint in s._constraintIneq)
                 {
-                    this._model.AddConstr(constraint, GRB.LESS_EQUAL,
-                        0, "ineq_index:" + this._constraintIneq.Count);
-                    this._constraintIneq.Add(constraint);
+                    this.AddLeqZeroConstraint(constraint);
                 }
                 foreach (var constraint in s._constraintEq)
                 {
-                    this._model.AddConstr(constraint, GRB.EQUAL, 0,
-                        "eq_index:" + this._constraintEq.Count);
-                    this._constraintEq.Add(constraint);
+                    this.AddEqZeroConstraint(constraint);
                 }
                 foreach (var aux in s._SOSauxilaries)
                 {
