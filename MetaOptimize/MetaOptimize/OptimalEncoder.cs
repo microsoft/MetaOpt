@@ -228,7 +228,6 @@ namespace MetaOptimize
             // Return the encoding, including the feasibility constraints, objective, and KKT conditions.
             return new OptimizationEncoding<TVar, TSolution>
             {
-                Solver = this.Solver,
                 MaximizationObjective = this.TotalDemandMetVariable,
                 DemandVariables = this.DemandVariables,
             };

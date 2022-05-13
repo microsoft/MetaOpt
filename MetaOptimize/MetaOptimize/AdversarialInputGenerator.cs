@@ -21,8 +21,12 @@ namespace MetaOptimize
             var optimalEncoding = optimalEncoder.Encoding();
             var heuristicEncoding = heuristicEncoder.Encoding();
 
-            var solver = optimalEncoding.Solver;
-            solver.CombineWith(heuristicEncoding.Solver);
+            if (optimalEncoder.Solver != heuristicEncoder.Solver)
+            {
+                throw new System.Exception("Solver mismatch between optimal and heuristic encoders.");
+            }
+
+            var solver = optimalEncoder.Solver;
 
             foreach (var (pair, variable) in optimalEncoding.DemandVariables)
             {

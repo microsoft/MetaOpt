@@ -12,11 +12,6 @@ namespace MetaOptimize
     public class OptimizationEncoding<TVar, TSolution>
     {
         /// <summary>
-        /// The constraint solver implementation.
-        /// </summary>
-        public ISolver<TVar, TSolution> Solver { get; set; }
-
-        /// <summary>
         /// The maximization objective.
         /// </summary>
         public TVar MaximizationObjective { get; set; }

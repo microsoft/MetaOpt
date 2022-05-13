@@ -15,6 +15,11 @@ namespace MetaOptimize
     public class PopEncoder<TVar, TSolution> : IEncoder<TVar, TSolution>
     {
         /// <summary>
+        /// The solver being used.
+        /// </summary>
+        public ISolver<TVar, TSolution> Solver { get; set; }
+
+        /// <summary>
         /// The topology for the network.
         /// </summary>
         public Topology Topology { get; set; }
@@ -52,13 +57,14 @@ namespace MetaOptimize
         /// <param name="k">The max number of paths between nodes.</param>
         /// <param name="numPartitions">The number of partitions.</param>
         /// <param name="demandPartitions">The demand partitions.</param>
-        public PopEncoder(Func<ISolver<TVar, TSolution>> solver, Topology topology, int k, int numPartitions, IDictionary<(string, string), int> demandPartitions)
+        public PopEncoder(ISolver<TVar, TSolution> solver, Topology topology, int k, int numPartitions, IDictionary<(string, string), int> demandPartitions)
         {
             if (numPartitions <= 0)
             {
                 throw new ArgumentOutOfRangeException("Partitions must be greater than zero.");
             }
 
+            this.Solver = solver;
             this.Topology = topology;
             this.K = k;
             this.ReducedTopology = topology.SplitCapacity(numPartitions);
@@ -79,7 +85,7 @@ namespace MetaOptimize
                     }
                 }
 
-                this.PartitionEncoders[i] = new OptimalEncoder<TVar, TSolution>(solver(), this.ReducedTopology, this.K, demandConstraints);
+                this.PartitionEncoders[i] = new OptimalEncoder<TVar, TSolution>(solver, this.ReducedTopology, this.K, demandConstraints);
             }
         }
 
@@ -97,18 +103,11 @@ namespace MetaOptimize
                 encodings[i] = this.PartitionEncoders[i].Encoding();
             }
 
-            // combine all the separate solvers.
-            var solver = this.PartitionEncoders[0].Solver;
-            for (int i = 1; i < this.NumPartitions; i++)
-            {
-                solver.CombineWith(this.PartitionEncoders[i].Solver);
-            }
-
             // create new demand variables as the sum of the individual partitions.
             var demandVariables = new Dictionary<(string, string), TVar>();
             foreach (var pair in this.Topology.GetNodePairs())
             {
-                var demandVariable = solver.CreateVariable("demand_pop_" + pair.Item1 + "_" + pair.Item2);
+                var demandVariable = this.Solver.CreateVariable("demand_pop_" + pair.Item1 + "_" + pair.Item2);
                 var polynomial = new Polynomial<TVar>(new Term<TVar>(-1, demandVariable));
 
                 foreach (var encoder in this.PartitionEncoders)
@@ -116,24 +115,23 @@ namespace MetaOptimize
                     polynomial.Terms.Add(new Term<TVar>(1, encoder.DemandVariables[pair]));
                 }
 
-                solver.AddEqZeroConstraint(polynomial);
+                this.Solver.AddEqZeroConstraint(polynomial);
 
                 demandVariables[pair] = demandVariable;
             }
 
             // compute the objective to optimize.
-            var objectiveVariable = solver.CreateVariable("objective_pop");
+            var objectiveVariable = this.Solver.CreateVariable("objective_pop");
             var objective = new Polynomial<TVar>(new Term<TVar>(-1, objectiveVariable));
             foreach (var encoding in encodings)
             {
                 objective.Terms.Add(new Term<TVar>(1, encoding.MaximizationObjective));
             }
 
-            solver.AddEqZeroConstraint(objective);
+            this.Solver.AddEqZeroConstraint(objective);
 
             return new OptimizationEncoding<TVar, TSolution>
             {
-                Solver = solver,
                 MaximizationObjective = objectiveVariable,
                 DemandVariables = demandVariables,
             };
