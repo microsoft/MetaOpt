@@ -20,7 +20,7 @@ namespace MetaOptimize.Test
         /// Test that the optimality encoder works for a topology with one edge.
         /// </summary>
         [TestMethod]
-        public void TestOptimalityGapSimpleWithZen()
+        public void TestOptimalityGapSimple()
         {
             var topology = new Topology();
             topology.AddNode("a");
@@ -55,16 +55,16 @@ namespace MetaOptimize.Test
             var optimizationSolutionG = optimalEncoderG.GetSolution(solverSolutionG);
 
             Assert.AreEqual(10, optimizationSolutionG.TotalDemandMet);
-            Assert.AreEqual(10, optimizationSolutionG.Demands[("a", "b")]);
+            Assert.IsTrue(10 <= optimizationSolutionG.Demands[("a", "b")]);
             Assert.AreEqual(10, optimizationSolutionG.Flows[("a", "b")]);
-            Assert.AreEqual(0, optimizationSolutionG.Demands[("b", "a")]);
+            Assert.IsTrue(0 <= optimizationSolutionG.Demands[("b", "a")]);
             Assert.AreEqual(0, optimizationSolutionG.Flows[("b", "a")]);
         }
         /// <summary>
         /// Test that the optimal encoder works with a diamond topology.
         /// </summary>
         [TestMethod]
-        public void TestOptimalityGapDiamondWithZen()
+        public void TestOptimalityGapDiamond()
         {
             var topology = new Topology();
             topology.AddNode("a");
@@ -91,13 +91,28 @@ namespace MetaOptimize.Test
             Console.WriteLine(Newtonsoft.Json.JsonConvert.SerializeObject(optimizationSolution, Newtonsoft.Json.Formatting.Indented)); */
 
             Assert.AreEqual(40, optimizationSolution.TotalDemandMet);
-            Assert.AreEqual(10, optimizationSolution.Demands[("a", "b")]);
+            Assert.IsTrue(10 <= optimizationSolution.Demands[("a", "b")]);
             Assert.AreEqual(10, optimizationSolution.Flows[("a", "b")]);
-            Assert.AreEqual(10, optimizationSolution.Demands[("a", "c")]);
+            Assert.IsTrue(10 <= optimizationSolution.Demands[("a", "c")]);
             Assert.AreEqual(10, optimizationSolution.Flows[("a", "c")]);
-            Assert.AreEqual(10, optimizationSolution.Demands[("b", "d")]);
+            Assert.IsTrue(10 <= optimizationSolution.Demands[("b", "d")]);
             Assert.AreEqual(10, optimizationSolution.Flows[("c", "d")]);
             Assert.AreEqual(0, optimizationSolution.Flows[("a", "d")]);
+
+            var solverG = new SolverGuroubi();
+            var optimalEncoderG = new OptimalEncoder<GRBVar, GRBModel>(solverG, topology, k: 1);
+            var encodingG = optimalEncoderG.Encoding();
+            var solverSolutionG = encodingG.Solver.Maximize(encodingG.MaximizationObjective);
+            var optimizationSolutionG = optimalEncoderG.GetSolution(solverSolutionG);
+
+            Assert.AreEqual(40, optimizationSolutionG.TotalDemandMet);
+            Assert.IsTrue(10 <= optimizationSolutionG.Demands[("a", "b")]);
+            Assert.AreEqual(10, optimizationSolutionG.Flows[("a", "b")]);
+            Assert.IsTrue(10 <= optimizationSolutionG.Demands[("a", "c")]);
+            Assert.AreEqual(10, optimizationSolutionG.Flows[("a", "c")]);
+            Assert.IsTrue(10 <= optimizationSolutionG.Demands[("b", "d")]);
+            Assert.AreEqual(10, optimizationSolutionG.Flows[("c", "d")]);
+            Assert.AreEqual(0, optimizationSolutionG.Flows[("a", "d")]);
         }
     }
 }

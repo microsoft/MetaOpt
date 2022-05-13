@@ -272,14 +272,6 @@ namespace MetaOptimize
         /// <returns>A solution.</returns>
         public GRBModel Maximize(GRBVar objectiveVariable)
         {
-            if (this._env == null)
-            {
-                this._env = SetupGurobi();
-            }
-            if (this._model == null)
-            {
-                this._model = new GRBModel(this._env);
-            }
             GRBLinExpr obj = 0;
             obj.AddTerm(1.0, objectiveVariable);
             this._model.SetObjective(obj, GRB.MAXIMIZE);
@@ -302,6 +294,7 @@ namespace MetaOptimize
                 this._model.SetObjective(obj, GRB.MAXIMIZE);
                 this._model.Optimize();
                 this._modelRun = true;
+                this._model.Write("model.lp");
             }
             int status = _model.Status;
             if (status == GRB.Status.INFEASIBLE || status == GRB.Status.INF_OR_UNBD)
