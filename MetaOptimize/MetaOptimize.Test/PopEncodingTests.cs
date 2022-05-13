@@ -22,7 +22,7 @@ namespace MetaOptimize.Test
         /// Solver Zen.
         /// </summary>
         [TestMethod]
-        public void TestPopGapSimpleWithZen()
+        public void TestPopGapSimple()
         {
             var topology = new Topology();
             topology.AddNode("a");

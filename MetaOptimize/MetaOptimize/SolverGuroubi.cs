@@ -6,6 +6,7 @@ using System.Reflection.Metadata.Ecma335;
 using System.Text;
 using System.Threading.Tasks;
 using Gurobi;
+using Microsoft.VisualBasic.FileIO;
 using Microsoft.Z3;
 using ZenLib;
 
@@ -59,6 +60,15 @@ namespace MetaOptimize
         private bool _modelRun;
 
         /// <summary>
+        /// releases guroubi environment.
+        /// </summary>
+        public void Delete()
+        {
+            this._env.Dispose();
+            this._env = null;
+        }
+
+        /// <summary>
         /// Connects to Ishai's guroubi license.
         /// </summary>
         /// <returns></returns>
@@ -101,7 +111,7 @@ namespace MetaOptimize
             {
                 string new_name = name + "_" + this._variables.Count;
                 variable = _model.AddVar(
-                    Double.MinValue, Double.MaxValue, 0, GRB.CONTINUOUS,
+                    -1 * Math.Pow(10, 10), Math.Pow(10, 10), 0, GRB.CONTINUOUS,
                     new_name);
                 this._variables.Add(variable);
                 this._varNames.Add(new_name);
@@ -197,11 +207,11 @@ namespace MetaOptimize
             // Create an auxilary variable for each polynomial
             // Add it to the list of auxilary variables.
             var var_1 = this._model.AddVar(
-                    Double.MinValue, Double.MaxValue, 0, GRB.CONTINUOUS, "aux_" + this._auxilaryVars.Count);
+                    -1 * Math.Pow(10, 10), Math.Pow(10, 10), 0, GRB.CONTINUOUS, "aux_" + this._auxilaryVars.Count);
             this._auxiliaryVarNames.Add("aux_" + this._auxilaryVars.Count);
             this._auxilaryVars.Add(var_1);
             var var_2 = this._model.AddVar(
-                    Double.MinValue, Double.MaxValue, 0, GRB.CONTINUOUS, "aux_" + this._auxilaryVars.Count);
+                    -1 * Math.Pow(10, 10), Math.Pow(10, 10), 0, GRB.CONTINUOUS, "aux_" + this._auxilaryVars.Count);
             this._auxiliaryVarNames.Add("aux_" + this._auxilaryVars.Count);
             this._auxilaryVars.Add(var_2);
             GRBVar[] auxilaries = new GRBVar[] { var_1, var_2 };
@@ -238,12 +248,12 @@ namespace MetaOptimize
                 // Warning: assumes all variables are of the same type.
                 foreach (var name in s._varNames)
                 {
-                    this.CreateVariable(name);
+                    this.CreateVariable(name + "CPY");
                 }
                 foreach (var name in s._auxiliaryVarNames)
                 {
                     this._auxilaryVars.Add(this._model.AddVar(-1 * Math.Pow(10, 10), Math.Pow(10, 10), 0, GRB.CONTINUOUS,
-                        name));
+                        name + "CPY"));
                 }
                 foreach (var constraint in s._constraintIneq)
                 {
@@ -272,12 +282,13 @@ namespace MetaOptimize
         /// <returns>A solution.</returns>
         public GRBModel Maximize(GRBVar objectiveVariable)
         {
+            Console.WriteLine("in maximize call");
             GRBLinExpr obj = 0;
             obj.AddTerm(1.0, objectiveVariable);
             this._model.SetObjective(obj, GRB.MAXIMIZE);
             this._model.Optimize();
             this._modelRun = true;
-            this._model.Write("model.lp");
+            this._model.Write("model_" +  DateTime.Now.Millisecond + ".lp");
             return this._model;
         }
         /// <summary>
@@ -288,13 +299,14 @@ namespace MetaOptimize
         /// <returns>The value as a double.</returns>
         public double GetVariable(GRBModel solution, GRBVar variable)
         {
-            if (!_modelRun)
-            {
+            if (!this._modelRun)
+            {/*
                 GRBLinExpr obj = 0;
                 this._model.SetObjective(obj, GRB.MAXIMIZE);
                 this._model.Optimize();
                 this._modelRun = true;
-                this._model.Write("model.lp");
+                this._model.Write("model_" +  DateTime.Now.Millisecond + ".lp");*/
+                Console.WriteLine("WARNING!: In getVariable and solver had not been called");
             }
             int status = _model.Status;
             if (status == GRB.Status.INFEASIBLE || status == GRB.Status.INF_OR_UNBD)

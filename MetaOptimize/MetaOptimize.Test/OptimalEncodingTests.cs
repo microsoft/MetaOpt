@@ -113,6 +113,8 @@ namespace MetaOptimize.Test
             Assert.IsTrue(10 <= optimizationSolutionG.Demands[("b", "d")]);
             Assert.AreEqual(10, optimizationSolutionG.Flows[("c", "d")]);
             Assert.AreEqual(0, optimizationSolutionG.Flows[("a", "d")]);
+
+            solverG.Delete();
         }
     }
 }

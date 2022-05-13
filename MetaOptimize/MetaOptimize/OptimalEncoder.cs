@@ -4,6 +4,7 @@
 
 namespace MetaOptimize
 {
+    using System;
     using System.Collections.Generic;
 
     /// <summary>

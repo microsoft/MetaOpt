@@ -6,6 +6,7 @@ namespace MetaOptimize.Test
 {
     using System;
     using System.Collections.Generic;
+    using Gurobi;
     using Microsoft.VisualStudio.TestTools.UnitTesting;
     using ZenLib;
 
@@ -19,7 +20,7 @@ namespace MetaOptimize.Test
         /// Test that the optimality encoder works for a topology with one edge.
         /// </summary>
         [TestMethod]
-        public void TestOptimialityGapWithZen()
+        public void TestOptimialityGap()
         {
             var topology = new Topology();
             topology.AddNode("a");
@@ -47,6 +48,18 @@ namespace MetaOptimize.Test
 
             Assert.AreEqual(40, optimalSolution.TotalDemandMet);
             Assert.AreEqual(20, popSolution.TotalDemandMet);
+
+            // create the optimal encoder.
+            var solverG = new SolverGuroubi();
+            var optimalEncoderG = new OptimalEncoder<GRBVar, GRBModel>(solverG, topology, k: 1);
+
+            var popEncoderG = new PopEncoder<GRBVar, GRBModel>(() => new SolverGuroubi(), topology, k: 1, numPartitions: 2, demandPartitions: partition);
+
+            var (optimalSolutionG, popSolutionG) = AdversarialInputGenerator<GRBVar, GRBModel>.MaximizeOptimalityGap(optimalEncoderG, popEncoderG);
+            Assert.AreEqual(40, optimalSolutionG.TotalDemandMet);
+            Assert.AreEqual(20, popSolutionG.TotalDemandMet);
+
+            solverG.Delete();
         }
     }
 }
