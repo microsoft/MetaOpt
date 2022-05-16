@@ -48,10 +48,24 @@ namespace MetaOptimize.Test
             Console.WriteLine(Newtonsoft.Json.JsonConvert.SerializeObject(optimizationSolution, Newtonsoft.Json.Formatting.Indented));
 
             Assert.AreEqual(5, optimizationSolution.TotalDemandMet);
-            Assert.AreEqual(5, optimizationSolution.Demands[("a", "b")]);
+            Assert.IsTrue(5 <= optimizationSolution.Demands[("a", "b")]);
             Assert.AreEqual(5, optimizationSolution.Flows[("a", "b")]);
-            Assert.AreEqual(0, optimizationSolution.Demands[("b", "a")]);
+            Assert.IsTrue(0 <= optimizationSolution.Demands[("b", "a")]);
             Assert.AreEqual(0, optimizationSolution.Flows[("b", "a")]);
+
+            var popEncoderG = new PopEncoder<GRBVar, GRBModel>(new SolverGuroubi(), topology, k: 1, numPartitions: 2, demandPartitions: partition);
+            var encodingG = popEncoderG.Encoding();
+            var solverSolutionG = popEncoderG.Solver.Maximize(encodingG.MaximizationObjective);
+            var optimizationSolutionG = popEncoderG.GetSolution(solverSolutionG);
+
+            var solverG = (SolverGuroubi)popEncoderG.Solver;
+            Console.WriteLine(Newtonsoft.Json.JsonConvert.SerializeObject(optimizationSolutionG, Newtonsoft.Json.Formatting.Indented));
+
+            Assert.AreEqual(5, optimizationSolutionG.TotalDemandMet);
+            Assert.IsTrue(5 <= optimizationSolutionG.Demands[("a", "b")]);
+            Assert.AreEqual(5, optimizationSolutionG.Flows[("a", "b")]);
+            Assert.IsTrue(0 <= optimizationSolutionG.Demands[("b", "a")]);
+            Assert.AreEqual(0, optimizationSolutionG.Flows[("b", "a")]);
         }
     }
 }
