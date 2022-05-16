@@ -38,7 +38,7 @@ namespace MetaOptimize.Test
 
             // create the pop encoder.
             var partition = topology.RandomPartition(2);
-            var popEncoder = new PopEncoder<Zen<Real>, ZenSolution>(() => new SolverZen(), topology, k: 1, numPartitions: 2, demandPartitions: partition);
+            var popEncoder = new PopEncoder<Zen<Real>, ZenSolution>(solver, topology, k: 1, numPartitions: 2, demandPartitions: partition);
 
             var (optimalSolution, popSolution) = AdversarialInputGenerator<Zen<Real>, ZenSolution>.MaximizeOptimalityGap(optimalEncoder, popEncoder);
 
@@ -53,7 +53,7 @@ namespace MetaOptimize.Test
             var solverG = new SolverGuroubi();
             var optimalEncoderG = new OptimalEncoder<GRBVar, GRBModel>(solverG, topology, k: 1);
 
-            var popEncoderG = new PopEncoder<GRBVar, GRBModel>(() => new SolverGuroubi(), topology, k: 1, numPartitions: 2, demandPartitions: partition);
+            var popEncoderG = new PopEncoder<GRBVar, GRBModel>(solverG, topology, k: 1, numPartitions: 2, demandPartitions: partition);
 
             var (optimalSolutionG, popSolutionG) = AdversarialInputGenerator<GRBVar, GRBModel>.MaximizeOptimalityGap(optimalEncoderG, popEncoderG);
             Assert.AreEqual(40, optimalSolutionG.TotalDemandMet);

@@ -30,7 +30,7 @@ namespace MetaOptimize.Test
             var solver = new SolverZen();
             var optimalEncoder = new OptimalEncoder<Zen<Real>, ZenSolution>(solver, topology, k: 1);
             var encoding = optimalEncoder.Encoding();
-            var solverSolution = encoding.Solver.Maximize(encoding.MaximizationObjective);
+            var solverSolution = optimalEncoder.Solver.Maximize(encoding.MaximizationObjective);
             var optimizationSolution = optimalEncoder.GetSolution(solverSolution);
 
             // Debugging information.
@@ -51,7 +51,7 @@ namespace MetaOptimize.Test
             var solverG = new SolverGuroubi();
             var optimalEncoderG = new OptimalEncoder<GRBVar, GRBModel>(solverG, topology, k: 1);
             var encodingG = optimalEncoderG.Encoding();
-            var solverSolutionG = encodingG.Solver.Maximize(encodingG.MaximizationObjective);
+            var solverSolutionG = optimalEncoderG.Solver.Maximize(encodingG.MaximizationObjective);
             var optimizationSolutionG = optimalEncoderG.GetSolution(solverSolutionG);
 
             Assert.AreEqual(10, optimizationSolutionG.TotalDemandMet);
@@ -79,7 +79,7 @@ namespace MetaOptimize.Test
             var solver = new SolverZen();
             var optimalEncoder = new OptimalEncoder<Zen<Real>, ZenSolution>(solver, topology, k: 1);
             var encoding = optimalEncoder.Encoding();
-            var solverSolution = encoding.Solver.Maximize(encoding.MaximizationObjective);
+            var solverSolution = optimalEncoder.Solver.Maximize(encoding.MaximizationObjective);
             var optimizationSolution = optimalEncoder.GetSolution(solverSolution);
 
             // Debugging information.
@@ -102,7 +102,7 @@ namespace MetaOptimize.Test
             var solverG = new SolverGuroubi();
             var optimalEncoderG = new OptimalEncoder<GRBVar, GRBModel>(solverG, topology, k: 1);
             var encodingG = optimalEncoderG.Encoding();
-            var solverSolutionG = encodingG.Solver.Maximize(encodingG.MaximizationObjective);
+            var solverSolutionG = optimalEncoderG.Solver.Maximize(encodingG.MaximizationObjective);
             var optimizationSolutionG = optimalEncoderG.GetSolution(solverSolutionG);
 
             Assert.AreEqual(40, optimizationSolutionG.TotalDemandMet);

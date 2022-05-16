@@ -32,12 +32,12 @@ namespace MetaOptimize.Test
             var partition = new Dictionary<(string, string), int>();
             partition.Add(("a", "b"), 0);
             partition.Add(("b", "a"), 1);
-            var popEncoder = new PopEncoder<Zen<Real>, ZenSolution>(() => new SolverZen(), topology, k: 1, numPartitions: 2, demandPartitions: partition);
+            var popEncoder = new PopEncoder<Zen<Real>, ZenSolution>(new SolverZen(), topology, k: 1, numPartitions: 2, demandPartitions: partition);
             var encoding = popEncoder.Encoding();
-            var solverSolution = encoding.Solver.Maximize(encoding.MaximizationObjective);
+            var solverSolution = popEncoder.Solver.Maximize(encoding.MaximizationObjective);
             var optimizationSolution = popEncoder.GetSolution(solverSolution);
 
-            var solver = (SolverZen)encoding.Solver;
+            var solver = (SolverZen)popEncoder.Solver;
 
             // Debugging information.
             foreach (var c in solver.ConstraintExprs)
