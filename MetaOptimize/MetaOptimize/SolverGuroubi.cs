@@ -285,7 +285,7 @@ namespace MetaOptimize
             Console.WriteLine("in maximize call");
             GRBLinExpr obj = 0;
             obj.AddTerm(1.0, objectiveVariable);
-            this._env.PreSOS1Encoding = 0;
+            this._model.Tune();
             this._model.SetObjective(obj, GRB.MAXIMIZE);
             this._model.Optimize();
             this._modelRun = true;
