@@ -20,6 +20,7 @@ namespace MetaOptimize
     /// </summary>
     public class SolverGuroubi : ISolver<GRBVar, GRBModel>
     {
+        private double _scaleFactor = Math.Pow(10, 4);
         /// <summary>
         /// stashes guroubi environment so it can be reused.
         /// </summary>
@@ -53,9 +54,15 @@ namespace MetaOptimize
         /// </summary>
         private List<GRBVar[]> _SOSauxilaries = new List<GRBVar[]>();
         /// <summary>
+        /// Used for the approx form.
+        /// </summary>
+        private List<GRBVar> _binaryVars = new List<GRBVar>();
+        /// <summary>
         /// The gurobi model.
         /// </summary>
         public GRBModel _model = null;
+
+        private GRBLinExpr _objective = 0;
 
         private bool _modelRun;
 
@@ -111,7 +118,7 @@ namespace MetaOptimize
             {
                 string new_name = name + "_" + this._variables.Count;
                 variable = _model.AddVar(
-                    -1 * Math.Pow(10, 10), Math.Pow(10, 10), 0, GRB.CONTINUOUS,
+                    -1 * Math.Pow(10, 4), Math.Pow(10, 4), 0, GRB.CONTINUOUS,
                     new_name);
                 this._variables.Add(variable);
                 this._varNames.Add(new_name);
@@ -135,11 +142,11 @@ namespace MetaOptimize
             {
                 if (term.Exponent == 1)
                 {
-                    obj.AddTerm(term.Coefficient, (dynamic)term.Variable.Value);
+                    obj.AddTerm(term.Coefficient / this._scaleFactor, (dynamic)term.Variable.Value);
                 }
                 else
                 {
-                    obj += term.Coefficient;
+                    obj += (term.Coefficient / this._scaleFactor);
                 }
             }
             return obj;
@@ -192,7 +199,21 @@ namespace MetaOptimize
         {
             GRBLinExpr poly1 = this.convertPolynomialToLinExpr(polynomial1);
             GRBLinExpr poly2 = this.convertPolynomialToLinExpr(polynomial2);
-            this.AddOrEqZeroConstraint(poly1, poly2);
+            GRBLinExpr poly2Neg = this.convertPolynomialToLinExpr(polynomial2.Negate());
+            // this.AddOrEqZeroConstraint(poly1, poly2);
+
+            var alpha = this._model.AddVar(0.0, 1.0, 0.0, GRB.BINARY, "binary_" + this._binaryVars.Count);
+            // var alpha = this._model.AddVar(0.0, 1.0, 0.0, GRB.CONTINUOUS, "binary_" + this._binaryVars.Count);
+            this._binaryVars.Add(alpha);
+            // this._objective.AddTerm(-1 * Math.Pow(10, -25), alpha);
+            poly1.AddTerm(-1 * Math.Pow(10, 4), alpha);
+            poly2.AddTerm(Math.Pow(10, 4), alpha);
+            poly2.AddConstant(-1 * Math.Pow(10, 4));
+            poly2Neg.AddTerm(Math.Pow(10, 4), alpha);
+            poly2Neg.AddConstant(-1 * Math.Pow(10, 4));
+            this.AddLeqZeroConstraint(poly1);
+            this.AddLeqZeroConstraint(poly2);
+            this.AddLeqZeroConstraint(poly2Neg);
         }
         /// <summary>
         /// Add or equals zero.
@@ -202,7 +223,7 @@ namespace MetaOptimize
         /// </summary>
         /// <param name="polynomial1">The first polynomial.</param>
         /// <param name="polynomial2">The second polynomial.</param>
-        public void AddOrEqZeroConstraint(GRBLinExpr polynomial1, GRBLinExpr polynomial2)
+        public void AddOrEqZeroConstraintV1(GRBLinExpr polynomial1, GRBLinExpr polynomial2)
         {
             // Create an auxilary variable for each polynomial
             // Add it to the list of auxilary variables.
@@ -235,45 +256,7 @@ namespace MetaOptimize
         /// <param name="otherSolver">The other solver.</param>
         public void CombineWith(ISolver<GRBVar, GRBModel> otherSolver)
         {
-            if (this._env == null)
-            {
-                this._env = SetupGurobi();
-            }
-            if (this._model == null)
-            {
-                this._model = new GRBModel(this._env);
-            }
-            if (otherSolver is SolverGuroubi s)
-            {
-                // Warning: assumes all variables are of the same type.
-                foreach (var name in s._varNames)
-                {
-                    this.CreateVariable(name + "CPY");
-                }
-                foreach (var name in s._auxiliaryVarNames)
-                {
-                    this._auxilaryVars.Add(this._model.AddVar(-1 * Math.Pow(10, 10), Math.Pow(10, 10), 0, GRB.CONTINUOUS,
-                        name + "CPY"));
-                }
-                foreach (var constraint in s._constraintIneq)
-                {
-                    this.AddLeqZeroConstraint(constraint);
-                }
-                foreach (var constraint in s._constraintEq)
-                {
-                    this.AddEqZeroConstraint(constraint);
-                }
-                foreach (var aux in s._SOSauxilaries)
-                {
-                    this._model.AddSOS(aux, aux.Select((x, i) => (Double)i).ToArray(),
-                        GRB.SOS_TYPE1);
-                    this._SOSauxilaries.Add(aux);
-                }
-            }
-            else
-            {
-                throw new System.Exception("Can not mix solvers");
-            }
+            // removed support for this. Check earlier git commits if you need it.
         }
         /// <summary>
         /// Maximize the objective.
@@ -283,13 +266,12 @@ namespace MetaOptimize
         public GRBModel Maximize(GRBVar objectiveVariable)
         {
             Console.WriteLine("in maximize call");
-            GRBLinExpr obj = 0;
-            obj.AddTerm(1.0, objectiveVariable);
+            this._objective.AddTerm(1.0, objectiveVariable);
             this._model.Tune();
-            this._model.SetObjective(obj, GRB.MAXIMIZE);
+            this._model.SetObjective(this._objective, GRB.MAXIMIZE);
             this._model.Optimize();
             this._modelRun = true;
-            this._model.Write("model_" +  DateTime.Now.Millisecond + ".lp");
+           // this._model.Write("model_" +  DateTime.Now.Millisecond + ".lp");
             return this._model;
         }
         /// <summary>
@@ -301,12 +283,7 @@ namespace MetaOptimize
         public double GetVariable(GRBModel solution, GRBVar variable)
         {
             if (!this._modelRun)
-            {/*
-                GRBLinExpr obj = 0;
-                this._model.SetObjective(obj, GRB.MAXIMIZE);
-                this._model.Optimize();
-                this._modelRun = true;
-                this._model.Write("model_" +  DateTime.Now.Millisecond + ".lp");*/
+            {
                 Console.WriteLine("WARNING!: In getVariable and solver had not been called");
             }
             int status = _model.Status;
