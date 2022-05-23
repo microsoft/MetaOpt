@@ -20,10 +20,11 @@ namespace MetaOptimize
     /// </summary>
     public class SolverGuroubi : ISolver<GRBVar, GRBModel>
     {
+        private double _varBounds = Math.Pow(10, 5);
         /// <summary>
         /// scale factor for the variable.
         /// </summary>
-        public double _scaleFactor = Math.Pow(10, 5);
+        public double _scaleFactor = Math.Pow(10, 2);
         /// <summary>
         /// stashes guroubi environment so it can be reused.
         /// </summary>
@@ -95,11 +96,10 @@ namespace MetaOptimize
         /// <summary>
         /// constructor with scalefactor.
         /// </summary>
-        /// <param name="scalefactor"></param>
-        public SolverGuroubi(double scalefactor)
+        /// <param name="varbound"></param>
+        public SolverGuroubi(double varbound)
         {
-            Console.WriteLine("scale factor: " + scalefactor);
-            this.setScaleFactor(scalefactor);
+            this._varBounds = varbound;
             this._env = SetupGurobi();
             this._model = new GRBModel(this._env);
         }
@@ -133,7 +133,7 @@ namespace MetaOptimize
             {
                 string new_name = name + "_" + this._variables.Count;
                 variable = _model.AddVar(
-                    -1 * this._scaleFactor, this._scaleFactor, 0, GRB.CONTINUOUS,
+                    -1 * this._varBounds, this._varBounds, 0, GRB.CONTINUOUS,
                     new_name);
                 this._variables.Add(variable);
                 this._varNames.Add(new_name);
@@ -162,9 +162,6 @@ namespace MetaOptimize
         {
             // original: - M < x < M; M = Double.MaxValue
             // original : a * x + b <=0
-            // what we want is: -c < y < c; y = c * x/M
-            // (a / c) * x + b <= 0
-            // a * x + b * c  <= 0
             // bounds on X : -M < x < M ==> -c < x < c
             // My prior change: a / c * x + b / c <= 0
             GRBLinExpr obj = 0;
