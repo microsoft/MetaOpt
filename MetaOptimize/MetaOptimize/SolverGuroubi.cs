@@ -24,7 +24,7 @@ namespace MetaOptimize
         /// <summary>
         /// scale factor for the variable.
         /// </summary>
-        public double _scaleFactor = Math.Pow(10, 2);
+        public double _scaleFactor = 1.0; // Math.Pow(10, 3);
         /// <summary>
         /// stashes guroubi environment so it can be reused.
         /// </summary>
@@ -233,11 +233,11 @@ namespace MetaOptimize
             // var alpha = this._model.AddVar(0.0, 1.0, 0.0, GRB.CONTINUOUS, "binary_" + this._binaryVars.Count);
             this._binaryVars.Add(alpha);
             // this._objective.AddTerm(-1 * Math.Pow(10, -25), alpha);
-            poly1.AddTerm(-1 * Math.Pow(10, 4), alpha);
-            poly2.AddTerm(Math.Pow(10, 4), alpha);
-            poly2.AddConstant(-1 * Math.Pow(10, 4));
-            poly2Neg.AddTerm(Math.Pow(10, 4), alpha);
-            poly2Neg.AddConstant(-1 * Math.Pow(10, 4));
+            poly1.AddTerm(-1 * this._varBounds, alpha);
+            poly2.AddTerm(this._varBounds, alpha);
+            poly2.AddConstant(-1 * this._varBounds);
+            poly2Neg.AddTerm(this._varBounds, alpha);
+            poly2Neg.AddConstant(-1 * this._varBounds);
             this.AddLeqZeroConstraint(poly1);
             this.AddLeqZeroConstraint(poly2);
             this.AddLeqZeroConstraint(poly2Neg);
