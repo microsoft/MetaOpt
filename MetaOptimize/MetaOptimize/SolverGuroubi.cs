@@ -20,9 +20,9 @@ namespace MetaOptimize
     /// </summary>
     public class SolverGuroubi : ISolver<GRBVar, GRBModel>
     {
-        private double _tolerance = Math.Pow(10, 9);
+        private double _tolerance = Math.Pow(10, 8);
 
-        private double _varBounds = Math.Pow(10, 4);
+        private double _varBounds = Math.Pow(10, 6);
         /// <summary>
         /// scale factor for the variable.
         /// </summary>

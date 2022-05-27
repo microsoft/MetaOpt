@@ -12,8 +12,17 @@ using ZenLib;
 
 namespace MetaOptimize
 {
-    internal class SolverGurobiNoParams
+    /// <summary>
+    /// Gurobi solver.
+    /// Todo: may need to rethink the second argument to the class.
+    /// Right now assuming we have a dictionary that maps var names to
+    /// guroubi variables.
+    /// </summary>
+    public class SolverGurobiNoParams : ISolver<GRBVar, GRBModel>
     {
+        /// <summary>
+        /// env.
+        /// </summary>
         public GRBEnv _env = null;
         /// <summary>
         /// The solver variables.
@@ -172,6 +181,14 @@ namespace MetaOptimize
         {
             GRBLinExpr poly = this.convertPolynomialToLinExpr(polynomial);
             this.AddEqZeroConstraint(poly);
+        }
+        /// <summary>
+        /// Combine the constraints and variables of another solver into this one.
+        /// </summary>
+        /// <param name="otherSolver">The other solver.</param>
+        public void CombineWith(ISolver<GRBVar, GRBModel> otherSolver)
+        {
+            // removed support for this. Check earlier git commits if you need it.
         }
         /// <summary>
         /// Add a equal to zero constraint.
