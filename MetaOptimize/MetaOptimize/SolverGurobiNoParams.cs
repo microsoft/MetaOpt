@@ -12,7 +12,7 @@ using ZenLib;
 
 namespace MetaOptimize
 {
-    internal class SolverGurobiNoParams
+    public class SolverGurobiNoParams
     {
         public GRBEnv _env = null;
         /// <summary>
@@ -134,6 +134,7 @@ namespace MetaOptimize
             GRBLinExpr obj = 0;
             foreach (var term in poly.Terms)
             {
+                Debug.Assert(term.Exponent == 1 || term.Exponent == 0, "non 0|1 exponent is not modeled");
                 if (term.Exponent == 1)
                 {
                     obj.AddTerm(term.Coefficient, (dynamic)term.Variable.Value);

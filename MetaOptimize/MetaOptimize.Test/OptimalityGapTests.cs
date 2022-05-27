@@ -50,7 +50,7 @@ namespace MetaOptimize.Test
             Assert.AreEqual(20, popSolution.TotalDemandMet);
 
             // create the optimal encoder.
-            var solverG = new SolverGurobi();
+            var solverG = new SolverGurobiNoParams();
             var optimalEncoderG = new OptimalEncoder<GRBVar, GRBModel>(solverG, topology, k: 1);
 
             var popEncoderG = new PopEncoder<GRBVar, GRBModel>(solverG, topology, k: 1, numPartitions: 2, demandPartitions: partition);
