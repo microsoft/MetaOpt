@@ -48,7 +48,7 @@ namespace MetaOptimize.Test
             Assert.AreEqual(0, optimizationSolution.Flows[("b", "a")]);
 
             // Test Gurobi now
-            var solverG = new SolverGuroubi();
+            var solverG = new SolverGurobi();
             var optimalEncoderG = new OptimalEncoder<GRBVar, GRBModel>(solverG, topology, k: 1);
             var encodingG = optimalEncoderG.Encoding();
             var solverSolutionG = optimalEncoderG.Solver.Maximize(encodingG.MaximizationObjective);
@@ -99,7 +99,7 @@ namespace MetaOptimize.Test
             Assert.AreEqual(10, optimizationSolution.Flows[("c", "d")]);
             Assert.AreEqual(0, optimizationSolution.Flows[("a", "d")]);
 
-            var solverG = new SolverGuroubi();
+            var solverG = new SolverGurobi();
             var optimalEncoderG = new OptimalEncoder<GRBVar, GRBModel>(solverG, topology, k: 1);
             var encodingG = optimalEncoderG.Encoding();
             var solverSolutionG = optimalEncoderG.Solver.Maximize(encodingG.MaximizationObjective);

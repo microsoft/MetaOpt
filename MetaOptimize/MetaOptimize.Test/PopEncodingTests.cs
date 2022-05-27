@@ -53,12 +53,12 @@ namespace MetaOptimize.Test
             Assert.IsTrue(0 <= optimizationSolution.Demands[("b", "a")]);
             Assert.AreEqual(0, optimizationSolution.Flows[("b", "a")]);
 
-            var popEncoderG = new PopEncoder<GRBVar, GRBModel>(new SolverGuroubi(), topology, k: 1, numPartitions: 2, demandPartitions: partition);
+            var popEncoderG = new PopEncoder<GRBVar, GRBModel>(new SolverGurobi(), topology, k: 1, numPartitions: 2, demandPartitions: partition);
             var encodingG = popEncoderG.Encoding();
             var solverSolutionG = popEncoderG.Solver.Maximize(encodingG.MaximizationObjective);
             var optimizationSolutionG = popEncoderG.GetSolution(solverSolutionG);
 
-            var solverG = (SolverGuroubi)popEncoderG.Solver;
+            var solverG = (SolverGurobi)popEncoderG.Solver;
             Console.WriteLine(Newtonsoft.Json.JsonConvert.SerializeObject(optimizationSolutionG, Newtonsoft.Json.Formatting.Indented));
 
             Assert.AreEqual(5, optimizationSolutionG.TotalDemandMet);
