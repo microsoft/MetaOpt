@@ -57,11 +57,17 @@ namespace MetaOptimize
         /// <param name="k">The max number of paths between nodes.</param>
         /// <param name="numPartitions">The number of partitions.</param>
         /// <param name="demandPartitions">The demand partitions.</param>
-        public PopEncoder(ISolver<TVar, TSolution> solver, Topology topology, int k, int numPartitions, IDictionary<(string, string), int> demandPartitions)
+        /// <param name="demandEnforcements"> The demand requirements for individual demands.</param>
+        public PopEncoder(ISolver<TVar, TSolution> solver, Topology topology, int k, int numPartitions, IDictionary<(string, string), int> demandPartitions,
+            IDictionary<(string, string), double> demandEnforcements = null)
         {
             if (numPartitions <= 0)
             {
                 throw new ArgumentOutOfRangeException("Partitions must be greater than zero.");
+            }
+            if (numPartitions > 10)
+            {
+                throw new ArgumentOutOfRangeException("You need to adjust the max demand allowed.");
             }
 
             this.Solver = solver;
@@ -79,12 +85,15 @@ namespace MetaOptimize
 
                 foreach (var demand in this.DemandPartitions)
                 {
+                    if (demandEnforcements != null)
+                    {
+                        demandConstraints[demand.Key] = demandEnforcements[demand.Key];
+                    }
                     if (demand.Value != i)
                     {
                         demandConstraints[demand.Key] = 0;
                     }
                 }
-
                 this.PartitionEncoders[i] = new OptimalEncoder<TVar, TSolution>(solver, this.ReducedTopology, this.K, demandConstraints);
             }
         }

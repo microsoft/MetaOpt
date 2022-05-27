@@ -20,11 +20,13 @@ namespace MetaOptimize
     /// </summary>
     public class SolverGuroubi : ISolver<GRBVar, GRBModel>
     {
-        private double _varBounds = Math.Pow(10, 5);
+        private double _tolerance = Math.Pow(10, 9);
+
+        private double _varBounds = Math.Pow(10, 4);
         /// <summary>
         /// scale factor for the variable.
         /// </summary>
-        public double _scaleFactor = 1.0; // Math.Pow(10, 3);
+        public double _scaleFactor = Math.Pow(10, 3);
         /// <summary>
         /// stashes guroubi environment so it can be reused.
         /// </summary>
@@ -232,12 +234,12 @@ namespace MetaOptimize
             var alpha = this._model.AddVar(0.0, 1.0, 0.0, GRB.BINARY, "binary_" + this._binaryVars.Count);
             // var alpha = this._model.AddVar(0.0, 1.0, 0.0, GRB.CONTINUOUS, "binary_" + this._binaryVars.Count);
             this._binaryVars.Add(alpha);
-            // this._objective.AddTerm(-1 * Math.Pow(10, -25), alpha);
-            poly1.AddTerm(-1 * this._varBounds, alpha);
-            poly2.AddTerm(this._varBounds, alpha);
-            poly2.AddConstant(-1 * this._varBounds);
-            poly2Neg.AddTerm(this._varBounds, alpha);
-            poly2Neg.AddConstant(-1 * this._varBounds);
+            // this._objective.AddTerm(1 / (this._varBounds), alpha);
+            poly1.AddTerm(-1 * this._varBounds / this._scaleFactor, alpha);
+            poly2.AddTerm(this._varBounds / this._scaleFactor, alpha);
+            poly2.AddConstant(-1 * this._varBounds / this._scaleFactor);
+            poly2Neg.AddTerm(this._varBounds / this._scaleFactor, alpha);
+            poly2Neg.AddConstant(-1 * this._varBounds / this._scaleFactor);
             this.AddLeqZeroConstraint(poly1);
             this.AddLeqZeroConstraint(poly2);
             this.AddLeqZeroConstraint(poly2Neg);
@@ -294,7 +296,9 @@ namespace MetaOptimize
         {
             Console.WriteLine("in maximize call");
             this._objective.AddTerm(1.0, objectiveVariable);
-            this._model.Tune();
+            Console.WriteLine("tolerance is : " + this._model.Get(GRB.DoubleParam.IntFeasTol));
+            this._model.Set(GRB.DoubleParam.IntFeasTol, 1.0 / this._tolerance);
+            // this._model.Parameters.OptimalityTol = 1.0 / this._varBounds;
             this._model.SetObjective(this._objective, GRB.MAXIMIZE);
             this._model.Optimize();
             this._modelRun = true;

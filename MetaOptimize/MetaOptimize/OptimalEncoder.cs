@@ -126,7 +126,7 @@ namespace MetaOptimize
         {
             // Compute the maximum demand M.
             // Since we don't know the demands we have to be very conservative.
-            var maxDemand = this.Topology.TotalCapacity();
+            var maxDemand = this.Topology.TotalCapacity() * 10;
 
             // Ensure that sum_k f_k = total_demand.
             var polynomial = new Polynomial<TVar>();
