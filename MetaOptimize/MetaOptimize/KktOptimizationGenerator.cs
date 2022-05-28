@@ -5,6 +5,8 @@
 namespace MetaOptimize
 {
     using System.Collections.Generic;
+    using System.Linq;
+    using ZenLib;
 
     /// <summary>
     /// An optimization encoder that automatically derives the KKT conditions.
@@ -125,18 +127,30 @@ namespace MetaOptimize
                 this.solver.AddEqZeroConstraint(eqZeroConstraint);
             }
 
+            Dictionary<int, int> haveLambda = new Dictionary<int, int>();
+
             for (int i = 0; i < this.leqZeroConstraints.Count; i++)
             {
                 var leqConstraint = this.leqZeroConstraints[i];
+                if (leqConstraint.isallInSetOrConst(this.AvoidDerivativeVariables))
+                {
+                    continue;
+                }
                 var lambda = this.solver.CreateVariable("lambda_" + i);
+                haveLambda[i] = lambdaVariables.Count;
                 this.lambdaVariables.Add(lambda);
 
                 this.solver.AddLeqZeroConstraint(new Polynomial<TVar>(new Term<TVar>(-1, lambda)));
                 this.solver.AddOrEqZeroConstraint(new Polynomial<TVar>(new Term<TVar>(1, lambda)), leqConstraint);
             }
-
+            Dictionary<int, int> haveNu = new Dictionary<int, int>();
             for (int i = 0; i < this.eqZeroConstraints.Count; i++)
             {
+                if (this.eqZeroConstraints[i].isallInSetOrConst(this.AvoidDerivativeVariables))
+                {
+                    continue;
+                }
+                haveNu[i] = this.nuVariables.Count;
                 this.nuVariables.Add(this.solver.CreateVariable("nu_" + i));
             }
 
@@ -152,14 +166,18 @@ namespace MetaOptimize
 
                 for (int i = 0; i < this.leqZeroConstraints.Count; i++)
                 {
+                    if (!haveLambda.ContainsKey(i))
+                        continue;
                     var derivative = this.leqZeroConstraints[i].Derivative(variable);
-                    total.Terms.Add(new Term<TVar>(derivative, this.lambdaVariables[i]));
+                    total.Terms.Add(new Term<TVar>(derivative, this.lambdaVariables[haveLambda[i]]));
                 }
 
                 for (int i = 0; i < this.eqZeroConstraints.Count; i++)
                 {
+                    if (!haveNu.ContainsKey(i))
+                        continue;
                     var derivative = this.eqZeroConstraints[i].Derivative(variable);
-                    total.Terms.Add(new Term<TVar>(derivative, this.nuVariables[i]));
+                    total.Terms.Add(new Term<TVar>(derivative, this.nuVariables[haveNu[i]]));
                 }
 
                 this.solver.AddEqZeroConstraint(total);

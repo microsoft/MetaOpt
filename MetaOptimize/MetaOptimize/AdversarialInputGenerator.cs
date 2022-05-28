@@ -27,7 +27,7 @@ namespace MetaOptimize
             }
 
             var solver = optimalEncoder.Solver;
-
+            // ensures that demand in both problems is the same.
             foreach (var (pair, variable) in optimalEncoding.DemandVariables)
             {
                 var heuristicVariable = heuristicEncoding.DemandVariables[pair];
