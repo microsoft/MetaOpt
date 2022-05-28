@@ -12,63 +12,39 @@ using ZenLib;
 
 namespace MetaOptimize
 {
-    public class SolverGurobiNoParams
+    /// <summary>
+    /// Gurobi-based solver.
+    /// </summary>
+    public class SolverGurobiNoParams : ISolver<GRBVar, GRBModel>
     {
-        public GRBEnv _env = null;
-        /// <summary>
-        /// The solver variables.
-        /// </summary>
-        public ISet<GRBVar> _variables = new HashSet<GRBVar>();
-        /// <summary>
-        /// Stores variable names.
-        /// </summary>
-        public ISet<string> _varNames = new HashSet<string>();
+        private GRBEnv _env = null;
 
-        /// <summary>
-        /// auxilary variables we are using
-        /// to encode SOS constraints.
-        /// </summary>
-        private List<GRBVar> _auxilaryVars = new List<GRBVar>();
+        private Dictionary<string, GRBVar> _variables = new Dictionary<string, GRBVar>();
 
-        private List<string> _auxiliaryVarNames = new List<string>();
-        /// <summary>
-        /// inequality constraints.
-        /// </summary>
-        public IList<GRBLinExpr> _constraintIneq = new List<GRBLinExpr>();
-        /// <summary>
-        /// equality constraints.
-        /// </summary>
-        public IList<GRBLinExpr> _constraintEq = new List<GRBLinExpr>();
-        /// <summary>
-        /// Keeps track of sos aux.
-        /// </summary>
-        private List<GRBVar[]> _SOSauxilaries = new List<GRBVar[]>();
-        /// <summary>
-        /// Used for the approx form.
-        /// </summary>
-        private List<GRBVar> _binaryVars = new List<GRBVar>();
-        /// <summary>
-        /// The gurobi model.
-        /// </summary>
-        public GRBModel _model = null;
+        private int _constraintIneqCount = 0;
+
+        private int _constraintEqCount = 0;
+
+        private Dictionary<string, GRBVar> _auxiliaryVars = new Dictionary<string, GRBVar>();
+
+        private GRBModel _model = null;
 
         private GRBLinExpr _objective = 0;
 
-        private bool _modelRun;
-
         /// <summary>
-        /// releases guroubi environment.
+        /// releases gurobi environment. // sk: not sure about this.
         /// </summary>
         public void Delete()
         {
+            this._model.Dispose();
             this._env.Dispose();
             this._env = null;
         }
 
         /// <summary>
-        /// Connects to Ishai's guroubi license.
+        /// Connects to Gurobi.
         /// </summary>
-        /// <returns></returns>
+        /// <returns>an env.</returns>
         public static GRBEnv SetupGurobi()
         {
             // for 8.1 and later
@@ -78,20 +54,16 @@ namespace MetaOptimize
             env.Start();
             return env;
         }
+
         /// <summary>
         /// constructor.
         /// </summary>
         public SolverGurobiNoParams()
         {
-            if (this._env == null)
-            {
-                this._env = SetupGurobi();
-            }
-            if (this._model == null)
-            {
-                this._model = new GRBModel(this._env);
-            }
+            this._env = SetupGurobi();
+            this._model = new GRBModel(this._env);
         }
+
         /// <summary>
         /// Create a new variable with a given name.
         /// </summary>
@@ -99,138 +71,108 @@ namespace MetaOptimize
         /// <returns>The solver variable.</returns>
         public GRBVar CreateVariable(string name)
         {
-            GRBVar variable;
-            if (name == "")
+            if (name == null || name.Length == 0)
             {
-                throw new Exception("bug");
+                throw new Exception("no name for variable");
             }
+
             try
             {
-                string new_name = name + "_" + this._variables.Count;
-                variable = _model.AddVar(
-                    -1 * Math.Pow(10, 10), Math.Pow(10, 10), 0, GRB.CONTINUOUS,
-                    new_name);
-                this._variables.Add(variable);
-                this._varNames.Add(new_name);
+                var new_name = $"{name}_{this._variables.Count}";
+                var variable = _model.AddVar(Double.NegativeInfinity, Double.PositiveInfinity, 0, GRB.CONTINUOUS, new_name);
+                this._variables.Add(new_name, variable);
                 return variable;
             }
             catch (GRBException ex)
             {
-                System.Console.WriteLine(ex.Message);
+                Console.WriteLine(ex.ToString());
+                throw (ex);
             }
-            return null;
         }
+
         /// <summary>
         /// Converts polynomials to linear expressions.
         /// </summary>
         /// <param name="poly"></param>
-        /// <returns></returns>
-        public GRBLinExpr convertPolynomialToLinExpr(Polynomial<GRBVar> poly)
+        /// <returns>Linear expression.</returns>
+        public GRBLinExpr Convert(Polynomial<GRBVar> poly)
         {
-            // original: - M < x < M; M = Double.MaxValue
-            // original : a * x + b <=0
-            // bounds on X : -M < x < M ==> -c < x < c
-            // My prior change: a / c * x + b / c <= 0
             GRBLinExpr obj = 0;
             foreach (var term in poly.Terms)
             {
-                Debug.Assert(term.Exponent == 1 || term.Exponent == 0, "non 0|1 exponent is not modeled");
-                if (term.Exponent == 1)
+                switch (term.Exponent)
                 {
-                    obj.AddTerm(term.Coefficient, (dynamic)term.Variable.Value);
-                }
-                else
-                {
-                    obj += (term.Coefficient);
+                    case 1:
+                        obj.AddTerm(term.Coefficient, term.Variable.Value);
+                        break;
+                    case 0:
+                        obj += (term.Coefficient);
+                        break;
+                    default:
+                        throw new Exception("non 0|1 exponent is not modeled");
                 }
             }
             return obj;
         }
+
         /// <summary>
         /// wrapper that does type conversions then calls the original function.
         /// </summary>
         /// <param name="polynomial"></param>
         public void AddLeqZeroConstraint(Polynomial<GRBVar> polynomial)
         {
-            GRBLinExpr poly = this.convertPolynomialToLinExpr(polynomial);
-            this.AddLeqZeroConstraint(poly);
+            this._model.AddConstr(this.Convert(polynomial), GRB.LESS_EQUAL, 0.0, "ineq_index_" + this._constraintIneqCount++);
         }
-        /// <summary>
-        /// Add a less than or equal to zero constraint.
-        /// </summary>
-        /// <param name="polynomial">The polynomial.</param>
-        public void AddLeqZeroConstraint(GRBLinExpr polynomial)
-        {
-            this._model.AddConstr(polynomial, GRB.LESS_EQUAL,
-                (Double)0, "ineq_index_" + this._constraintIneq.Count);
-            this._constraintIneq.Add(polynomial);
-        }
+
         /// <summary>
         /// Wrapper for AddEqZeroConstraint that converts types.
         /// </summary>
         /// <param name="polynomial"></param>
         public void AddEqZeroConstraint(Polynomial<GRBVar> polynomial)
         {
-            GRBLinExpr poly = this.convertPolynomialToLinExpr(polynomial);
-            this.AddEqZeroConstraint(poly);
+            this._model.AddConstr(this.Convert(polynomial), GRB.EQUAL, 0.0, "eq_index_" + this._constraintEqCount);
         }
         /// <summary>
-        /// Add a equal to zero constraint.
+        /// Combine the constraints and variables of another solver into this one.
         /// </summary>
-        /// <param name="polynomial">The polynomial.</param>
-        public void AddEqZeroConstraint(GRBLinExpr polynomial)
+        /// <param name="otherSolver">The other solver.</param>
+        public void CombineWith(ISolver<GRBVar, GRBModel> otherSolver)
         {
-            this._model.AddConstr(polynomial, GRB.EQUAL,
-                (Double)0, "eq_index_" + this._constraintEq.Count);
-            this._constraintEq.Add(polynomial);
+            // removed support for this. Check earlier git commits if you need it.
         }
+
         /// <summary>
-        /// Wrapper that convers the new types to guroubi types and then
-        /// calls the proper function.
+        /// Ensure at least one of these terms is zero.
         /// </summary>
         /// <param name="polynomial1"></param>
         /// <param name="polynomial2"></param>
         public void AddOrEqZeroConstraint(Polynomial<GRBVar> polynomial1, Polynomial<GRBVar> polynomial2)
         {
-            GRBLinExpr poly1 = this.convertPolynomialToLinExpr(polynomial1);
-            GRBLinExpr poly2 = this.convertPolynomialToLinExpr(polynomial2);
-            this.AddOrEqZeroConstraintV1(poly1, poly2);
+            this.AddOrEqZeroConstraintV1(this.Convert(polynomial1), this.Convert(polynomial2));
         }
-        /// <summary>
-        /// Add or equals zero.
-        /// We currently are using SOS
-        /// constraints to encode this.
-        /// todo: explore auxilary vars.
-        /// </summary>
-        /// <param name="polynomial1">The first polynomial.</param>
-        /// <param name="polynomial2">The second polynomial.</param>
-        public void AddOrEqZeroConstraintV1(GRBLinExpr polynomial1, GRBLinExpr polynomial2)
-        {
-            // Create an auxilary variable for each polynomial
-            // Add it to the list of auxilary variables.
-            var var_1 = this._model.AddVar(
-                    -1 * Math.Pow(10, 10), Math.Pow(10, 10), 0, GRB.CONTINUOUS, "aux_" + this._auxilaryVars.Count);
-            this._auxiliaryVarNames.Add("aux_" + this._auxilaryVars.Count);
-            this._auxilaryVars.Add(var_1);
-            var var_2 = this._model.AddVar(
-                    -1 * Math.Pow(10, 10), Math.Pow(10, 10), 0, GRB.CONTINUOUS, "aux_" + this._auxilaryVars.Count);
-            this._auxiliaryVarNames.Add("aux_" + this._auxilaryVars.Count);
-            this._auxilaryVars.Add(var_2);
-            GRBVar[] auxilaries = new GRBVar[] { var_1, var_2 };
 
-            // Create constraints that ensure the auxilary variables are equal
-            // to the value of the polynomials.
-            polynomial1 = new GRBLinExpr(polynomial1);
-            polynomial1.AddTerm(-1, var_1);
-            polynomial2 = new GRBLinExpr(polynomial2);
-            polynomial2.AddTerm(-1, var_2);
-            this.AddEqZeroConstraint(polynomial1);
-            this.AddEqZeroConstraint(polynomial2);
+        /// <summary>
+        /// Uses SOS constraint to ensure atleast one of the following terms should equal 0.
+        /// </summary>
+        /// <param name="expr1">The first polynomial.</param>
+        /// <param name="expr2">The second polynomial.</param>
+        public void AddOrEqZeroConstraintV1(GRBLinExpr expr1, GRBLinExpr expr2)
+        {
+            // Create auxilary variable for each polynomial
+            var var_1 = this._model.AddVar(Double.NegativeInfinity, Double.PositiveInfinity, 0, GRB.CONTINUOUS, "aux_" + this._auxiliaryVars.Count);
+            this._auxiliaryVars.Add($"aux_{this._auxiliaryVars.Count}", var_1);
+
+            var var_2 = this._model.AddVar(Double.NegativeInfinity, Double.PositiveInfinity, 0, GRB.CONTINUOUS, "aux_" + this._auxiliaryVars.Count);
+            this._auxiliaryVars.Add($"aux_{this._auxiliaryVars.Count}", var_2);
+
+            this._model.AddConstr(expr1, GRB.EQUAL, var_1, "eq_index_" + this._constraintEqCount++);
+            this._model.AddConstr(expr2, GRB.EQUAL, var_2, "eq_index_" + this._constraintEqCount++);
+
             // Add SOS constraint.
-            this._model.AddSOS(auxilaries, auxilaries.Select((x, i) => (Double)i).ToArray(),
-                        GRB.SOS_TYPE1);
-            this._SOSauxilaries.Add(auxilaries);
+            var auxiliaries = new GRBVar[] { var_1, var_2 };
+            this._model.AddSOS(auxiliaries, new Double[] { 1, 2 }, GRB.SOS_TYPE1); // note: weights do not matter
         }
+
         /// <summary>
         /// Maximize the objective.
         /// </summary>
@@ -241,11 +183,28 @@ namespace MetaOptimize
             Console.WriteLine("in maximize call");
             this._objective.AddTerm(1.0, objectiveVariable);
             this._model.SetObjective(this._objective, GRB.MAXIMIZE);
+            this._model.Write("model_" + DateTime.Now.Millisecond + ".lp");
+
             this._model.Optimize();
-            this._modelRun = true;
-            this._model.Write("model_" +  DateTime.Now.Millisecond + ".lp");
+            if (this._model.Status != GRB.Status.OPTIMAL)
+            {
+                throw new Exception($"model not optimal {ModelStatusToString(this._model.Status)}");
+            }
+
             return this._model;
         }
+
+        private static string ModelStatusToString(int x)
+        {
+            switch (x)
+            {
+                case GRB.Status.INFEASIBLE: return "infeasible";
+                case GRB.Status.INF_OR_UNBD: return "inf_or_unbd";
+                case GRB.Status.UNBOUNDED: return "unbd";
+                default: return "xxx_did_not_parse_status_code";
+            }
+        }
+
         /// <summary>
         /// Get the resulting value assigned to a variable.
         /// </summary>
@@ -254,28 +213,12 @@ namespace MetaOptimize
         /// <returns>The value as a double.</returns>
         public double GetVariable(GRBModel solution, GRBVar variable)
         {
-            if (!this._modelRun)
+            // Maximize() above is a synchronous call; not sure if this check is needed
+            if (solution.Status != GRB.Status.OPTIMAL)
             {
-                Console.WriteLine("WARNING!: In getVariable and solver had not been called");
+                throw new Exception("can't read status since model is not optimal");
             }
-            int status = _model.Status;
-            if (status == GRB.Status.INFEASIBLE || status == GRB.Status.INF_OR_UNBD)
-            {
-                Console.WriteLine("The model cannot be solved because it is "
-                    + "infeasible");
-                Environment.Exit(1);
-            }
-            if (status == GRB.Status.UNBOUNDED)
-            {
-                Console.WriteLine("The model cannot be solved because it is "
-                    + "unbounded");
-                Environment.Exit(1);
-            }
-            if (status != GRB.Status.OPTIMAL)
-            {
-                Console.WriteLine("Optimization was stopped with status " + status);
-                Environment.Exit(1);
-            }
+
             return variable.X;
         }
     }

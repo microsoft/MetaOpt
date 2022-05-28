@@ -68,5 +68,44 @@ namespace MetaOptimize.Test
             Assert.IsTrue(0 <= optimizationSolutionG.Demands[("b", "a")]);
             Assert.AreEqual(0, optimizationSolutionG.Flows[("b", "a")]);
         }
+
+        /// <summary>
+        /// Test the POP encoder on a more complex example.
+        /// </summary>
+        [TestMethod]
+        public void TestPopGapSK()
+        {
+            var topology = new Topology();
+            topology.AddNode("a");
+            topology.AddNode("b");
+            topology.AddNode("c");
+            topology.AddNode("d");
+            topology.AddEdge("a", "b", capacity: 10);
+            topology.AddEdge("a", "c", capacity: 10);
+            topology.AddEdge("b", "d", capacity: 10);
+            topology.AddEdge("c", "d", capacity: 10);
+
+            var partition = topology.RandomPartition(2);
+            // create the optimal encoder.
+            var solverG = new SolverGurobiNoParams();
+            var optimalEncoderG = new OptimalEncoder<GRBVar, GRBModel>(solverG, topology, k: 1);
+
+            var popEncoderG = new PopEncoder<GRBVar, GRBModel>(solverG, topology, k: 1, numPartitions: 2, demandPartitions: partition);
+
+            var (optimalSolutionG, popSolutionG) = AdversarialInputGenerator<GRBVar, GRBModel>.MaximizeOptimalityGap(optimalEncoderG, popEncoderG);
+            Console.WriteLine("Optimal:");
+            Console.WriteLine(Newtonsoft.Json.JsonConvert.SerializeObject(optimalSolutionG, Newtonsoft.Json.Formatting.Indented));
+            Console.WriteLine("****");
+            Console.WriteLine("Heuristic:");
+            Console.WriteLine(Newtonsoft.Json.JsonConvert.SerializeObject(popSolutionG, Newtonsoft.Json.Formatting.Indented));
+            Console.WriteLine("****");
+
+            var optimal = optimalSolutionG.TotalDemandMet;
+            var heuristic = popSolutionG.TotalDemandMet;
+            Assert.IsTrue(Math.Abs(optimal - 40.0) < 0.01, $"Optimal is {optimal} != 40");
+            Assert.IsTrue(Math.Abs(heuristic - 20.0) < 0.01, $"Heuristic is {heuristic} != 20");
+
+            Console.WriteLine($"optimalG={optimal}, heuristicG={heuristic}");
+        }
     }
 }
