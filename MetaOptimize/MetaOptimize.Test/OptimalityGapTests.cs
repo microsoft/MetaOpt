@@ -5,17 +5,19 @@
 namespace MetaOptimize.Test
 {
     using System;
-    using System.Collections.Generic;
-    using Gurobi;
     using Microsoft.VisualStudio.TestTools.UnitTesting;
-    using ZenLib;
 
     /// <summary>
     /// Test that the optimiality gap maximization is working.
     /// </summary>
     [TestClass]
-    public class OptimalityGapTests
+    public class OptimalityGapTests<TVar, TSol>
     {
+        /// <summary>
+        /// Function to create a new solver.
+        /// </summary>
+        internal Func<ISolver<TVar, TSol>> CreateSolver;
+
         /// <summary>
         /// Test that the optimality encoder works for a topology with one edge.
         /// </summary>
@@ -33,33 +35,21 @@ namespace MetaOptimize.Test
             topology.AddEdge("c", "d", capacity: 10);
 
             // create the optimal encoder.
-            var solver = new SolverZen();
-            var optimalEncoder = new OptimalEncoder<Zen<Real>, ZenSolution>(solver, topology, k: 1);
+            var solver = CreateSolver();
+            var optimalEncoder = new OptimalEncoder<TVar, TSol>(solver, topology, k: 1);
 
             // create the pop encoder.
             var partition = topology.RandomPartition(2);
-            var popEncoder = new PopEncoder<Zen<Real>, ZenSolution>(solver, topology, k: 1, numPartitions: 2, demandPartitions: partition);
+            var popEncoder = new PopEncoder<TVar, TSol>(solver, topology, k: 1, numPartitions: 2, demandPartitions: partition);
 
-            var (optimalSolution, popSolution) = AdversarialInputGenerator<Zen<Real>, ZenSolution>.MaximizeOptimalityGap(optimalEncoder, popEncoder);
+            var (optimalSolution, popSolution) = AdversarialInputGenerator<TVar, TSol>.MaximizeOptimalityGap(optimalEncoder, popEncoder);
 
             // Debugging information.
             Console.WriteLine(Newtonsoft.Json.JsonConvert.SerializeObject(optimalSolution, Newtonsoft.Json.Formatting.Indented));
             Console.WriteLine(Newtonsoft.Json.JsonConvert.SerializeObject(popSolution, Newtonsoft.Json.Formatting.Indented));
 
-            Assert.AreEqual(40, optimalSolution.TotalDemandMet);
-            Assert.AreEqual(20, popSolution.TotalDemandMet);
-
-            // create the optimal encoder.
-            var solverG = new SolverGurobiNoParams();
-            var optimalEncoderG = new OptimalEncoder<GRBVar, GRBModel>(solverG, topology, k: 1);
-
-            var popEncoderG = new PopEncoder<GRBVar, GRBModel>(solverG, topology, k: 1, numPartitions: 2, demandPartitions: partition);
-
-            var (optimalSolutionG, popSolutionG) = AdversarialInputGenerator<GRBVar, GRBModel>.MaximizeOptimalityGap(optimalEncoderG, popEncoderG);
-            Assert.AreEqual(40, optimalSolutionG.TotalDemandMet);
-            Assert.AreEqual(20, popSolutionG.TotalDemandMet);
-
-            solverG.Delete();
+            Assert.IsTrue(TestHelper.IsApproximately(40, optimalSolution.TotalDemandMet));
+            Assert.IsTrue(TestHelper.IsApproximately(20, popSolution.TotalDemandMet));
         }
     }
 }
