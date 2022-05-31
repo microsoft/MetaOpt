@@ -18,16 +18,27 @@ namespace MetaOptimize
     public class SolverGurobiNoParams : ISolver<GRBVar, GRBModel>
     {
         private GRBEnv _env = null;
-
-        private Dictionary<string, GRBVar> _variables = new Dictionary<string, GRBVar>();
-
+        /// <summary>
+        /// Gurobi Vars.
+        /// </summary>
+        protected Dictionary<string, GRBVar> _variables = new Dictionary<string, GRBVar>();
+        /// <summary>
+        /// ineq constraints.
+        /// </summary>
         private int _constraintIneqCount = 0;
+        /// <summary>
+        /// eq constraints.
+        /// </summary>
+        protected int _constraintEqCount = 0;
+        /// <summary>
+        /// Gurobi Aux vars.
+        /// </summary>
+        protected Dictionary<string, GRBVar> _auxiliaryVars = new Dictionary<string, GRBVar>();
 
-        private int _constraintEqCount = 0;
-
-        private Dictionary<string, GRBVar> _auxiliaryVars = new Dictionary<string, GRBVar>();
-
-        private GRBModel _model = null;
+        /// <summary>
+        /// Gurobi Model.
+        /// </summary>
+        protected GRBModel _model = null;
 
         private GRBLinExpr _objective = 0;
 
