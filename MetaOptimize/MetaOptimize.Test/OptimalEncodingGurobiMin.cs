@@ -8,11 +8,12 @@ namespace MetaOptimize.Test
 {
     using Gurobi;
     using Microsoft.VisualStudio.TestTools.UnitTesting;
+
     /// <summary>
-    /// Tests Gurobi Or Version.
+    /// Tests for the optimal encoder.
     /// </summary>
     [TestClass]
-    public class KKtOptimizationTestGurobiOr : KktOptimizationTests<GRBVar, GRBModel>
+    public class OptimalEncodingGurobiMin : OptimalEncodingTests<GRBVar, GRBModel>
     {
         /// <summary>
         /// Initialize the test class.
@@ -20,7 +21,7 @@ namespace MetaOptimize.Test
         [TestInitialize]
         public void Initialize()
         {
-            this.CreateSolver = () => new GurobiOr();
+            this.CreateSolver = () => new GurobiMin();
         }
     }
 }

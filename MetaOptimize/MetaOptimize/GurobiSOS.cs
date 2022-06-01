@@ -160,7 +160,7 @@ namespace MetaOptimize
         /// </summary>
         /// <param name="polynomial1"></param>
         /// <param name="polynomial2"></param>
-        public void AddOrEqZeroConstraint(Polynomial<GRBVar> polynomial1, Polynomial<GRBVar> polynomial2)
+        public virtual void AddOrEqZeroConstraint(Polynomial<GRBVar> polynomial1, Polynomial<GRBVar> polynomial2)
         {
             this.AddOrEqZeroConstraintV1(this.Convert(polynomial1), this.Convert(polynomial2));
         }

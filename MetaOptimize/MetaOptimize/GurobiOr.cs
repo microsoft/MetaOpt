@@ -16,7 +16,7 @@ namespace MetaOptimize
         /// </summary>
         /// <param name="polynomial1"></param>
         /// <param name="polynomial2"></param>
-        public new void AddOrEqZeroConstraint(Polynomial<GRBVar> polynomial1, Polynomial<GRBVar> polynomial2)
+        public override void AddOrEqZeroConstraint(Polynomial<GRBVar> polynomial1, Polynomial<GRBVar> polynomial2)
         {
             this.AddOrEqZeroConstraint(this.Convert(polynomial1), this.Convert(polynomial2.Negate()));
         }
@@ -37,14 +37,14 @@ namespace MetaOptimize
             this._model.AddConstr(expr1, GRB.EQUAL, var_1, "eq_index_" + this._constraintEqCount++);
             this._model.AddConstr(expr2, GRB.EQUAL, var_2, "eq_index_" + this._constraintEqCount++);
 
-            var OrResult = this._model.AddVar(Double.NegativeInfinity, Double.PositiveInfinity, 0, GRB.CONTINUOUS, "aux_" + this._auxiliaryVars.Count);
-            this._auxiliaryVars.Add($"aux_{this._auxiliaryVars.Count}", OrResult);
+            var AndResult = this._model.AddVar(Double.NegativeInfinity, Double.PositiveInfinity, 0, GRB.CONTINUOUS, "aux_" + this._auxiliaryVars.Count);
+            this._auxiliaryVars.Add($"aux_{this._auxiliaryVars.Count}", AndResult);
 
             // add min constraint
             var auxiliaries = new GRBVar[] { var_1, var_2 };
-            this._model.AddGenConstrOr(OrResult, auxiliaries, $"auxC_{this._auxiliaryVars.Count}");
+            this._model.AddGenConstrAnd(AndResult, auxiliaries, $"AndResult_{this._auxiliaryVars.Count}");
 
-            this._model.AddConstr(OrResult, GRB.EQUAL, 0, "eq_index_" + this._constraintEqCount++);
+            this._model.AddConstr(AndResult, GRB.EQUAL, 0, "AndEq_" + this._constraintEqCount++);
         }
     }
 }

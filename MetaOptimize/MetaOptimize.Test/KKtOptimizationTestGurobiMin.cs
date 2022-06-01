@@ -12,7 +12,7 @@ namespace MetaOptimize.Test
     /// Tests Gurobi Or Version.
     /// </summary>
     [TestClass]
-    public class KKtOptimizationTestGurobiOr : KktOptimizationTests<GRBVar, GRBModel>
+    public class KKtOptimizationTestGurobiMin : KktOptimizationTests<GRBVar, GRBModel>
     {
         /// <summary>
         /// Initialize the test class.
@@ -20,7 +20,7 @@ namespace MetaOptimize.Test
         [TestInitialize]
         public void Initialize()
         {
-            this.CreateSolver = () => new GurobiOr();
+            this.CreateSolver = () => new GurobiMin();
         }
     }
 }
