@@ -9,7 +9,7 @@ namespace MetaOptimize
     /// Uses the min of two positive
     /// functions instead of SoS variables.
     /// </summary>
-    public class SolverGurobiMinVersion : GurobiSOS
+    public class GurobiOr : GurobiSOS
     {
         /// <summary>
         /// Ensure at least one of these terms is zero.
@@ -37,9 +37,14 @@ namespace MetaOptimize
             this._model.AddConstr(expr1, GRB.EQUAL, var_1, "eq_index_" + this._constraintEqCount++);
             this._model.AddConstr(expr2, GRB.EQUAL, var_2, "eq_index_" + this._constraintEqCount++);
 
+            var OrResult = this._model.AddVar(Double.NegativeInfinity, Double.PositiveInfinity, 0, GRB.CONTINUOUS, "aux_" + this._auxiliaryVars.Count);
+            this._auxiliaryVars.Add($"aux_{this._auxiliaryVars.Count}", OrResult);
+
             // add min constraint
-            var auxiliaries = new GRBVar[] { var_1 };
-            this._model.AddGenConstrMin(var_2, auxiliaries, 0, $"auxC_{this._auxiliaryVars.Count}");
+            var auxiliaries = new GRBVar[] { var_1, var_2 };
+            this._model.AddGenConstrOr(OrResult, auxiliaries, $"auxC_{this._auxiliaryVars.Count}");
+
+            this._model.AddConstr(OrResult, GRB.EQUAL, 0, "eq_index_" + this._constraintEqCount++);
         }
     }
 }
