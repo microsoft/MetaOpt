@@ -18,17 +18,11 @@ namespace MetaOptimize
     public class SolverGurobiNoParams : ISolver<GRBVar, GRBModel>
     {
         private GRBEnv _env = null;
-
         private Dictionary<string, GRBVar> _variables = new Dictionary<string, GRBVar>();
-
         private int _constraintIneqCount = 0;
-
         private int _constraintEqCount = 0;
-
         private Dictionary<string, GRBVar> _auxiliaryVars = new Dictionary<string, GRBVar>();
-
         private GRBModel _model = null;
-
         private GRBLinExpr _objective = 0;
 
         /// <summary>
