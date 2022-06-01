@@ -33,7 +33,6 @@ namespace MetaOptimize.Test
             var encoder = new KktOptimizationGenerator<TVar, TSol>(solver, new HashSet<TVar>() { x, y }, new HashSet<TVar>());
 
             // x + 2y == 10
-
             encoder.AddEqZeroConstraint(new Polynomial<TVar>(new Term<TVar>(1, x), new Term<TVar>(2, y), new Term<TVar>(-10)));
 
             // x >= 0, y>= 0

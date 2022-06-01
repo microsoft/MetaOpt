@@ -9,7 +9,7 @@ namespace MetaOptimize
     /// Uses the min of two positive
     /// functions instead of SoS variables.
     /// </summary>
-    public class SolverGurobiMinVersion : SolverGurobiNoParams
+    public class SolverGurobiMinVersion : GurobiSOS
     {
         /// <summary>
         /// Ensure at least one of these terms is zero.
