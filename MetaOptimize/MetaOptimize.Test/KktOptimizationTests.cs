@@ -39,16 +39,18 @@ namespace MetaOptimize.Test
             encoder.AddLeqZeroConstraint(new Polynomial<TVar>(new Term<TVar>(-1, x)));
             encoder.AddLeqZeroConstraint(new Polynomial<TVar>(new Term<TVar>(-1, y)));
 
+            var obj = solver.CreateVariable("objective");
+            encoder.AddLeqZeroConstraint(new Polynomial<TVar>(new Term<TVar>(1, obj), new Term<TVar>(-100)));
+
             // maximize y - x
             encoder.AddMaximizationConstraints(new Polynomial<TVar>(new Term<TVar>(1, y), new Term<TVar>(-1, x)));
 
-            // doesn't matter what we maximize here.
             /* foreach (var c in solver.ConstraintExprs)
             {
                 System.Console.WriteLine(c);
             } */
 
-            var solution = solver.Maximize(solver.CreateVariable("objective"));
+            var solution = solver.Maximize(obj);
             solver.GetVariable(solution, x);
 
             Assert.IsTrue(TestHelper.IsApproximately(0, solver.GetVariable(solution, x)));
