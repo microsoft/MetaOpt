@@ -1,6 +1,7 @@
 ﻿// <copyright file="PolynomialTerm.cs" company="Microsoft">
 // Copyright (c) Microsoft. All rights reserved.
 // </copyright>
+using System.Collections.Generic;
 
 namespace MetaOptimize
 {
@@ -97,7 +98,23 @@ namespace MetaOptimize
                 return this.Coefficient;
             }
         }
-
+        /// <summary>
+        /// Function that checks if this variable is in a set.
+        /// </summary>
+        /// <param name="vars">set of variables.</param>
+        /// <returns></returns>
+        public bool isInSetOrConst(ISet<TVar> vars)
+        {
+            if (this.Exponent == 0 || !this.Variable.HasValue)
+            {
+                return true;
+            }
+            if (!vars.Contains((dynamic)this.Variable.Value))
+            {
+                return false;
+            }
+            return true;
+        }
         /// <summary>
         /// Negate this polynomial term.
         /// </summary>

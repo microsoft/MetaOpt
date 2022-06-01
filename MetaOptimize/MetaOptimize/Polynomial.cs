@@ -86,5 +86,22 @@ namespace MetaOptimize
         {
             return string.Join(" + ", this.Terms.Select(x => x.ToString()));
         }
+        /// <summary>
+        /// Checks if all terms in
+        /// this linear polynomial
+        /// are in variabls.
+        /// </summary>
+        /// <param name="variables"></param>
+        /// <returns></returns>
+        public bool isallInSetOrConst(ISet<TVar> variables)
+        {
+            // how many terms are not in the set and not const.
+            var count = this.Terms.Where(x => !x.isInSetOrConst(variables)).Count();
+            if (count == 0)
+            {
+                return true;
+            }
+            return false;
+        }
     }
 }

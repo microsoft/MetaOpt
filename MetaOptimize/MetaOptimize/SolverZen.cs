@@ -126,6 +126,11 @@ namespace MetaOptimize
         /// <returns>A solution.</returns>
         public ZenSolution Maximize(Zen<Real> objectiveVariable)
         {
+            if (objectiveVariable.ToString() == "dummy")
+            {
+                return Zen.Solve(Zen.And(this.ConstraintExprs.ToArray()));
+            }
+
             return Zen.Maximize(objectiveVariable, subjectTo: Zen.And(this.ConstraintExprs.ToArray()));
         }
     }
