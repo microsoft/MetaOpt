@@ -122,7 +122,7 @@ namespace MetaOptimize
         /// Encode the problem.
         /// </summary>
         /// <returns>The constraints and maximization objective.</returns>
-        public OptimizationEncoding<TVar, TSolution> Encoding()
+        public OptimizationEncoding<TVar, TSolution> Encoding(bool noKKT = false)
         {
             // Compute the maximum demand M.
             // Since we don't know the demands we have to be very conservative.
@@ -222,7 +222,7 @@ namespace MetaOptimize
             }
 
             // Generate the full constraints.
-            this.kktEncoder.AddMaximizationConstraints(new Polynomial<TVar>(new Term<TVar>(1, this.TotalDemandMetVariable)));
+            this.kktEncoder.AddMaximizationConstraints(new Polynomial<TVar>(new Term<TVar>(1, this.TotalDemandMetVariable)), noKKT);
 
             // Optimization objective is the total demand met.
             // Return the encoding, including the feasibility constraints, objective, and KKT conditions.

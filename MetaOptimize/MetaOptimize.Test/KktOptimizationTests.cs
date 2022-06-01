@@ -45,11 +45,6 @@ namespace MetaOptimize.Test
             // maximize y - x
             encoder.AddMaximizationConstraints(new Polynomial<TVar>(new Term<TVar>(1, y), new Term<TVar>(-1, x)));
 
-            /* foreach (var c in solver.ConstraintExprs)
-            {
-                System.Console.WriteLine(c);
-            } */
-
             var solution = solver.Maximize(obj);
             solver.GetVariable(solution, x);
 

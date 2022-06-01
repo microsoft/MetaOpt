@@ -104,18 +104,20 @@ namespace MetaOptimize
         /// Get the KKT constraints for maximal solution.
         /// </summary>
         /// <param name="objective">The objective.</param>
+        /// <param name="noKKT"> To not solve through KKT.</param>
         /// <returns>The result as a Zen boolean expression.</returns>
-        public void AddMaximizationConstraints(Polynomial<TVar> objective)
+        public void AddMaximizationConstraints(Polynomial<TVar> objective, bool noKKT = false)
         {
-            this.AddMinimizationConstraints(objective.Negate());
+            this.AddMinimizationConstraints(objective.Negate(), noKKT);
         }
 
         /// <summary>
         /// Get the KKT constraints for minimal solution.
         /// </summary>
         /// <param name="objective">The objective.</param>
+        /// <param name="noKKT"> To not solve through KKT.</param>
         /// <returns>The result as a Zen boolean expression.</returns>
-        public void AddMinimizationConstraints(Polynomial<TVar> objective)
+        public void AddMinimizationConstraints(Polynomial<TVar> objective, bool noKKT = false)
         {
             foreach (var leqZeroConstraint in this.leqZeroConstraints)
             {
@@ -127,60 +129,61 @@ namespace MetaOptimize
                 this.solver.AddEqZeroConstraint(eqZeroConstraint);
             }
 
-            Dictionary<int, int> haveLambda = new Dictionary<int, int>();
-
-            for (int i = 0; i < this.leqZeroConstraints.Count; i++)
+            if (noKKT)
             {
-                var leqConstraint = this.leqZeroConstraints[i];
-                if (leqConstraint.isallInSetOrConst(this.AvoidDerivativeVariables))
-                {
-                    continue;
-                }
-                var lambda = this.solver.CreateVariable("lambda_" + i);
-                haveLambda[i] = lambdaVariables.Count;
-                this.lambdaVariables.Add(lambda);
-
-                this.solver.AddLeqZeroConstraint(new Polynomial<TVar>(new Term<TVar>(-1, lambda)));
-                this.solver.AddOrEqZeroConstraint(new Polynomial<TVar>(new Term<TVar>(1, lambda)), leqConstraint);
-            }
-            Dictionary<int, int> haveNu = new Dictionary<int, int>();
-            for (int i = 0; i < this.eqZeroConstraints.Count; i++)
-            {
-                if (this.eqZeroConstraints[i].isallInSetOrConst(this.AvoidDerivativeVariables))
-                {
-                    continue;
-                }
-                haveNu[i] = this.nuVariables.Count;
-                this.nuVariables.Add(this.solver.CreateVariable("nu_" + i));
-            }
-
-            foreach (var variable in this.Variables)
-            {
-                if (this.AvoidDerivativeVariables.Contains(variable))
-                {
-                    continue;
-                }
-
-                var deriv = objective.Derivative(variable);
-                var total = new Polynomial<TVar>(new Term<TVar>(deriv));
-
+                Dictionary<int, int> haveLambda = new Dictionary<int, int>();
                 for (int i = 0; i < this.leqZeroConstraints.Count; i++)
                 {
-                    if (!haveLambda.ContainsKey(i))
+                    var leqConstraint = this.leqZeroConstraints[i];
+                    if (leqConstraint.isallInSetOrConst(this.AvoidDerivativeVariables))
+                    {
                         continue;
-                    var derivative = this.leqZeroConstraints[i].Derivative(variable);
-                    total.Terms.Add(new Term<TVar>(derivative, this.lambdaVariables[haveLambda[i]]));
-                }
+                    }
+                    var lambda = this.solver.CreateVariable("lambda_" + i);
+                    haveLambda[i] = lambdaVariables.Count;
+                    this.lambdaVariables.Add(lambda);
 
+                    this.solver.AddLeqZeroConstraint(new Polynomial<TVar>(new Term<TVar>(-1, lambda)));
+                    this.solver.AddOrEqZeroConstraint(new Polynomial<TVar>(new Term<TVar>(1, lambda)), leqConstraint);
+                }
+                Dictionary<int, int> haveNu = new Dictionary<int, int>();
                 for (int i = 0; i < this.eqZeroConstraints.Count; i++)
                 {
-                    if (!haveNu.ContainsKey(i))
+                    if (this.eqZeroConstraints[i].isallInSetOrConst(this.AvoidDerivativeVariables))
+                    {
                         continue;
-                    var derivative = this.eqZeroConstraints[i].Derivative(variable);
-                    total.Terms.Add(new Term<TVar>(derivative, this.nuVariables[haveNu[i]]));
+                    }
+                    haveNu[i] = this.nuVariables.Count;
+                    this.nuVariables.Add(this.solver.CreateVariable("nu_" + i));
                 }
 
-                this.solver.AddEqZeroConstraint(total);
+                foreach (var variable in this.Variables)
+                {
+                    if (this.AvoidDerivativeVariables.Contains(variable))
+                    {
+                        continue;
+                    }
+
+                    var deriv = objective.Derivative(variable);
+                    var total = new Polynomial<TVar>(new Term<TVar>(deriv));
+
+                    for (int i = 0; i < this.leqZeroConstraints.Count; i++)
+                    {
+                        if (!haveLambda.ContainsKey(i))
+                            continue;
+                        var derivative = this.leqZeroConstraints[i].Derivative(variable);
+                        total.Terms.Add(new Term<TVar>(derivative, this.lambdaVariables[haveLambda[i]]));
+                    }
+
+                    for (int i = 0; i < this.eqZeroConstraints.Count; i++)
+                    {
+                        if (!haveNu.ContainsKey(i))
+                            continue;
+                        var derivative = this.eqZeroConstraints[i].Derivative(variable);
+                        total.Terms.Add(new Term<TVar>(derivative, this.nuVariables[haveNu[i]]));
+                    }
+                    this.solver.AddEqZeroConstraint(total);
+                }
             }
         }
     }

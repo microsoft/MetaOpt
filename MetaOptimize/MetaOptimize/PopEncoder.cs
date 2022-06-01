@@ -102,14 +102,14 @@ namespace MetaOptimize
         /// Encode the problem.
         /// </summary>
         /// <returns>The constraints and maximization objective.</returns>
-        public OptimizationEncoding<TVar, TSolution> Encoding()
+        public OptimizationEncoding<TVar, TSolution> Encoding(bool noKKT = false)
         {
             var encodings = new OptimizationEncoding<TVar, TSolution>[NumPartitions];
 
             // get all the separate encodings.
             for (int i = 0; i < this.NumPartitions; i++)
             {
-                encodings[i] = this.PartitionEncoders[i].Encoding();
+                encodings[i] = this.PartitionEncoders[i].Encoding(noKKT);
             }
 
             // create new demand variables as the sum of the individual partitions.
