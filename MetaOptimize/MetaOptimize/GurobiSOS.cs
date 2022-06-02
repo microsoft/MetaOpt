@@ -27,7 +27,7 @@ namespace MetaOptimize
         /// <summary>
         /// ineq constraints.
         /// </summary>
-        private int _constraintIneqCount = 0;
+        protected int _constraintIneqCount = 0;
         /// <summary>
         /// eq constraints.
         /// </summary>
@@ -42,8 +42,10 @@ namespace MetaOptimize
         /// </summary>
         protected GRBModel _model = null;
 
-        // SK: TODO: Shouldn't this be protected as well?
-        private GRBLinExpr _objective = 0;
+        /// <summary>
+        /// This is the objective function.
+        /// </summary>
+        protected GRBLinExpr _objective = 0;
 
         /// <summary>
         /// releases gurobi environment. // sk: not sure about this.
@@ -192,7 +194,7 @@ namespace MetaOptimize
         /// </summary>
         /// <param name="objectiveVariable">The objective variable.</param>
         /// <returns>A solution.</returns>
-        public GRBModel Maximize(GRBVar objectiveVariable)
+        public virtual GRBModel Maximize(GRBVar objectiveVariable)
         {
             Console.WriteLine("in maximize call");
             this._objective.AddTerm(1.0, objectiveVariable);
@@ -211,7 +213,12 @@ namespace MetaOptimize
             return this._model;
         }
 
-        private static string ModelStatusToString(int x)
+        /// <summary>
+        /// Returns current status of GRB model.
+        /// </summary>
+        /// <param name="x"></param>
+        /// <returns></returns>
+        protected static string ModelStatusToString(int x)
         {
             switch (x)
             {
