@@ -11,8 +11,8 @@ namespace MetaOptimize
     /// </summary>
     public class GurobiBinary : GurobiSOS
     {
-        private double _bigM = GRB.MAXINT;
-        private double _tolerance = Math.Pow(10, -8);
+        private double _bigM = Math.Pow(10, 7);
+        private double _tolerance = Math.Pow(10, -9);
 
         /// <summary>
         /// Wrapper that convers the new types to guroubi types and then
