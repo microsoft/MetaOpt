@@ -131,6 +131,11 @@ namespace MetaOptimize
 
             // compute the objective to optimize.
             var objectiveVariable = this.Solver.CreateVariable("objective_pop");
+            if (noKKT)
+            {
+                var maxDemand = this.Topology.TotalCapacity() * -10;
+                this.Solver.AddLeqZeroConstraint(new Polynomial<TVar>(new Term<TVar>(1, objectiveVariable), new Term<TVar>(maxDemand)));
+            }
             var objective = new Polynomial<TVar>(new Term<TVar>(-1, objectiveVariable));
             foreach (var encoding in encodings)
             {
