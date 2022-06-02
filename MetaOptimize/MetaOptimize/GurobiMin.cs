@@ -41,7 +41,8 @@ namespace MetaOptimize
             var auxiliaries = new GRBVar[] { var_1, var_2 };
             var MinResult = this._model.AddVar(Double.NegativeInfinity, Double.PositiveInfinity, 0, GRB.CONTINUOUS, "MinResult_" + this._auxiliaryVars.Count);
             this._auxiliaryVars.Add($"MinResult_{this._auxiliaryVars.Count}", MinResult);
-            this._model.AddGenConstrMin(MinResult, auxiliaries, 0, $"auxC_{this._auxiliaryVars.Count}");
+            this._model.AddGenConstrMin(MinResult, auxiliaries, Double.PositiveInfinity, $"auxC_{this._auxiliaryVars.Count}");
+            this._model.AddConstr(MinResult, GRB.EQUAL, 0, "MinConstr_" + this._constraintEqCount++);
         }
     }
 }
