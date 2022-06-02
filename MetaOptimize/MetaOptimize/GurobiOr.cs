@@ -37,14 +37,12 @@ namespace MetaOptimize
             this._model.AddConstr(expr1, GRB.EQUAL, var_1, "eq_index_" + this._constraintEqCount++);
             this._model.AddConstr(expr2, GRB.EQUAL, var_2, "eq_index_" + this._constraintEqCount++);
 
-            var AndResult = this._model.AddVar(Double.NegativeInfinity, Double.PositiveInfinity, 0, GRB.CONTINUOUS, "aux_" + this._auxiliaryVars.Count);
+            var AndResult = this._model.AddVar(0, 0, 0, GRB.BINARY, "aux_" + this._auxiliaryVars.Count);
             this._auxiliaryVars.Add($"aux_{this._auxiliaryVars.Count}", AndResult);
 
-            // add min constraint
-            var auxiliaries = new GRBVar[] { var_1, var_2 };
-            this._model.AddGenConstrAnd(AndResult, auxiliaries, $"AndResult_{this._auxiliaryVars.Count}");
+            this._model.AddGenConstrAnd(AndResult, new GRBVar[] { var_1, var_2 }, $"AndResult_{this._auxiliaryVars.Count}");
 
-            this._model.AddConstr(AndResult, GRB.EQUAL, 0, "AndEq_" + this._constraintEqCount++);
+            // this._model.AddConstr(AndResult, GRB.EQUAL, 0, "AndEq_" + this._constraintEqCount++);
         }
     }
 }
