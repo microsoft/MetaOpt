@@ -117,7 +117,7 @@ namespace MetaOptimize
         /// <param name="objective">The objective.</param>
         /// <param name="noKKT"> To not solve through KKT.</param>
         /// <returns>The result as a Zen boolean expression.</returns>
-        public void AddMinimizationConstraints(Polynomial<TVar> objective, bool noKKT = false)
+        public void AddMinimizationConstraints(Polynomial<TVar> objective, bool noKKT)
         {
             foreach (var leqZeroConstraint in this.leqZeroConstraints)
             {
@@ -129,7 +129,7 @@ namespace MetaOptimize
                 this.solver.AddEqZeroConstraint(eqZeroConstraint);
             }
 
-            if (noKKT)
+            if (!noKKT)
             {
                 Dictionary<int, int> haveLambda = new Dictionary<int, int>();
                 for (int i = 0; i < this.leqZeroConstraints.Count; i++)
