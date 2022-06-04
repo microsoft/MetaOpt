@@ -31,7 +31,7 @@ namespace MetaOptimize.Cli
         /// <summary>
         /// The solver we want to use.
         /// </summary>
-        [Option('c', "solver choice", Required = true, HelpText = "The solver that we want to use (Gurobi | Zen)")]
+        [Option('c', "solver choice", Required = true, HelpText = "The solver that we want to use (Gurobi | Zen | GurobiSearch)")]
         public SolverChoice SolverChoice { get; set; }
 
         /// <summary>
@@ -45,6 +45,24 @@ namespace MetaOptimize.Cli
         /// </summary>
         [Option('p', "paths", Default = 2, HelpText = "The maximum number of paths to use for any demand.")]
         public int Paths { get; set; }
+
+        /// <summary>
+        /// method for finding gap [search or direct].
+        /// </summary>
+        [Option('m', "method", Default = MethodChoice.Direct, HelpText = "the method for finding the desirable gap [Direct (default) | Search]")]
+        public MethodChoice Method { get; set; }
+
+        /// <summary>
+        /// if using search, shows how much close to optimal is ok.
+        /// </summary>
+        [Option('o', "confidence", Default = 0.1, HelpText = "if using search, will find a solution as close as this value to optimal. [Default=0.1]")]
+        public double Confidencelvl { get; set; }
+
+        /// <summary>
+        /// if using search, this values is used as the starting gap.
+        /// </summary>
+        [Option('g', "startinggap", Default = 10, HelpText = "if using search, will start the search from this number. [Default=10]")]
+        public double StartingGap { get; set; }
 
         /// <summary>
         /// Whether to print debugging information.
@@ -82,5 +100,24 @@ namespace MetaOptimize.Cli
         /// The Zen solver.
         /// </summary>
         Zen,
+
+        /// <summary>
+        /// GurobiSearch.
+        /// </summary>
+        GurobiSearch,
+    }
+    /// <summary>
+    /// The method we want to use.
+    /// </summary>
+    public enum MethodChoice
+    {
+        /// <summary>
+        /// directly find the max gap
+        /// </summary>
+        Direct,
+        /// <summary>
+        /// search for the max gap with some interval
+        /// </summary>
+        Search,
     }
 }

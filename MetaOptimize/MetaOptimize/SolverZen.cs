@@ -69,18 +69,20 @@ namespace MetaOptimize
         /// Add a less than or equal to zero constraint.
         /// </summary>
         /// <param name="polynomial">The polynomial.</param>
-        public void AddLeqZeroConstraint(Polynomial<Zen<Real>> polynomial)
+        public string AddLeqZeroConstraint(Polynomial<Zen<Real>> polynomial)
         {
             this.ConstraintExprs.Add(polynomial.AsZen() <= (Real)0);
+            return "dummyName";
         }
 
         /// <summary>
         /// Add a equal to zero constraint.
         /// </summary>
         /// <param name="polynomial">The polynomial.</param>
-        public void AddEqZeroConstraint(Polynomial<Zen<Real>> polynomial)
+        public string AddEqZeroConstraint(Polynomial<Zen<Real>> polynomial)
         {
             this.ConstraintExprs.Add(polynomial.AsZen() == (Real)0);
+            return "dummyName";
         }
 
         /// <summary>
@@ -93,6 +95,25 @@ namespace MetaOptimize
             var p1 = polynomial1.AsZen();
             var p2 = polynomial2.AsZen();
             this.ConstraintExprs.Add(Zen.Or(p1 == (Real)0, p2 == (Real)0));
+        }
+
+        /// <summary>
+        /// Remove a constraint.
+        /// </summary>
+        /// <param name="constraintName">name of the constraint in the string format.</param>
+        public void RemoveConstraint(string constraintName)
+        {
+            throw new Exception("Not Implemented yet....");
+        }
+
+        /// <summary>
+        /// Change constraint's RHS.
+        /// </summary>
+        /// <param name="constraintName">name of the constraint in the string format.</param>
+        /// <param name="newRHS">new RHS of the constraint.</param>
+        public void ChangeConstraintRHS(string constraintName, double newRHS)
+        {
+            throw new Exception("Not Implemented yet....");
         }
 
         /// <summary>
@@ -132,6 +153,14 @@ namespace MetaOptimize
             }
 
             return Zen.Maximize(objectiveVariable, subjectTo: Zen.And(this.ConstraintExprs.ToArray()));
+        }
+
+        /// <summary>
+        /// Check feasibility.
+        /// </summary>
+        public ZenSolution CheckFeasibility()
+        {
+            throw new Exception("have not implemented this yet....");
         }
     }
 }

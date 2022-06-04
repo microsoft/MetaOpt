@@ -135,18 +135,22 @@ namespace MetaOptimize
         /// wrapper that does type conversions then calls the original function.
         /// </summary>
         /// <param name="polynomial"></param>
-        public void AddLeqZeroConstraint(Polynomial<GRBVar> polynomial)
+        public string AddLeqZeroConstraint(Polynomial<GRBVar> polynomial)
         {
-            this._model.AddConstr(this.Convert(polynomial), GRB.LESS_EQUAL, 0.0, "ineq_index_" + this._constraintIneqCount++);
+            string name = "ineq_index_" + this._constraintIneqCount++;
+            this._model.AddConstr(this.Convert(polynomial), GRB.LESS_EQUAL, 0.0, name);
+            return name;
         }
 
         /// <summary>
         /// Wrapper for AddEqZeroConstraint that converts types.
         /// </summary>
         /// <param name="polynomial"></param>
-        public void AddEqZeroConstraint(Polynomial<GRBVar> polynomial)
+        public string AddEqZeroConstraint(Polynomial<GRBVar> polynomial)
         {
-            this._model.AddConstr(this.Convert(polynomial), GRB.EQUAL, 0.0, "eq_index_" + this._constraintEqCount);
+            string name = "eq_index_" + this._constraintEqCount;
+            this._model.AddConstr(this.Convert(polynomial), GRB.EQUAL, 0.0, name);
+            return name;
         }
         /// <summary>
         /// Combine the constraints and variables of another solver into this one.
@@ -190,6 +194,44 @@ namespace MetaOptimize
         }
 
         /// <summary>
+        /// Remove a constraint.
+        /// </summary>
+        /// <param name="constraintName">name of the constraint in the string format.</param>
+        public void RemoveConstraint(string constraintName)
+        {
+            this._model.Remove(this._model.GetConstrByName(constraintName));
+        }
+
+        /// <summary>
+        /// Change constraint's RHS.
+        /// </summary>
+        /// <param name="constraintName">name of the constraint in the string format.</param>
+        /// <param name="newRHS">new RHS of the constraint.</param>
+        public void ChangeConstraintRHS(string constraintName, double newRHS)
+        {
+            this._model.GetConstrByName(constraintName).Set(GRB.DoubleAttr.RHS, newRHS);
+        }
+
+        /// <summary>
+        /// check feasibility of optimization.
+        /// </summary>
+        public virtual GRBModel CheckFeasibility()
+        {
+            Console.WriteLine("in feasibility call");
+            string exhaust_dir_name = @"c:\tmp\grbsos_exhaust\rand_" + (new Random()).Next(1000) + @"\";
+            Directory.CreateDirectory(exhaust_dir_name);
+            this._model.Write($"{exhaust_dir_name}\\model_" + DateTime.Now.Millisecond + ".lp");
+            this._model.Update();
+            this._model.Optimize();
+            if (this._model.Status != GRB.Status.OPTIMAL)
+            {
+                // throw new Exception($"model not optimal {ModelStatusToString(this._model.Status)}");
+                throw new InfeasibleOrUnboundSolution();
+            }
+            return this._model;
+        }
+
+        /// <summary>
         /// Maximize the objective.
         /// </summary>
         /// <param name="objectiveVariable">The objective variable.</param>
@@ -208,6 +250,7 @@ namespace MetaOptimize
             if (this._model.Status != GRB.Status.OPTIMAL)
             {
                 throw new Exception($"model not optimal {ModelStatusToString(this._model.Status)}");
+                // throw new InfeasibleOrUnboundSolution();
             }
 
             return this._model;

@@ -4,6 +4,7 @@
 
 namespace MetaOptimize
 {
+    using System;
     /// <summary>
     /// Meta-optimization utility functions for maximizing optimality gaps.
     /// </summary>
@@ -93,7 +94,8 @@ namespace MetaOptimize
             solver.AddLeqZeroConstraint(new Polynomial<TVar>(
                 new Term<TVar>(-1, objectiveVariable), new Term<TVar>(minDifference)));
 
-            var solution = solver.Maximize(solver.CreateVariable("dummy"));
+            // var solution = solver.Maximize(solver.CreateVariable("dummy"));
+            var solution = solver.CheckFeasibility();
 
             return (optimalEncoder.GetSolution(solution), heuristicEncoder.GetSolution(solution));
 
@@ -108,6 +110,96 @@ namespace MetaOptimize
             Console.WriteLine();
             Console.WriteLine("Optimal (Pop):");
             heuristicEncoder.DisplaySolution(solution); */
+        }
+
+        private static void ensureSameDemands(
+            ISolver<TVar, TSolution> solver,
+            OptimizationEncoding<TVar, TSolution> optimalEncoding,
+            OptimizationEncoding<TVar, TSolution> heuristicEncoding)
+        {
+            foreach (var (pair, variable) in optimalEncoding.DemandVariables)
+            {
+                var heuristicVariable = heuristicEncoding.DemandVariables[pair];
+                solver.AddEqZeroConstraint(new Polynomial<TVar>(new Term<TVar>(1, variable), new Term<TVar>(-1, heuristicVariable)));
+            }
+        }
+
+        /// <summary>
+        /// Finds an adversarial input that is within intervalConf of the maximum gap.
+        /// </summary>
+        /// <param name="optimalEncoder"> </param>
+        /// <param name="heuristicEncoder"> </param>
+        /// <param name="intervalConf"></param>
+        /// <param name="startGap"></param>
+        public static (OptimizationSolution, OptimizationSolution) FindMaximumGapInterval(
+            IEncoder<TVar, TSolution> optimalEncoder,
+            IEncoder<TVar, TSolution> heuristicEncoder,
+            double intervalConf,
+            double startGap)
+        {
+            if (optimalEncoder.Solver != heuristicEncoder.Solver)
+            {
+                throw new System.Exception("Solver mismatch....");
+            }
+
+            if (startGap <= 0.001)
+            {
+                throw new System.Exception("Starting Gap too small...");
+            }
+            var optimalEncoding = optimalEncoder.Encoding();
+            var heuristicEncoding = heuristicEncoder.Encoding();
+
+            var solver = optimalEncoder.Solver;
+            ensureSameDemands(solver, optimalEncoding, heuristicEncoding);
+            string nameLBConst = solver.AddLeqZeroConstraint(
+                new Polynomial<TVar>(
+                    new Term<TVar>(-1, optimalEncoding.MaximizationObjective),
+                    new Term<TVar>(1, heuristicEncoding.MaximizationObjective),
+                    new Term<TVar>(startGap)));
+
+            double lbGap = 0;
+            double ubGap = startGap;
+            bool found_infeas = false;
+            TSolution solution;
+            while (!found_infeas) {
+                Console.WriteLine("************** Current Gap Interval (Phase 1) ****************");
+                Console.WriteLine("lb=" + lbGap);
+                Console.WriteLine("nxt=" + ubGap);
+                Console.WriteLine("**************************************************");
+                try {
+                    solution = solver.CheckFeasibility();
+                    lbGap = ubGap;
+                    ubGap = ubGap * 2;
+                }
+                catch (InfeasibleOrUnboundSolution) {
+                    found_infeas = true;
+                }
+                solver.ChangeConstraintRHS(nameLBConst, -1 * ubGap);
+            }
+
+            while ((ubGap - lbGap) / lbGap > intervalConf) {
+                double midGap = (lbGap + ubGap) / 2;
+                Console.WriteLine("************** Current Gap Interval (Phase 2) ****************");
+                Console.WriteLine("lb=" + lbGap);
+                Console.WriteLine("ub=" + ubGap);
+                Console.WriteLine("nxt=" + midGap);
+                Console.WriteLine("**************************************************");
+                solver.ChangeConstraintRHS(nameLBConst, -1 * midGap);
+                try {
+                    solution = solver.CheckFeasibility();
+                    lbGap = midGap;
+                }
+                catch (InfeasibleOrUnboundSolution) {
+                    ubGap = midGap;
+                }
+            }
+            Console.WriteLine("************** Final Gap Interval ****************");
+            Console.WriteLine("lb=" + lbGap);
+            Console.WriteLine("ub=" + ubGap);
+            Console.WriteLine("**************************************************");
+            solver.ChangeConstraintRHS(nameLBConst, -1 * lbGap);
+            solution = solver.CheckFeasibility();
+            return (optimalEncoder.GetSolution(solution), heuristicEncoder.GetSolution(solution));
         }
     }
 }

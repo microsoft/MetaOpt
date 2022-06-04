@@ -184,39 +184,46 @@ namespace MetaOptimize
         /// wrapper that does type conversions then calls the original function.
         /// </summary>
         /// <param name="polynomial"></param>
-        public void AddLeqZeroConstraint(Polynomial<GRBVar> polynomial)
+        public string AddLeqZeroConstraint(Polynomial<GRBVar> polynomial)
         {
             GRBLinExpr poly = this.convertPolynomialToLinExpr(polynomial);
-            this.AddLeqZeroConstraint(poly);
+            string name = this.AddLeqZeroConstraint(poly);
+            return name;
         }
         /// <summary>
         /// Add a less than or equal to zero constraint.
         /// </summary>
         /// <param name="polynomial">The polynomial.</param>
-        public void AddLeqZeroConstraint(GRBLinExpr polynomial)
+        public string AddLeqZeroConstraint(GRBLinExpr polynomial)
         {
+            string name = "ineq_index_" + this._constraintIneq.Count;
             this._model.AddConstr(polynomial, GRB.LESS_EQUAL,
-                (Double)0, "ineq_index_" + this._constraintIneq.Count);
+                (Double)0, name);
             this._constraintIneq.Add(polynomial);
+            return name;
         }
+
         /// <summary>
         /// Wrapper for AddEqZeroConstraint that converts types.
         /// </summary>
         /// <param name="polynomial"></param>
-        public void AddEqZeroConstraint(Polynomial<GRBVar> polynomial)
+        public string AddEqZeroConstraint(Polynomial<GRBVar> polynomial)
         {
             GRBLinExpr poly = this.convertPolynomialToLinExpr(polynomial);
-            this.AddEqZeroConstraint(poly);
+            string name = this.AddEqZeroConstraint(poly);
+            return name;
         }
         /// <summary>
         /// Add a equal to zero constraint.
         /// </summary>
         /// <param name="polynomial">The polynomial.</param>
-        public void AddEqZeroConstraint(GRBLinExpr polynomial)
+        public string AddEqZeroConstraint(GRBLinExpr polynomial)
         {
+            string name = "eq_index_" + this._constraintEq.Count;
             this._model.AddConstr(polynomial, GRB.EQUAL,
-                (Double)0, "eq_index_" + this._constraintEq.Count);
+                (Double)0, name);
             this._constraintEq.Add(polynomial);
+            return name;
         }
         /// <summary>
         /// Wrapper that convers the new types to guroubi types and then
@@ -279,6 +286,26 @@ namespace MetaOptimize
                         GRB.SOS_TYPE1);
             this._SOSauxilaries.Add(auxilaries);
         }
+
+        /// <summary>
+        /// Remove a constraint.
+        /// </summary>
+        /// <param name="constraintName">name of the constraint in the string format.</param>
+        public void RemoveConstraint(string constraintName)
+        {
+            this._model.Remove(this._model.GetConstrByName(constraintName));
+        }
+
+        /// <summary>
+        /// Change constraint's RHS.
+        /// </summary>
+        /// <param name="constraintName">name of the constraint in the string format.</param>
+        /// <param name="newRHS">new RHS of the constraint.</param>
+        public void ChangeConstraintRHS(string constraintName, double newRHS)
+        {
+            this._model.GetConstrByName(constraintName).Set(GRB.DoubleAttr.RHS, newRHS);
+        }
+
         /// <summary>
         /// Combine the constraints and variables of another solver into this one.
         /// </summary>
@@ -305,6 +332,21 @@ namespace MetaOptimize
             this._model.Write("model_" +  DateTime.Now.Millisecond + ".lp");
             return this._model;
         }
+
+        /// <summary>
+        /// check feasibility.
+        /// </summary>
+        public GRBModel CheckFeasibility()
+        {
+            Console.WriteLine("in feasibility call");
+            Console.WriteLine("tolerance is : " + this._model.Get(GRB.DoubleParam.IntFeasTol));
+            this._model.Set(GRB.DoubleParam.IntFeasTol, 1.0 / this._tolerance);
+            this._model.Optimize();
+            this._modelRun = true;
+            this._model.Write("model_" +  DateTime.Now.Millisecond + ".lp");
+            return this._model;
+        }
+
         /// <summary>
         /// Get the resulting value assigned to a variable.
         /// </summary>
