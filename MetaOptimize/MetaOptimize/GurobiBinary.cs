@@ -11,8 +11,22 @@ namespace MetaOptimize
     /// </summary>
     public class GurobiBinary : GurobiSOS
     {
-        private double _bigM = Math.Pow(10, 7);
+        private double _bigM = Math.Pow(10, 8);
         private double _tolerance = Math.Pow(10, -9);
+        private double _scale = Math.Pow(10, -4);
+
+        /// <summary>
+        /// Scales a polynomial.
+        /// </summary>
+        /// <param name="poly"></param>
+        public Polynomial<GRBVar> scale(Polynomial<GRBVar> poly)
+        {
+            foreach (var term in poly.Terms)
+            {
+                term.Coefficient *= this._scale;
+            }
+            return poly;
+        }
 
         /// <summary>
         /// Wrapper that convers the new types to guroubi types and then
@@ -22,20 +36,20 @@ namespace MetaOptimize
         /// <param name="polynomial2"></param>
         public override void AddOrEqZeroConstraint(Polynomial<GRBVar> polynomial1, Polynomial<GRBVar> polynomial2)
         {
-            GRBLinExpr poly1 = this.Convert(polynomial1);
-            GRBLinExpr poly2 = this.Convert(polynomial2);
+            GRBLinExpr poly1 = this.Convert(this.scale(polynomial1));
+            GRBLinExpr poly2 = this.Convert(this.scale(polynomial2));
             GRBLinExpr poly2Neg = this.Convert(polynomial2.Negate());
 
             var alpha = this._model.AddVar(0.0, 1.0, 0.0, GRB.BINARY, "binary_" + this._auxiliaryVars.Count);
             this._auxiliaryVars.Add($"binary_{this._auxiliaryVars.Count}", alpha);
 
-            poly1.AddTerm(-1 * this._bigM, alpha);
+            poly1.AddTerm(-1 * this._bigM * this._scale, alpha);
 
-            poly2.AddTerm(this._bigM, alpha);
-            poly2.AddConstant(-1 * this._bigM);
+            poly2.AddTerm(this._bigM * this._scale, alpha);
+            poly2.AddConstant(-1 * this._bigM * this._scale);
 
-            poly2Neg.AddTerm(this._bigM, alpha);
-            poly2Neg.AddConstant(-1 * this._bigM);
+            poly2Neg.AddTerm(this._bigM * this._scale, alpha);
+            poly2Neg.AddConstant(-1 * this._bigM * this._scale);
 
             this._model.AddConstr(poly1, GRB.LESS_EQUAL, 0.0, "ineq_index_" + this._constraintIneqCount++);
             this._model.AddConstr(poly2, GRB.LESS_EQUAL, 0.0, "ineq_index_" + this._constraintIneqCount++);
