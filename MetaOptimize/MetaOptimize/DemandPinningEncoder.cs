@@ -121,7 +121,6 @@ namespace MetaOptimize
             this.K = k;
             this.variables = new HashSet<TVar>();
             this.Paths = new Dictionary<(string, string), string[][]>();
-            // this.absShortestPaths = new Dictionary<(string, string), string[][]>();
             this.Threshold = threshold != 0 ? threshold : this.Topology.TotalCapacity();
             this.DemandConstraints = demandConstraints ?? new Dictionary<(string, string), double>();
 
@@ -138,12 +137,10 @@ namespace MetaOptimize
             this.variables.Add(this.TotalDemandMetVariable);
 
             this.FlowVariables = new Dictionary<(string, string), TVar>();
-            // this.maxPinned = new Dictionary<(string, string), TVar>();
             this.MaxAuxVariables = new Dictionary<(string, string), TVar>();
             this.FlowPathVariables = new Dictionary<string[], TVar>(new PathComparer());
             this.sumNonShortest = new Dictionary<(string, string), Polynomial<TVar>>();
             this.shortestFlowVariables = new Dictionary<(string, string), TVar>();
-            // this.pinnedFlowVariables = new Dictionary<(string, string), TVar>();
 
             foreach (var pair in this.Topology.GetNodePairs())
             {
@@ -154,17 +151,12 @@ namespace MetaOptimize
                 }
                 // establish the flow variable.
                 this.FlowVariables[pair] = this.Solver.CreateVariable("flow_" + pair.Item1 + "_" + pair.Item2);
-                // this.pinnedFlowVariables[pair] = this.Solver.CreateVariable("pinnedFlow_" + pair.Item1 + "_" + pair.Item2);
-                // this.maxPinned[pair] = this.Solver.CreateVariable("maxPinned_" + pair.Item1 + "_" + pair.Item2);
                 this.MaxAuxVariables[pair] = this.Solver.CreateVariable("maxNonPinned_" + pair.Item1 + "_" + pair.Item2);
                 this.variables.Add(this.FlowVariables[pair]);
-                // this.variables.Add(this.pinnedFlowVariables[pair]);
-                // this.variables.Add(this.maxPinned[pair]);
                 this.variables.Add(this.MaxAuxVariables[pair]);
                 this.sumNonShortest[pair] = new Polynomial<TVar>(new Term<TVar>(0));
 
                 var shortestPaths = this.Topology.ShortestKPaths(1, pair.Item1, pair.Item2);
-
                 foreach (var simplePath in paths)
                 {
                     // establish the flow path variables.
@@ -176,7 +168,6 @@ namespace MetaOptimize
                         this.sumNonShortest[pair].Terms.Add(new Term<TVar>(1, this.FlowPathVariables[simplePath]));
                     }
                 }
-                // this.absShortestPaths[pair] = shortestPaths;
             }
 
             var demandVariables = new HashSet<TVar>(this.DemandVariables.Values);
@@ -204,10 +195,6 @@ namespace MetaOptimize
                 }
                 polynomial.Terms.Add(new Term<TVar>(1, this.FlowVariables[pair]));
             }
-            // foreach (var pair in this.Topology.GetNodePairs())
-            // {
-            //     polynomial.Terms.Add(new Term<TVar>(1, this.pinnedFlowVariables[pair]));
-            // }
 
             polynomial.Terms.Add(new Term<TVar>(-1, this.TotalDemandMetVariable));
             this.kktEncoder.AddEqZeroConstraint(polynomial);
@@ -232,13 +219,6 @@ namespace MetaOptimize
                 this.kktEncoder.AddLeqZeroConstraint(new Polynomial<TVar>(new Term<TVar>(-1, variable)));
                 this.kktEncoder.AddLeqZeroConstraint(new Polynomial<TVar>(new Term<TVar>(1, variable), new Term<TVar>(-1, this.DemandVariables[pair])));
             }
-            // // Ensure \beta_k geq 0
-            // // Ensure \beta_k \leq d_k
-            // foreach (var (pair, variable) in this.pinnedFlowVariables)
-            // {
-            //     this.kktEncoder.AddLeqZeroConstraint(new Polynomial<TVar>(new Term<TVar>(-1, variable)));
-            //     this.kktEncoder.AddLeqZeroConstraint(new Polynomial<TVar>(new Term<TVar>(1, variable), new Term<TVar>(-1, this.DemandVariables[pair])));
-            // }
 
             // Ensure that f_k^p geq 0.
             foreach (var (pair, paths) in this.Paths)
@@ -248,18 +228,6 @@ namespace MetaOptimize
                     this.kktEncoder.AddLeqZeroConstraint(new Polynomial<TVar>(new Term<TVar>(-1, this.FlowPathVariables[path])));
                 }
             }
-
-            // Ensure that nodes that are not connected have no flow or demand.
-            // This is needed for not fully connected topologies.
-            // foreach (var (pair, paths) in this.Paths)
-            // {
-            //     if (paths.Length == 0)
-            //     {
-            //         this.kktEncoder.AddEqZeroConstraint(new Polynomial<TVar>(new Term<TVar>(1, this.DemandVariables[pair])));
-            //         this.kktEncoder.AddEqZeroConstraint(new Polynomial<TVar>(new Term<TVar>(1, this.FlowVariables[pair])));
-            //         // this.kktEncoder.AddEqZeroConstraint(new Polynomial<TVar>(new Term<TVar>(1, this.pinnedFlowVariables[pair])));
-            //     }
-            // }
 
             // Ensure that the flow f_k = sum_p f_k^p.
             foreach (var (pair, paths) in this.Paths)
@@ -298,17 +266,6 @@ namespace MetaOptimize
                         sumPerEdge[edge].Terms.Add(term);
                     }
                 }
-                // foreach (var path in this.absShortestPaths[pair])
-                // {
-                //     for (int i = 0; i < path.Length - 1; i++)
-                //     {
-                //         var source = path[i];
-                //         var target = path[i + 1];
-                //         var edge = this.Topology.GetEdge(source, target);
-                //         var term = new Term<TVar>(1, this.pinnedFlowVariables[pair]);
-                //         sumPerEdge[edge].Terms.Add(term);
-                //     }
-                // }
             }
 
             foreach (var (edge, total) in sumPerEdge)
@@ -336,32 +293,6 @@ namespace MetaOptimize
                 shortestPathUB.Terms.Add(new Term<TVar>(-1, MaxAuxVariables[pair]));
                 this.kktEncoder.AddLeqZeroConstraint(shortestPathUB);
             }
-            // foreach (var (pair, variable) in MaxAuxVariables)
-            // {
-            //     this.kktEncoder.AddLeqZeroConstraint(new Polynomial<TVar>(new Term<TVar>(-1, variable)));
-            //     var poly = new Polynomial<TVar>(new Term<TVar>(0));
-            //     poly.Terms.Add(new Term<TVar>(-1, MaxAuxVariables[pair]));
-            //     poly.Terms.Add(new Term<TVar>(this._bigM, this.DemandVariables[pair]));
-            //     poly.Terms.Add(new Term<TVar>(-1 * this._bigM * this.Threshold));
-            //     this.kktEncoder.AddLeqZeroConstraint(poly);
-            //     // need to ensure f_k <= maxnonpinned
-            //     var poly2 = new Polynomial<TVar>(new Term<TVar>(1, this.FlowVariables[pair]));
-            //     poly2.Terms.Add(new Term<TVar>(-1, MaxAuxVariables[pair]));
-            //     this.kktEncoder.AddLeqZeroConstraint(poly2);
-            // }
-            // foreach (var (pair, variable) in maxPinned)
-            // {
-            //     this.kktEncoder.AddLeqZeroConstraint(new Polynomial<TVar>(new Term<TVar>(-1, variable)));
-            //     var poly = new Polynomial<TVar>(new Term<TVar>(0));
-            //     poly.Terms.Add(new Term<TVar>(-1, maxPinned[pair]));
-            //     poly.Terms.Add(new Term<TVar>(this._bigM * this.Threshold));
-            //     poly.Terms.Add(new Term<TVar>(-1 * this._bigM, this.DemandVariables[pair]));
-            //     this.kktEncoder.AddLeqZeroConstraint(poly);
-            //     // need to ensure \beta_k \le maxpinned.
-            //     var poly2 = new Polynomial<TVar>(new Term<TVar>(1, this.pinnedFlowVariables[pair]));
-            //     poly2.Terms.Add(new Term<TVar>(-1, maxPinned[pair]));
-            //     this.kktEncoder.AddLeqZeroConstraint(poly2);
-            // }
 
             var objectiveFunction = new Polynomial<TVar>(new Term<TVar>(1, this.TotalDemandMetVariable));
             double alpha = maxDemand;
