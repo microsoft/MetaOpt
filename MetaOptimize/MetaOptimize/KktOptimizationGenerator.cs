@@ -23,6 +23,7 @@ namespace MetaOptimize
         /// </summary>
         private IList<Polynomial<TVar>> leqZeroConstraints;
 
+
         /// <summary>
         /// The constraints for polynomial equals zero.
         /// </summary>
