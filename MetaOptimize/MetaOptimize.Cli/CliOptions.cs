@@ -31,7 +31,7 @@ namespace MetaOptimize.Cli
         /// <summary>
         /// The solver we want to use.
         /// </summary>
-        [Option('c', "solver choice", Required = true, HelpText = "The solver that we want to use (Gurobi | Zen | GurobiSearch)")]
+        [Option('c', "solver", Required = true, HelpText = "The solver that we want to use (Gurobi | Zen)")]
         public SolverChoice SolverChoice { get; set; }
 
         /// <summary>
@@ -39,6 +39,12 @@ namespace MetaOptimize.Cli
         /// </summary>
         [Option('s', "slices", Default = 2, HelpText = "The number of pop slices to use.")]
         public int PopSlices { get; set; }
+
+        /// <summary>
+        /// The threshold for demand pinning.
+        /// </summary>
+        [Option('t', "threshold", Default = 5, HelpText = "The threshold for the demand pinning heuristic. [Default = 5]")]
+        public int DemandPinningThreshold { get; set; }
 
         /// <summary>
         /// The maximum number of paths to use for a demand.
@@ -100,11 +106,6 @@ namespace MetaOptimize.Cli
         /// The Zen solver.
         /// </summary>
         Zen,
-
-        /// <summary>
-        /// GurobiSearch.
-        /// </summary>
-        GurobiSearch,
     }
     /// <summary>
     /// The method we want to use.
