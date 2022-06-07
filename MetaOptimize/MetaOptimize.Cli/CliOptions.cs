@@ -49,7 +49,7 @@ namespace MetaOptimize.Cli
         /// <summary>
         /// The threshold for demand pinning.
         /// </summary>
-        [Option('t', "threshold", Default = 5, HelpText = "The threshold for the demand pinning heuristic.")]
+        [Option('t', "pinthreshold", Default = 5, HelpText = "The threshold for the demand pinning heuristic.")]
         public int DemandPinningThreshold { get; set; }
 
         /// <summary>
@@ -75,6 +75,12 @@ namespace MetaOptimize.Cli
         /// </summary>
         [Option('g', "startinggap", Default = 10, HelpText = "if using search, will start the search from this number.")]
         public double StartingGap { get; set; }
+
+        /// <summary>
+        /// an upper bound on all the demands to find more useful advers inputs.
+        /// </summary>
+        [Option('u', "demandupperbound", Default = 0, HelpText = "an upper bound on all the demands.")]
+        public double DemandUB { get; set; }
 
         /// <summary>
         /// Whether to print debugging information.

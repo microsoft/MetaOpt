@@ -5,6 +5,7 @@
 namespace MetaOptimize
 {
     using System;
+    using System.Collections.Generic;
     /// <summary>
     /// Meta-optimization utility functions for maximizing optimality gaps.
     /// </summary>
@@ -15,9 +16,11 @@ namespace MetaOptimize
         /// </summary>
         /// <param name="optimalEncoder">The optimal encoder.</param>
         /// <param name="heuristicEncoder">The heuristic encoder.</param>
+        /// <param name="demandUB">upper bound on all the demands.</param>
         public static (OptimizationSolution, OptimizationSolution) MaximizeOptimalityGap(
             IEncoder<TVar, TSolution> optimalEncoder,
-            IEncoder<TVar, TSolution> heuristicEncoder)
+            IEncoder<TVar, TSolution> heuristicEncoder,
+            double demandUB = 0)
         {
             var optimalEncoding = optimalEncoder.Encoding();
             var heuristicEncoding = heuristicEncoder.Encoding();
@@ -28,12 +31,8 @@ namespace MetaOptimize
             }
 
             var solver = optimalEncoder.Solver;
-            // ensures that demand in both problems is the same.
-            foreach (var (pair, variable) in optimalEncoding.DemandVariables)
-            {
-                var heuristicVariable = heuristicEncoding.DemandVariables[pair];
-                solver.AddEqZeroConstraint(new Polynomial<TVar>(new Term<TVar>(1, variable), new Term<TVar>(-1, heuristicVariable)));
-            }
+            // ensures that demand in both problems is the same and lower than demand upper bound constraint.
+            ensureSameDemandsAndDemandUB(solver, optimalEncoding, heuristicEncoding, demandUB);
 
             var objectiveVariable = solver.CreateVariable("objective");
             solver.AddEqZeroConstraint(new Polynomial<TVar>(
@@ -64,10 +63,12 @@ namespace MetaOptimize
         /// <param name="optimalEncoder">The optimal encoder.</param>
         /// <param name="heuristicEncoder">The heuristic encoder.</param>
         /// <param name="minDifference">The minimum difference.</param>
+        /// <param name="demandUB">upper bound on all the demands.</param>
         public static (OptimizationSolution, OptimizationSolution) FindOptimalityGapAtLeast(
             IEncoder<TVar, TSolution> optimalEncoder,
             IEncoder<TVar, TSolution> heuristicEncoder,
-            double minDifference)
+            double minDifference,
+            double demandUB = 0)
         {
             var optimalEncoding = optimalEncoder.Encoding();
             var heuristicEncoding = heuristicEncoder.Encoding();
@@ -78,12 +79,8 @@ namespace MetaOptimize
             }
 
             var solver = optimalEncoder.Solver;
-            // ensures that demand in both problems is the same.
-            foreach (var (pair, variable) in optimalEncoding.DemandVariables)
-            {
-                var heuristicVariable = heuristicEncoding.DemandVariables[pair];
-                solver.AddEqZeroConstraint(new Polynomial<TVar>(new Term<TVar>(1, variable), new Term<TVar>(-1, heuristicVariable)));
-            }
+            // ensures that demand in both problems is the same and lower than demand upper bound constraint.
+            ensureSameDemandsAndDemandUB(solver, optimalEncoding, heuristicEncoding, demandUB);
 
             var objectiveVariable = solver.CreateVariable("objective");
             solver.AddEqZeroConstraint(new Polynomial<TVar>(
@@ -112,15 +109,19 @@ namespace MetaOptimize
             heuristicEncoder.DisplaySolution(solution); */
         }
 
-        private static void ensureSameDemands(
+        private static void ensureSameDemandsAndDemandUB(
             ISolver<TVar, TSolution> solver,
             OptimizationEncoding<TVar, TSolution> optimalEncoding,
-            OptimizationEncoding<TVar, TSolution> heuristicEncoding)
+            OptimizationEncoding<TVar, TSolution> heuristicEncoding,
+            double demandUB = 0)
         {
             foreach (var (pair, variable) in optimalEncoding.DemandVariables)
             {
                 var heuristicVariable = heuristicEncoding.DemandVariables[pair];
                 solver.AddEqZeroConstraint(new Polynomial<TVar>(new Term<TVar>(1, variable), new Term<TVar>(-1, heuristicVariable)));
+                if (demandUB > 0) {
+                    solver.AddLeqZeroConstraint(new Polynomial<TVar>(new Term<TVar>(-1 * demandUB), new Term<TVar>(1, variable)));
+                }
             }
         }
 
@@ -131,11 +132,13 @@ namespace MetaOptimize
         /// <param name="heuristicEncoder"> </param>
         /// <param name="intervalConf"></param>
         /// <param name="startGap"></param>
+        /// <param name="demandUB">upper bound on all the demands.</param>
         public static (OptimizationSolution, OptimizationSolution) FindMaximumGapInterval(
             IEncoder<TVar, TSolution> optimalEncoder,
             IEncoder<TVar, TSolution> heuristicEncoder,
             double intervalConf,
-            double startGap)
+            double startGap,
+            double demandUB = 0)
         {
             if (optimalEncoder.Solver != heuristicEncoder.Solver)
             {
@@ -150,7 +153,8 @@ namespace MetaOptimize
             var heuristicEncoding = heuristicEncoder.Encoding();
 
             var solver = optimalEncoder.Solver;
-            ensureSameDemands(solver, optimalEncoding, heuristicEncoding);
+            // ensures that demand in both problems is the same and lower than demand upper bound constraint.
+            ensureSameDemandsAndDemandUB(solver, optimalEncoding, heuristicEncoding, demandUB);
             string nameLBConst = solver.AddLeqZeroConstraint(
                 new Polynomial<TVar>(
                     new Term<TVar>(-1, optimalEncoding.MaximizationObjective),

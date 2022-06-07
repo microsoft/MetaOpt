@@ -73,15 +73,15 @@ namespace MetaOptimize
         /// <param name="solver">The solver.</param>
         /// <param name="topology">The network topology.</param>
         /// <param name="k">The max number of paths between nodes.</param>
-        /// <param name="demandConstraints">Any concrete demand constraints.</param>
-        public OptimalEncoder(ISolver<TVar, TSolution>  solver, Topology topology, int k, Dictionary<(string, string), double> demandConstraints = null)
+        /// <param name="demandEqualityConstraints">Any concrete demand constraints.</param>
+        public OptimalEncoder(ISolver<TVar, TSolution>  solver, Topology topology, int k, Dictionary<(string, string), double> demandEqualityConstraints = null)
         {
             this.Solver = solver;
             this.Topology = topology;
             this.K = k;
             this.variables = new HashSet<TVar>();
             this.Paths = new Dictionary<(string, string), string[][]>();
-            this.DemandConstraints = demandConstraints ?? new Dictionary<(string, string), double>();
+            this.DemandConstraints = demandEqualityConstraints ?? new Dictionary<(string, string), double>();
 
             // establish the demand variables.
             this.DemandVariables = new Dictionary<(string, string), TVar>();
@@ -155,7 +155,7 @@ namespace MetaOptimize
             // Ensure that f_k leq d_k.
             foreach (var (pair, variable) in this.FlowVariables)
             {
-                this.kktEncoder.AddLeqZeroConstraint(new Polynomial<TVar>(new Term<TVar>(-1, variable)));
+                // this.kktEncoder.AddLeqZeroConstraint(new Polynomial<TVar>(new Term<TVar>(-1, variable)));
                 this.kktEncoder.AddLeqZeroConstraint(new Polynomial<TVar>(new Term<TVar>(1, variable), new Term<TVar>(-1, this.DemandVariables[pair])));
             }
 
