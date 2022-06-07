@@ -12,8 +12,8 @@ namespace MetaOptimize
     public class GurobiBinary : GurobiSOS
     {
         private double _bigM = Math.Pow(10, 8);
-        private double _tolerance = Math.Pow(10, -9);
-        private double _scale = Math.Pow(10, -4);
+        private double _tolerance = Math.Pow(10, -8);
+        private double _scale = Math.Pow(10, -5);
 
         /// <summary>
         /// Scales a polynomial.
