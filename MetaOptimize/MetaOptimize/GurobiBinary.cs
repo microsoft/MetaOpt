@@ -29,6 +29,13 @@ namespace MetaOptimize
         }
 
         /// <summary>
+        /// Constructor.
+        /// </summary>
+        public GurobiBinary(double timeout = double.PositiveInfinity) : base(timeout)
+        {
+        }
+
+        /// <summary>
         /// Wrapper that convers the new types to guroubi types and then
         /// calls the proper function.
         /// </summary>

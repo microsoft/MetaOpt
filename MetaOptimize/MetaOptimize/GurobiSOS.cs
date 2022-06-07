@@ -74,10 +74,11 @@ namespace MetaOptimize
         /// <summary>
         /// constructor.
         /// </summary>
-        public GurobiSOS()
+        public GurobiSOS(double timeout = double.PositiveInfinity)
         {
             this._env = SetupGurobi();
             this._model = new GRBModel(this._env);
+            this._model.Parameters.TimeLimit = timeout;
         }
 
         /// <summary>

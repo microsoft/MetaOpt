@@ -35,6 +35,12 @@ namespace MetaOptimize.Cli
         public SolverChoice SolverChoice { get; set; }
 
         /// <summary>
+        /// Timeout for gurobi solver.
+        /// </summary>
+        [Option('o', "timeout", Default = double.PositiveInfinity, HelpText = "gurobi solver terminates after the specified time")]
+        public double Timeout { get; set; }
+
+        /// <summary>
         /// The number of pop slices to use.
         /// </summary>
         [Option('s', "slices", Default = 2, HelpText = "The number of pop slices to use.")]
@@ -43,7 +49,7 @@ namespace MetaOptimize.Cli
         /// <summary>
         /// The threshold for demand pinning.
         /// </summary>
-        [Option('t', "threshold", Default = 5, HelpText = "The threshold for the demand pinning heuristic. [Default = 5]")]
+        [Option('t', "threshold", Default = 5, HelpText = "The threshold for the demand pinning heuristic.")]
         public int DemandPinningThreshold { get; set; }
 
         /// <summary>
@@ -55,19 +61,19 @@ namespace MetaOptimize.Cli
         /// <summary>
         /// method for finding gap [search or direct].
         /// </summary>
-        [Option('m', "method", Default = MethodChoice.Direct, HelpText = "the method for finding the desirable gap [Direct (default) | Search]")]
+        [Option('m', "method", Default = MethodChoice.Direct, HelpText = "the method for finding the desirable gap [Direct | Search | FindFeas]")]
         public MethodChoice Method { get; set; }
 
         /// <summary>
         /// if using search, shows how much close to optimal is ok.
         /// </summary>
-        [Option('o', "confidence", Default = 0.1, HelpText = "if using search, will find a solution as close as this value to optimal. [Default=0.1]")]
+        [Option('d', "confidence", Default = 0.1, HelpText = "if using search, will find a solution as close as this value to optimal.")]
         public double Confidencelvl { get; set; }
 
         /// <summary>
         /// if using search, this values is used as the starting gap.
         /// </summary>
-        [Option('g', "startinggap", Default = 10, HelpText = "if using search, will start the search from this number. [Default=10]")]
+        [Option('g', "startinggap", Default = 10, HelpText = "if using search, will start the search from this number.")]
         public double StartingGap { get; set; }
 
         /// <summary>
@@ -75,6 +81,12 @@ namespace MetaOptimize.Cli
         /// </summary>
         [Option('d', "debug", Default = false, HelpText = "Prints debugging messages to standard output.")]
         public bool Debug { get; set; }
+
+        /// <summary>
+        /// to show more detailed logs.
+        /// </summary>
+        [Option('v', "verbose", Default = false, HelpText = "more detailed logs")]
+        public bool Verbose { get; set; }
     }
 
     /// <summary>
@@ -120,5 +132,9 @@ namespace MetaOptimize.Cli
         /// search for the max gap with some interval
         /// </summary>
         Search,
+        /// <summary>
+        /// find a solution with gap at least equal to startinggap.
+        /// </summary>
+        FindFeas,
     }
 }
