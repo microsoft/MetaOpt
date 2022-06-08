@@ -109,6 +109,14 @@ namespace MetaOptimize
         }
 
         /// <summary>
+        /// Get the resulting value assigned to a variable.
+        /// </summary>
+        /// <param name="objective">The solver solution.</param>
+        public void SetObjective(GRBVar objective) {
+            this._objective.AddTerm(1.0, objective);
+        }
+
+        /// <summary>
         /// Converts polynomials to linear expressions.
         /// </summary>
         /// <param name="poly"></param>
@@ -217,17 +225,23 @@ namespace MetaOptimize
         /// <summary>
         /// check feasibility of optimization.
         /// </summary>
-        public virtual GRBModel CheckFeasibility()
+        public virtual GRBModel CheckFeasibility(double objectiveValue)
         {
             Console.WriteLine("in feasibility call");
             string exhaust_dir_name = @"c:\tmp\grbsos_exhaust\rand_" + (new Random()).Next(1000) + @"\";
+            this._model.Parameters.BestObjStop = objectiveValue;
+            this._model.Parameters.BestBdStop = objectiveValue - 0.001;
+            this._model.SetObjective(this._objective, GRB.MAXIMIZE);
             Directory.CreateDirectory(exhaust_dir_name);
             this._model.Write($"{exhaust_dir_name}\\model_" + DateTime.Now.Millisecond + ".lp");
             this._model.Update();
             this._model.Optimize();
-            if (this._model.Status != GRB.Status.OPTIMAL)
+            if (this._model.Status != GRB.Status.USER_OBJ_LIMIT & this._model.Status != GRB.Status.OPTIMAL)
             {
                 // throw new Exception($"model not optimal {ModelStatusToString(this._model.Status)}");
+                throw new InfeasibleOrUnboundSolution();
+            }
+            if (this._objective.Value < objectiveValue) {
                 throw new InfeasibleOrUnboundSolution();
             }
             return this._model;
@@ -236,13 +250,12 @@ namespace MetaOptimize
         /// <summary>
         /// Maximize the objective.
         /// </summary>
-        /// <param name="objectiveVariable">The objective variable.</param>
         /// <returns>A solution.</returns>
-        public virtual GRBModel Maximize(GRBVar objectiveVariable)
+        public virtual GRBModel Maximize()
         {
             Console.WriteLine("in maximize call");
-            this._objective.AddTerm(1.0, objectiveVariable);
             this._model.SetObjective(this._objective, GRB.MAXIMIZE);
+            // this._model.Parameters.MIPFocus = 3;
 
             string exhaust_dir_name = @"c:\tmp\grbsos_exhaust\rand_" + (new Random()).Next(1000) + @"\";
             Directory.CreateDirectory(exhaust_dir_name);
@@ -256,6 +269,16 @@ namespace MetaOptimize
             }
 
             return this._model;
+        }
+
+        /// <summary>
+        /// Maximize the objective with objective as input.
+        /// </summary>
+        /// <returns>A solution.</returns>
+        public virtual GRBModel Maximize(GRBVar objective)
+        {
+            SetObjective(objective);
+            return Maximize();
         }
 
         /// <summary>
@@ -283,7 +306,7 @@ namespace MetaOptimize
         public double GetVariable(GRBModel solution, GRBVar variable)
         {
             // Maximize() above is a synchronous call; not sure if this check is needed
-            if (solution.Status != GRB.Status.OPTIMAL)
+            if (solution.Status != GRB.Status.USER_OBJ_LIMIT & solution.Status != GRB.Status.OPTIMAL)
             {
                 throw new Exception("can't read status since model is not optimal");
             }

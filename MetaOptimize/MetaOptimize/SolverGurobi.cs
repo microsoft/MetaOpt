@@ -147,6 +147,15 @@ namespace MetaOptimize
             }
             return null;
         }
+
+        /// <summary>
+        /// Get the resulting value assigned to a variable.
+        /// </summary>
+        /// <param name="objective">The solver solution.</param>
+        public void SetObjective(GRBVar objective) {
+            this._objective.AddTerm(1.0, objective);
+        }
+
         /// <summary>
         /// sets the scalefactor to use.
         /// </summary>
@@ -317,12 +326,10 @@ namespace MetaOptimize
         /// <summary>
         /// Maximize the objective.
         /// </summary>
-        /// <param name="objectiveVariable">The objective variable.</param>
         /// <returns>A solution.</returns>
-        public GRBModel Maximize(GRBVar objectiveVariable)
+        public GRBModel Maximize()
         {
             Console.WriteLine("in maximize call");
-            this._objective.AddTerm(1.0, objectiveVariable);
             Console.WriteLine("tolerance is : " + this._model.Get(GRB.DoubleParam.IntFeasTol));
             this._model.Set(GRB.DoubleParam.IntFeasTol, 1.0 / this._tolerance);
             // this._model.Parameters.OptimalityTol = 1.0 / this._varBounds;
@@ -334,17 +341,28 @@ namespace MetaOptimize
         }
 
         /// <summary>
+        /// Maximize the objective with objective as input.
+        /// </summary>
+        /// <returns>A solution.</returns>
+        public virtual GRBModel Maximize(GRBVar objective)
+        {
+            SetObjective(objective);
+            return Maximize();
+        }
+
+        /// <summary>
         /// check feasibility.
         /// </summary>
-        public GRBModel CheckFeasibility()
+        public GRBModel CheckFeasibility(double objectiveValue)
         {
-            Console.WriteLine("in feasibility call");
-            Console.WriteLine("tolerance is : " + this._model.Get(GRB.DoubleParam.IntFeasTol));
-            this._model.Set(GRB.DoubleParam.IntFeasTol, 1.0 / this._tolerance);
-            this._model.Optimize();
-            this._modelRun = true;
-            this._model.Write("model_" +  DateTime.Now.Millisecond + ".lp");
-            return this._model;
+            throw new Exception("this part should be reimplemented based GurobiSoS");
+            // Console.WriteLine("in feasibility call");
+            // Console.WriteLine("tolerance is : " + this._model.Get(GRB.DoubleParam.IntFeasTol));
+            // this._model.Set(GRB.DoubleParam.IntFeasTol, 1.0 / this._tolerance);
+            // this._model.Optimize();
+            // this._modelRun = true;
+            // this._model.Write("model_" +  DateTime.Now.Millisecond + ".lp");
+            // return this._model;
         }
 
         /// <summary>

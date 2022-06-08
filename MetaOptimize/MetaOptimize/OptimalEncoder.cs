@@ -191,7 +191,7 @@ namespace MetaOptimize
             // Ensure that f_k leq d_k.
             foreach (var (pair, variable) in this.FlowVariables)
             {
-                this.kktEncoder.AddLeqZeroConstraint(new Polynomial<TVar>(new Term<TVar>(-1, variable)));
+                // this.kktEncoder.AddLeqZeroConstraint(new Polynomial<TVar>(new Term<TVar>(-1, variable)));
                 this.kktEncoder.AddLeqZeroConstraint(new Polynomial<TVar>(new Term<TVar>(1, variable), new Term<TVar>(-1, this.DemandVariables[pair])));
             }
 

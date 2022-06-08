@@ -64,7 +64,6 @@ namespace MetaOptimize
                 new Term<TVar>(-1, objectiveVariable),
                 new Term<TVar>(1, optimalEncoding.MaximizationObjective),
                 new Term<TVar>(-1, heuristicEncoding.MaximizationObjective)));
-
             var solution = solver.Maximize(objectiveVariable);
 
             return (optimalEncoder.GetSolution(solution), heuristicEncoder.GetSolution(solution));
@@ -120,11 +119,11 @@ namespace MetaOptimize
                 new Term<TVar>(1, optimalEncoding.MaximizationObjective),
                 new Term<TVar>(-1, heuristicEncoding.MaximizationObjective)));
 
-            solver.AddLeqZeroConstraint(new Polynomial<TVar>(
-                new Term<TVar>(-1, objectiveVariable), new Term<TVar>(minDifference)));
+            // solver.AddLeqZeroConstraint(new Polynomial<TVar>(
+                // new Term<TVar>(-1, objectiveVariable), new Term<TVar>(minDifference)));
 
             // var solution = solver.Maximize(solver.CreateVariable("dummy"));
-            var solution = solver.CheckFeasibility();
+            var solution = solver.CheckFeasibility(minDifference);
 
             return (optimalEncoder.GetSolution(solution), heuristicEncoder.GetSolution(solution));
 
@@ -198,11 +197,13 @@ namespace MetaOptimize
 
             // ensures that demand in both problems is the same and lower than demand upper bound constraint.
             EnsureDemandUB(solver, demandUB);
-            string nameLBConst = solver.AddLeqZeroConstraint(
-                new Polynomial<TVar>(
-                    new Term<TVar>(-1, optimalEncoding.MaximizationObjective),
-                    new Term<TVar>(1, heuristicEncoding.MaximizationObjective),
-                    new Term<TVar>(startGap)));
+            // setting demand as objective
+            var objectiveVariable = solver.CreateVariable("objective");
+            solver.AddEqZeroConstraint(new Polynomial<TVar>(
+                new Term<TVar>(-1, objectiveVariable),
+                new Term<TVar>(1, optimalEncoding.MaximizationObjective),
+                new Term<TVar>(-1, heuristicEncoding.MaximizationObjective)));
+            solver.SetObjective(objectiveVariable);
 
             double lbGap = 0;
             double ubGap = startGap;
@@ -214,14 +215,14 @@ namespace MetaOptimize
                 Console.WriteLine("nxt=" + ubGap);
                 Console.WriteLine("**************************************************");
                 try {
-                    solution = solver.CheckFeasibility();
+                    solution = solver.CheckFeasibility(ubGap);
                     lbGap = ubGap;
                     ubGap = ubGap * 2;
                 }
                 catch (InfeasibleOrUnboundSolution) {
                     found_infeas = true;
                 }
-                solver.ChangeConstraintRHS(nameLBConst, -1 * ubGap);
+                // solver.ChangeConstraintRHS(nameLBConst, -1 * ubGap);
             }
 
             while ((ubGap - lbGap) / lbGap > intervalConf) {
@@ -231,9 +232,9 @@ namespace MetaOptimize
                 Console.WriteLine("ub=" + ubGap);
                 Console.WriteLine("nxt=" + midGap);
                 Console.WriteLine("**************************************************");
-                solver.ChangeConstraintRHS(nameLBConst, -1 * midGap);
+                // solver.ChangeConstraintRHS(nameLBConst, -1 * midGap);
                 try {
-                    solution = solver.CheckFeasibility();
+                    solution = solver.CheckFeasibility(midGap);
                     lbGap = midGap;
                 }
                 catch (InfeasibleOrUnboundSolution) {
@@ -244,8 +245,8 @@ namespace MetaOptimize
             Console.WriteLine("lb=" + lbGap);
             Console.WriteLine("ub=" + ubGap);
             Console.WriteLine("**************************************************");
-            solver.ChangeConstraintRHS(nameLBConst, -1 * lbGap);
-            solution = solver.CheckFeasibility();
+            // solver.ChangeConstraintRHS(nameLBConst, -1 * lbGap);
+            solution = solver.CheckFeasibility(lbGap);
             return (optimalEncoder.GetSolution(solution), heuristicEncoder.GetSolution(solution));
         }
     }

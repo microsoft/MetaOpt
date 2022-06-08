@@ -25,6 +25,12 @@ namespace MetaOptimize
         public double GetVariable(TSolution solution, TVar variable);
 
         /// <summary>
+        /// Get the resulting value assigned to a variable.
+        /// </summary>
+        /// <param name="objective">The solver solution.</param>
+        public void SetObjective(TVar objective);
+
+        /// <summary>
         /// Add a less than or equal to zero constraint.
         /// </summary>
         /// <param name="polynomial">The polynomial.</param>
@@ -67,14 +73,19 @@ namespace MetaOptimize
         /// <summary>
         /// Maximize the objective.
         /// </summary>
-        /// <param name="objectiveVariable">The objective variable.</param>
         /// <returns>A solution.</returns>
-        public TSolution Maximize(TVar objectiveVariable);
+        public TSolution Maximize();
+
+        /// <summary>
+        /// Maximize the objective with objective as input.
+        /// </summary>
+        /// <returns>A solution.</returns>
+        public TSolution Maximize(TVar objective);
 
         // <summary>
         // Check feasibility.
         // </summary>
         /// <returns>A solution.</returns>
-        public TSolution CheckFeasibility();
+        public TSolution CheckFeasibility(double objectiveValue);
     }
 }

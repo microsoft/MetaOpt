@@ -15,6 +15,11 @@ namespace MetaOptimize
     public class SolverZen : ISolver<Zen<Real>, ZenSolution>
     {
         /// <summary>
+        /// This is the objective function.
+        /// </summary>
+        protected Zen<Real> _objective;
+
+        /// <summary>
         /// The solver constraints.
         /// </summary>
         public IList<Zen<bool>> ConstraintExprs = new List<Zen<bool>>();
@@ -141,24 +146,41 @@ namespace MetaOptimize
         }
 
         /// <summary>
+        /// Get the resulting value assigned to a variable.
+        /// </summary>
+        /// <param name="objective">The solver solution.</param>
+        public void SetObjective(Zen<Real> objective) {
+            this._objective = objective;
+        }
+
+        /// <summary>
         /// Maximize the objective.
         /// </summary>
-        /// <param name="objectiveVariable">The objective variable.</param>
         /// <returns>A solution.</returns>
-        public ZenSolution Maximize(Zen<Real> objectiveVariable)
+        public ZenSolution Maximize()
         {
-            if (objectiveVariable.ToString() == "dummy")
+            if (this._objective.ToString() == "dummy")
             {
                 return Zen.Solve(Zen.And(this.ConstraintExprs.ToArray()));
             }
 
-            return Zen.Maximize(objectiveVariable, subjectTo: Zen.And(this.ConstraintExprs.ToArray()));
+            return Zen.Maximize(this._objective, subjectTo: Zen.And(this.ConstraintExprs.ToArray()));
+        }
+
+        /// <summary>
+        /// Maximize the objective with objective as input.
+        /// </summary>
+        /// <returns>A solution.</returns>
+        public virtual ZenSolution Maximize(Zen<Real> objective)
+        {
+            SetObjective(objective);
+            return Maximize();
         }
 
         /// <summary>
         /// Check feasibility.
         /// </summary>
-        public ZenSolution CheckFeasibility()
+        public ZenSolution CheckFeasibility(double objectiveValue)
         {
             throw new Exception("have not implemented this yet....");
         }

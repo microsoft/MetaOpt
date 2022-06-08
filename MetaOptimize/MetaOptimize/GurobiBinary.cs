@@ -65,13 +65,12 @@ namespace MetaOptimize
         /// <summary>
         /// Maximize the objective.
         /// </summary>
-        /// <param name="objectiveVariable">The objective variable.</param>
         /// <returns>A solution.</returns>
-        public override GRBModel Maximize(GRBVar objectiveVariable)
+        public override GRBModel Maximize()
         {
             Console.WriteLine("in maximize call");
-            this._objective.AddTerm(1.0, objectiveVariable);
             this._model.SetObjective(this._objective, GRB.MAXIMIZE);
+            // this._model.Parameters.MIPFocus = 3;
 
             this._model.Set(GRB.DoubleParam.IntFeasTol, this._tolerance);
 
