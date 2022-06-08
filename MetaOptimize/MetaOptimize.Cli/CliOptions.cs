@@ -79,7 +79,7 @@ namespace MetaOptimize.Cli
         /// <summary>
         /// an upper bound on all the demands to find more useful advers inputs.
         /// </summary>
-        [Option('u', "demandupperbound", Default = 0, HelpText = "an upper bound on all the demands.")]
+        [Option('u', "demandupperbound", Default = -1, HelpText = "an upper bound on all the demands.")]
         public double DemandUB { get; set; }
 
         /// <summary>

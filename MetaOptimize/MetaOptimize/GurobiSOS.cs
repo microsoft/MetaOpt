@@ -79,6 +79,7 @@ namespace MetaOptimize
             this._env = SetupGurobi();
             this._model = new GRBModel(this._env);
             this._model.Parameters.TimeLimit = timeout;
+            this._model.Parameters.Presolve = 2;
         }
 
         /// <summary>
@@ -149,7 +150,7 @@ namespace MetaOptimize
         /// <param name="polynomial"></param>
         public string AddEqZeroConstraint(Polynomial<GRBVar> polynomial)
         {
-            string name = "eq_index_" + this._constraintEqCount;
+            string name = "eq_index_" + this._constraintEqCount++;
             this._model.AddConstr(this.Convert(polynomial), GRB.EQUAL, 0.0, name);
             return name;
         }

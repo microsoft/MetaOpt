@@ -41,8 +41,9 @@ namespace MetaOptimize.Test
             // create the pop encoder.
             var partition = topology.RandomPartition(2);
             var popEncoder = new PopEncoder<TVar, TSol>(solver, topology, k: 1, numPartitions: 2, demandPartitions: partition);
+            var adversarialInputGenerator = new AdversarialInputGenerator<TVar, TSol>(topology, k: 1);
 
-            var (optimalSolution, popSolution) = AdversarialInputGenerator<TVar, TSol>.MaximizeOptimalityGap(optimalEncoder, popEncoder);
+            var (optimalSolution, popSolution) = adversarialInputGenerator.MaximizeOptimalityGap(optimalEncoder, popEncoder);
 
             // Debugging information.
             Console.WriteLine(Newtonsoft.Json.JsonConvert.SerializeObject(optimalSolution, Newtonsoft.Json.Formatting.Indented));

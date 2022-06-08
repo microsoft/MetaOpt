@@ -123,13 +123,22 @@ namespace MetaOptimize
             this.Paths = new Dictionary<(string, string), string[][]>();
             this.Threshold = threshold != 0 ? threshold : this.Topology.TotalCapacity();
             this.DemandConstraints = demandConstraints ?? new Dictionary<(string, string), double>();
+        }
 
+        private void InitializeVariables(Dictionary<(string, string), TVar> preDemandVariables) {
             // establish the demand variables.
-            this.DemandVariables = new Dictionary<(string, string), TVar>();
-            foreach (var pair in topology.GetNodePairs())
-            {
-                this.DemandVariables[pair] = this.Solver.CreateVariable("demand_" + pair.Item1 + "_" + pair.Item2);
-                this.variables.Add(this.DemandVariables[pair]);
+            this.DemandVariables = preDemandVariables;
+            if (this.DemandVariables == null) {
+                this.DemandVariables = new Dictionary<(string, string), TVar>();
+                foreach (var pair in this.Topology.GetNodePairs())
+                {
+                    this.DemandVariables[pair] = this.Solver.CreateVariable("demand_" + pair.Item1 + "_" + pair.Item2);
+                    this.variables.Add(this.DemandVariables[pair]);
+                }
+            } else {
+                foreach (var (pair, variable) in this.DemandVariables) {
+                    this.variables.Add(variable);
+                }
             }
 
             // establish the total demand met variable.
@@ -178,8 +187,9 @@ namespace MetaOptimize
         /// Encode the problem.
         /// </summary>
         /// <returns>The constraints and maximization objective.</returns>
-        public OptimizationEncoding<TVar, TSolution> Encoding(bool noKKT = false)
+        public OptimizationEncoding<TVar, TSolution> Encoding(Dictionary<(string, string), TVar> preDemandVariables = null, bool noKKT = false)
         {
+            InitializeVariables(preDemandVariables);
             // Compute the maximum demand M.
             // Since we don't know the demands we have to be very conservative.
             var maxDemand = this.Topology.TotalCapacity() * 10;

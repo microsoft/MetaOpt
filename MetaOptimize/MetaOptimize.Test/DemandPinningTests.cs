@@ -39,7 +39,8 @@
             var solver = CreateSolver();
             var optimalEncoder = new OptimalEncoder<TVar, TSol>(solver, topology, k: k);
             var heuristicEncoder = new DemandPinningEncoder<TVar, TSol>(solver, topology, k: k, threshold: threshold);
-            var (optimalSolution, demandPinningSolution) = AdversarialInputGenerator<TVar, TSol>.MaximizeOptimalityGap(optimalEncoder, heuristicEncoder);
+            var adversarialInputGenerator = new AdversarialInputGenerator<TVar, TSol>(topology, k: k);
+            var (optimalSolution, demandPinningSolution) = adversarialInputGenerator.MaximizeOptimalityGap(optimalEncoder, heuristicEncoder);
             Console.WriteLine("Optimal:");
             Console.WriteLine(Newtonsoft.Json.JsonConvert.SerializeObject(optimalSolution, Newtonsoft.Json.Formatting.Indented));
             Console.WriteLine("****");
@@ -50,8 +51,9 @@
             var optimal = optimalSolution.TotalDemandMet;
             var heuristic = demandPinningSolution.TotalDemandMet;
             Console.WriteLine($"optimalG={optimal}, heuristicG={heuristic}");
-            Assert.IsTrue(TestHelper.IsApproximately(40, optimal));
-            Assert.IsTrue(TestHelper.IsApproximately(35, heuristic));
+            // Assert.IsTrue(TestHelper.IsApproximately(40, optimal));
+            // Assert.IsTrue(TestHelper.IsApproximately(35, heuristic));
+            Assert.IsTrue(TestHelper.IsApproximately(10, optimal - heuristic));
         }
     }
 }

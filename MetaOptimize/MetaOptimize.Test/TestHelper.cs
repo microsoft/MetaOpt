@@ -22,6 +22,9 @@ namespace MetaOptimize.Test
         /// <returns>True if their difference is below the threshold.</returns>
         public static bool IsApproximately(double expected, double actual, double threshold = 0.001)
         {
+            if (actual == 0) {
+                return expected < threshold;
+            }
             return Math.Abs(expected - actual) / actual < threshold;
         }
     }

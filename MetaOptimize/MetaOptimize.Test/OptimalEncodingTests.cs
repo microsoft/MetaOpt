@@ -63,7 +63,7 @@ namespace MetaOptimize.Test
 
             var solver = CreateSolver();
             var optimalEncoder = new OptimalEncoder<TVar, TSol>(solver, topology, k: 1);
-            var encoding = optimalEncoder.Encoding(true);
+            var encoding = optimalEncoder.Encoding(noKKT: true);
             var solverSolution = optimalEncoder.Solver.Maximize(encoding.MaximizationObjective);
             var optimizationSolution = optimalEncoder.GetSolution(solverSolution);
 
@@ -131,7 +131,7 @@ namespace MetaOptimize.Test
 
             var solver = CreateSolver();
             var optimalEncoder = new OptimalEncoder<TVar, TSol>(solver, topology, k: 1);
-            var encoding = optimalEncoder.Encoding(true);
+            var encoding = optimalEncoder.Encoding(noKKT: true);
             var solverSolution = optimalEncoder.Solver.Maximize(encoding.MaximizationObjective);
             var optimizationSolution = optimalEncoder.GetSolution(solverSolution);
 

@@ -201,9 +201,9 @@ namespace MetaOptimize
         }
 
         /// <summary>
-        /// The maximum capacity on any edge in the topology.
+        /// The total capacity of all the edges in the topology.
         /// </summary>
-        /// <returns>The maximum capacity.</returns>
+        /// <returns>The total capacity.</returns>
         public double TotalCapacity()
         {
             double totalCapacity = 0;
@@ -213,6 +213,19 @@ namespace MetaOptimize
             }
 
             return totalCapacity;
+        }
+
+        /// <summary>
+        /// the maximum link capacity among all the edges in the topology.
+        /// </summary>
+        /// <returns>The maximum link capacity.</returns>
+        public double MaxCapacity()
+        {
+            double maxCapacity = 0;
+            foreach (var edge in this.GetAllEdges()) {
+                maxCapacity = Math.Max(maxCapacity, edge.Capacity);
+            }
+            return maxCapacity;
         }
 
         /// <summary>

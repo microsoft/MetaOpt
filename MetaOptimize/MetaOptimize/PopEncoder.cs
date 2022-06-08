@@ -50,6 +50,11 @@ namespace MetaOptimize
         public OptimalEncoder<TVar, TSolution>[] PartitionEncoders { get; set; }
 
         /// <summary>
+        /// The demand variables for the network (d_k).
+        /// </summary>
+        public Dictionary<(string, string), TVar> DemandVariables { get; set; }
+
+        /// <summary>
         /// Create a new instance of the <see cref="PopEncoder{TVar, TSolution}"/> class.
         /// </summary>
         /// <param name="solver">The solver to use.</param>
@@ -98,35 +103,55 @@ namespace MetaOptimize
             }
         }
 
+        private void InitializeVariables(Dictionary<(string, string), TVar> preDemandVariables) {
+            // establish the demand variables.
+            this.DemandVariables = preDemandVariables;
+            if (this.DemandVariables == null) {
+                this.DemandVariables = new Dictionary<(string, string), TVar>();
+                foreach (var pair in this.Topology.GetNodePairs())
+                {
+                    this.DemandVariables[pair] = this.Solver.CreateVariable("demand_" + pair.Item1 + "_" + pair.Item2);
+                }
+            }
+        }
+
         /// <summary>
         /// Encode the problem.
         /// </summary>
         /// <returns>The constraints and maximization objective.</returns>
-        public OptimizationEncoding<TVar, TSolution> Encoding(bool noKKT = false)
+        public OptimizationEncoding<TVar, TSolution> Encoding(Dictionary<(string, string), TVar> preDemandVariables = null, bool noKKT = false)
         {
+            InitializeVariables(preDemandVariables);
             var encodings = new OptimizationEncoding<TVar, TSolution>[NumPartitions];
 
             // get all the separate encodings.
             for (int i = 0; i < this.NumPartitions; i++)
             {
-                encodings[i] = this.PartitionEncoders[i].Encoding(noKKT);
+                Dictionary<(string, string), TVar> partitionPreDemandVariables = null;
+                partitionPreDemandVariables = new Dictionary<(string, string), TVar>();
+                foreach (var (pair, partitionID) in this.DemandPartitions) {
+                    if (partitionID == i) {
+                        partitionPreDemandVariables[pair] = this.DemandVariables[pair];
+                    }
+                }
+                encodings[i] = this.PartitionEncoders[i].Encoding(partitionPreDemandVariables, noKKT: noKKT);
             }
 
             // create new demand variables as the sum of the individual partitions.
             var demandVariables = new Dictionary<(string, string), TVar>();
             foreach (var pair in this.Topology.GetNodePairs())
             {
-                var demandVariable = this.Solver.CreateVariable("demand_pop_" + pair.Item1 + "_" + pair.Item2);
-                var polynomial = new Polynomial<TVar>(new Term<TVar>(-1, demandVariable));
+                int partitionID = this.DemandPartitions[pair];
+                demandVariables[pair] = this.PartitionEncoders[partitionID].DemandVariables[pair];
+                // var demandVariable = this.Solver.CreateVariable("demand_pop_" + pair.Item1 + "_" + pair.Item2);
+                // var polynomial = new Polynomial<TVar>(new Term<TVar>(-1, demandVariable));
 
-                foreach (var encoder in this.PartitionEncoders)
-                {
-                    polynomial.Terms.Add(new Term<TVar>(1, encoder.DemandVariables[pair]));
-                }
-
-                this.Solver.AddEqZeroConstraint(polynomial);
-
-                demandVariables[pair] = demandVariable;
+                // foreach (var encoder in this.PartitionEncoders)
+                // {
+                    // polynomial.Terms.Add(new Term<TVar>(1, encoder.DemandVariables[pair]));
+                // }
+                // this.Solver.AddEqZeroConstraint(polynomial);
+                // demandVariables[pair] = demandVariable;
             }
 
             // compute the objective to optimize.
@@ -163,15 +188,38 @@ namespace MetaOptimize
 
             var solutions = this.PartitionEncoders.Select(e => e.GetSolution(solution)).ToList();
 
-            foreach (var pair in this.Topology.GetNodePairs())
+            // foreach (var pair in this.Topology.GetNodePairs())
+            // {
+            //     // demands[pair] = solutions.Select(s => s.Demands[pair]).Aggregate((a, b) => a + b);
+            //     // flows[pair] = solutions.Select(s => s.Flows[pair]).Aggregate((a, b) => a + b);
+            //     int partitionID = this.DemandPartitions[pair];
+            //     demands[pair] = solutions[partitionID].Demands[pair];
+            //     flows[pair] = solutions[partitionID].Flows[pair];
+            // }
+
+            // for (int i = 0; i < this.NumPartitions; i++) {
+            //     foreach (var path in solutions[i].FlowsPaths.Keys)
+            //     {
+            //         // flowPaths[path] = solutions.Select(s => s.FlowsPaths[path]).Aggregate((a, b) => a + b);
+            //         flowPaths[path] = solutions[i].FlowsPaths[path];
+            //     }
+            // }
+
+            foreach (var (pair, variable) in this.DemandVariables)
             {
-                demands[pair] = solutions.Select(s => s.Demands[pair]).Aggregate((a, b) => a + b);
-                flows[pair] = solutions.Select(s => s.Flows[pair]).Aggregate((a, b) => a + b);
+                demands[pair] = this.Solver.GetVariable(solution, variable);
             }
 
-            foreach (var path in solutions[0].FlowsPaths.Keys)
-            {
-                flowPaths[path] = solutions.Select(s => s.FlowsPaths[path]).Aggregate((a, b) => a + b);
+            for (int i = 0; i < this.NumPartitions; i++) {
+                foreach (var (pair, variable) in this.PartitionEncoders[i].FlowVariables)
+                {
+                    flows[pair] = this.Solver.GetVariable(solution, variable);
+                }
+
+                foreach (var (path, variable) in this.PartitionEncoders[i].FlowPathVariables)
+                {
+                    flowPaths[path] = this.Solver.GetVariable(solution, variable);
+                }
             }
 
             return new OptimizationSolution

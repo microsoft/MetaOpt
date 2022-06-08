@@ -82,13 +82,37 @@ namespace MetaOptimize
             this.variables = new HashSet<TVar>();
             this.Paths = new Dictionary<(string, string), string[][]>();
             this.DemandConstraints = demandEqualityConstraints ?? new Dictionary<(string, string), double>();
+        }
 
+        private bool IsDemandValid((string, string) pair) {
+            if (this.DemandConstraints.ContainsKey(pair)) {
+                if (this.DemandConstraints[pair] <= 0) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        private void InitializeVariables(Dictionary<(string, string), TVar> preDemandVariables) {
             // establish the demand variables.
-            this.DemandVariables = new Dictionary<(string, string), TVar>();
-            foreach (var pair in topology.GetNodePairs())
-            {
-                this.DemandVariables[pair] = this.Solver.CreateVariable("demand_" + pair.Item1 + "_" + pair.Item2);
-                this.variables.Add(this.DemandVariables[pair]);
+            this.DemandVariables = preDemandVariables;
+            if (this.DemandVariables == null) {
+                this.DemandVariables = new Dictionary<(string, string), TVar>();
+                foreach (var pair in this.Topology.GetNodePairs())
+                {
+                    if (!IsDemandValid(pair)) {
+                        continue;
+                    }
+                    this.DemandVariables[pair] = this.Solver.CreateVariable("demand_" + pair.Item1 + "_" + pair.Item2);
+                    this.variables.Add(this.DemandVariables[pair]);
+                }
+            } else {
+                foreach (var (pair, variable) in this.DemandVariables) {
+                    if (!IsDemandValid(pair)) {
+                        continue;
+                    }
+                    this.variables.Add(variable);
+                }
             }
 
             // establish the total demand met variable.
@@ -99,6 +123,9 @@ namespace MetaOptimize
             this.FlowPathVariables = new Dictionary<string[], TVar>(new PathComparer());
             foreach (var pair in this.Topology.GetNodePairs())
             {
+                if (!IsDemandValid(pair)) {
+                    continue;
+                }
                 // establish the flow variable.
                 this.FlowVariables[pair] = this.Solver.CreateVariable("flow_" + pair.Item1 + "_" + pair.Item2);
                 this.variables.Add(this.FlowVariables[pair]);
@@ -122,16 +149,22 @@ namespace MetaOptimize
         /// Encode the problem.
         /// </summary>
         /// <returns>The constraints and maximization objective.</returns>
-        public OptimizationEncoding<TVar, TSolution> Encoding(bool noKKT = false)
+        public OptimizationEncoding<TVar, TSolution> Encoding(Dictionary<(string, string), TVar> preDemandVariables = null, bool noKKT = false)
         {
+            // Initialize Variables for the encoding
+            InitializeVariables(preDemandVariables);
             // Compute the maximum demand M.
             // Since we don't know the demands we have to be very conservative.
-            var maxDemand = this.Topology.TotalCapacity() * 10;
+            // var maxDemand = this.Topology.TotalCapacity() * 10;
+            // var maxDemand = this.Topology.MaxCapacity() * this.K * 2;
 
             // Ensure that sum_k f_k = total_demand.
             var polynomial = new Polynomial<TVar>();
             foreach (var pair in this.Topology.GetNodePairs())
             {
+                if (!IsDemandValid(pair)) {
+                    continue;
+                }
                 polynomial.Terms.Add(new Term<TVar>(1, this.FlowVariables[pair]));
             }
 
@@ -140,14 +173,17 @@ namespace MetaOptimize
 
             // Ensure that the demands are finite.
             // This is needed because Z3 can return any value if demands can be infinite.
-            foreach (var (_, variable) in this.DemandVariables)
-            {
-                this.kktEncoder.AddLeqZeroConstraint(new Polynomial<TVar>(new Term<TVar>(1, variable), new Term<TVar>(-1 * maxDemand)));
-            }
+            // foreach (var (_, variable) in this.DemandVariables)
+            // {
+            //     this.kktEncoder.AddLeqZeroConstraint(new Polynomial<TVar>(new Term<TVar>(1, variable), new Term<TVar>(-1 * maxDemand)));
+            // }
 
             // Ensure that the demand constraints are respected
             foreach (var (pair, constant) in this.DemandConstraints)
             {
+                if (constant <= 0) {
+                    continue;
+                }
                 this.kktEncoder.AddEqZeroConstraint(new Polynomial<TVar>(new Term<TVar>(1, this.DemandVariables[pair]), new Term<TVar>(-1 * constant)));
             }
 
@@ -155,7 +191,7 @@ namespace MetaOptimize
             // Ensure that f_k leq d_k.
             foreach (var (pair, variable) in this.FlowVariables)
             {
-                // this.kktEncoder.AddLeqZeroConstraint(new Polynomial<TVar>(new Term<TVar>(-1, variable)));
+                this.kktEncoder.AddLeqZeroConstraint(new Polynomial<TVar>(new Term<TVar>(-1, variable)));
                 this.kktEncoder.AddLeqZeroConstraint(new Polynomial<TVar>(new Term<TVar>(1, variable), new Term<TVar>(-1, this.DemandVariables[pair])));
             }
 
@@ -195,10 +231,10 @@ namespace MetaOptimize
             // Ensure the capacity constraints hold.
             // The sum of flows over all paths through each edge are bounded by capacity.
             var sumPerEdge = new Dictionary<Edge, Polynomial<TVar>>();
-            foreach (var edge in this.Topology.GetAllEdges())
-            {
-                sumPerEdge[edge] = new Polynomial<TVar>(new Term<TVar>(0));
-            }
+            // foreach (var edge in this.Topology.GetAllEdges())
+            // {
+            //     sumPerEdge[edge] = new Polynomial<TVar>(new Term<TVar>(0));
+            // }
 
             foreach (var (pair, paths) in this.Paths)
             {
@@ -210,6 +246,9 @@ namespace MetaOptimize
                         var target = path[i + 1];
                         var edge = this.Topology.GetEdge(source, target);
                         var term = new Term<TVar>(1, this.FlowPathVariables[path]);
+                        if (!sumPerEdge.ContainsKey(edge)) {
+                            sumPerEdge[edge] = new Polynomial<TVar>(new Term<TVar>(0));
+                        }
                         sumPerEdge[edge].Terms.Add(term);
                     }
                 }
