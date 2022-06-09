@@ -261,13 +261,15 @@ namespace MetaOptimize
             }
 
             // Generate the full constraints.
-            this.kktEncoder.AddMaximizationConstraints(new Polynomial<TVar>(new Term<TVar>(1, this.TotalDemandMetVariable)), noKKT);
+            var objective = new Polynomial<TVar>(new Term<TVar>(1, this.TotalDemandMetVariable));
+            this.kktEncoder.AddMaximizationConstraints(objective, noKKT);
 
             // Optimization objective is the total demand met.
             // Return the encoding, including the feasibility constraints, objective, and KKT conditions.
             return new OptimizationEncoding<TVar, TSolution>
             {
-                MaximizationObjective = this.TotalDemandMetVariable,
+                GlobalObjective = this.TotalDemandMetVariable,
+                MaximizationObjective = objective,
                 DemandVariables = this.DemandVariables,
             };
         }

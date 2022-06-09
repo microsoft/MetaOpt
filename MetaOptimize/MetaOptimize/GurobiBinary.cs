@@ -70,6 +70,7 @@ namespace MetaOptimize
         {
             Console.WriteLine("in maximize call");
             this._model.SetObjective(this._objective, GRB.MAXIMIZE);
+            // this._model.Parameters.DualReductions = 0;
             // this._model.Parameters.MIPFocus = 3;
 
             this._model.Set(GRB.DoubleParam.IntFeasTol, this._tolerance);

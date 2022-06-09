@@ -32,7 +32,7 @@ namespace MetaOptimize.Test
             var solver = CreateSolver();
             var optimalEncoder = new OptimalEncoder<TVar, TSol>(solver, topology, k: 1);
             var encoding = optimalEncoder.Encoding();
-            var solverSolution = optimalEncoder.Solver.Maximize(encoding.MaximizationObjective);
+            var solverSolution = optimalEncoder.Solver.Maximize(encoding.GlobalObjective);
             var optimizationSolution = optimalEncoder.GetSolution(solverSolution);
 
             // Debugging information.
@@ -64,7 +64,7 @@ namespace MetaOptimize.Test
             var solver = CreateSolver();
             var optimalEncoder = new OptimalEncoder<TVar, TSol>(solver, topology, k: 1);
             var encoding = optimalEncoder.Encoding(noKKT: true);
-            var solverSolution = optimalEncoder.Solver.Maximize(encoding.MaximizationObjective);
+            var solverSolution = optimalEncoder.Solver.Maximize(encoding.GlobalObjective);
             var optimizationSolution = optimalEncoder.GetSolution(solverSolution);
 
             Assert.IsTrue(TestHelper.IsApproximately(10, optimizationSolution.TotalDemandMet));
@@ -93,7 +93,7 @@ namespace MetaOptimize.Test
             var solver = CreateSolver();
             var optimalEncoder = new OptimalEncoder<TVar, TSol>(solver, topology, k: 1);
             var encoding = optimalEncoder.Encoding();
-            var solverSolution = optimalEncoder.Solver.Maximize(encoding.MaximizationObjective);
+            var solverSolution = optimalEncoder.Solver.Maximize(encoding.GlobalObjective);
             var optimizationSolution = optimalEncoder.GetSolution(solverSolution);
 
             // Debugging information.
@@ -132,7 +132,7 @@ namespace MetaOptimize.Test
             var solver = CreateSolver();
             var optimalEncoder = new OptimalEncoder<TVar, TSol>(solver, topology, k: 1);
             var encoding = optimalEncoder.Encoding(noKKT: true);
-            var solverSolution = optimalEncoder.Solver.Maximize(encoding.MaximizationObjective);
+            var solverSolution = optimalEncoder.Solver.Maximize(encoding.GlobalObjective);
             var optimizationSolution = optimalEncoder.GetSolution(solverSolution);
 
             // Debugging information.

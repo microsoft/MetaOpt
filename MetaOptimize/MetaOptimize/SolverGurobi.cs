@@ -152,8 +152,24 @@ namespace MetaOptimize
         /// Get the resulting value assigned to a variable.
         /// </summary>
         /// <param name="objective">The solver solution.</param>
+        public void SetObjective(Polynomial<GRBVar> objective) {
+            this._objective = convertPolynomialToLinExpr(objective);
+        }
+
+        /// <summary>
+        /// Get the resulting value assigned to a variable.
+        /// </summary>
+        /// <param name="objective">The solver solution.</param>
         public void SetObjective(GRBVar objective) {
-            this._objective.AddTerm(1.0, objective);
+            this._objective = objective;
+        }
+
+        /// <summary>
+        /// Get the resulting value assigned to a variable.
+        /// </summary>
+        /// <param name="objective">The solver solution.</param>
+        public void SetObjective(GRBLinExpr objective) {
+            this._objective = objective;
         }
 
         /// <summary>
@@ -344,12 +360,20 @@ namespace MetaOptimize
         /// Maximize the objective with objective as input.
         /// </summary>
         /// <returns>A solution.</returns>
+        public virtual GRBModel Maximize(Polynomial<GRBVar> objective) {
+            SetObjective(objective);
+            return Maximize();
+        }
+
+        /// <summary>
+        /// Maximize the objective with objective as input.
+        /// </summary>
+        /// <returns>A solution.</returns>
         public virtual GRBModel Maximize(GRBVar objective)
         {
             SetObjective(objective);
             return Maximize();
         }
-
         /// <summary>
         /// check feasibility.
         /// </summary>

@@ -28,6 +28,12 @@ namespace MetaOptimize
         /// Get the resulting value assigned to a variable.
         /// </summary>
         /// <param name="objective">The solver solution.</param>
+        public void SetObjective(Polynomial<TVar> objective);
+
+        /// <summary>
+        /// Get the resulting value assigned to a variable.
+        /// </summary>
+        /// <param name="objective">The solver solution.</param>
         public void SetObjective(TVar objective);
 
         /// <summary>
@@ -75,6 +81,12 @@ namespace MetaOptimize
         /// </summary>
         /// <returns>A solution.</returns>
         public TSolution Maximize();
+
+        /// <summary>
+        /// Maximize the objective with objective as input.
+        /// </summary>
+        /// <returns>A solution.</returns>
+        public TSolution Maximize(Polynomial<TVar> objective);
 
         /// <summary>
         /// Maximize the objective with objective as input.

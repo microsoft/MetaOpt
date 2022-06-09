@@ -59,12 +59,11 @@ namespace MetaOptimize
             // ensures that demand in both problems is the same and lower than demand upper bound constraint.
             EnsureDemandUB(solver, demandUB);
 
-            var objectiveVariable = solver.CreateVariable("objective");
-            solver.AddEqZeroConstraint(new Polynomial<TVar>(
-                new Term<TVar>(-1, objectiveVariable),
-                new Term<TVar>(1, optimalEncoding.MaximizationObjective),
-                new Term<TVar>(-1, heuristicEncoding.MaximizationObjective)));
-            var solution = solver.Maximize(objectiveVariable);
+            // var objectiveVariable = solver.CreateVariable("objective");
+            var objective = new Polynomial<TVar>(
+                        new Term<TVar>(1, optimalEncoding.GlobalObjective),
+                        new Term<TVar>(-1, heuristicEncoding.GlobalObjective));
+            var solution = solver.Maximize(objective);
 
             return (optimalEncoder.GetSolution(solution), heuristicEncoder.GetSolution(solution));
 
@@ -113,11 +112,10 @@ namespace MetaOptimize
             // ensures that demand in both problems is the same and lower than demand upper bound constraint.
             EnsureDemandUB(solver, demandUB);
 
-            var objectiveVariable = solver.CreateVariable("objective");
-            solver.AddEqZeroConstraint(new Polynomial<TVar>(
-                new Term<TVar>(-1, objectiveVariable),
-                new Term<TVar>(1, optimalEncoding.MaximizationObjective),
-                new Term<TVar>(-1, heuristicEncoding.MaximizationObjective)));
+            var objective = new Polynomial<TVar>(
+                        new Term<TVar>(1, optimalEncoding.GlobalObjective),
+                        new Term<TVar>(-1, heuristicEncoding.GlobalObjective));
+            solver.SetObjective(objective);
 
             // solver.AddLeqZeroConstraint(new Polynomial<TVar>(
                 // new Term<TVar>(-1, objectiveVariable), new Term<TVar>(minDifference)));
@@ -198,12 +196,10 @@ namespace MetaOptimize
             // ensures that demand in both problems is the same and lower than demand upper bound constraint.
             EnsureDemandUB(solver, demandUB);
             // setting demand as objective
-            var objectiveVariable = solver.CreateVariable("objective");
-            solver.AddEqZeroConstraint(new Polynomial<TVar>(
-                new Term<TVar>(-1, objectiveVariable),
-                new Term<TVar>(1, optimalEncoding.MaximizationObjective),
-                new Term<TVar>(-1, heuristicEncoding.MaximizationObjective)));
-            solver.SetObjective(objectiveVariable);
+            var objective = new Polynomial<TVar>(
+                        new Term<TVar>(1, optimalEncoding.GlobalObjective),
+                        new Term<TVar>(-1, heuristicEncoding.GlobalObjective));
+            solver.SetObjective(objective);
 
             double lbGap = 0;
             double ubGap = startGap;

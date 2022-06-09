@@ -112,8 +112,16 @@ namespace MetaOptimize
         /// Get the resulting value assigned to a variable.
         /// </summary>
         /// <param name="objective">The solver solution.</param>
+        public void SetObjective(Polynomial<GRBVar> objective) {
+            this._objective = Convert(objective);
+        }
+
+        /// <summary>
+        /// Get the resulting value assigned to a variable.
+        /// </summary>
+        /// <param name="objective">The solver solution.</param>
         public void SetObjective(GRBVar objective) {
-            this._objective.AddTerm(1.0, objective);
+            this._objective = objective;
         }
 
         /// <summary>
@@ -231,6 +239,7 @@ namespace MetaOptimize
             string exhaust_dir_name = @"c:\tmp\grbsos_exhaust\rand_" + (new Random()).Next(1000) + @"\";
             this._model.Parameters.BestObjStop = objectiveValue;
             this._model.Parameters.BestBdStop = objectiveValue - 0.001;
+            // this._model.Parameters.MIPFocus = 2;
             this._model.SetObjective(this._objective, GRB.MAXIMIZE);
             Directory.CreateDirectory(exhaust_dir_name);
             this._model.Write($"{exhaust_dir_name}\\model_" + DateTime.Now.Millisecond + ".lp");
@@ -269,6 +278,16 @@ namespace MetaOptimize
             }
 
             return this._model;
+        }
+
+        /// <summary>
+        /// Maximize the objective with objective as input.
+        /// </summary>
+        /// <returns>A solution.</returns>
+        public virtual GRBModel Maximize(Polynomial<GRBVar> objective)
+        {
+            SetObjective(objective);
+            return Maximize();
         }
 
         /// <summary>

@@ -164,14 +164,15 @@ namespace MetaOptimize
             var objective = new Polynomial<TVar>(new Term<TVar>(-1, objectiveVariable));
             foreach (var encoding in encodings)
             {
-                objective.Terms.Add(new Term<TVar>(1, encoding.MaximizationObjective));
+                objective.Terms.Add(new Term<TVar>(1, encoding.GlobalObjective));
             }
 
             this.Solver.AddEqZeroConstraint(objective);
 
             return new OptimizationEncoding<TVar, TSolution>
             {
-                MaximizationObjective = objectiveVariable,
+                GlobalObjective = objectiveVariable,
+                MaximizationObjective = new Polynomial<TVar>(new Term<TVar>(1, objectiveVariable)),
                 DemandVariables = demandVariables,
             };
         }

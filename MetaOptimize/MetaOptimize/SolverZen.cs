@@ -17,7 +17,7 @@ namespace MetaOptimize
         /// <summary>
         /// This is the objective function.
         /// </summary>
-        protected Zen<Real> _objective;
+        protected Polynomial<Zen<Real>> _objective;
 
         /// <summary>
         /// The solver constraints.
@@ -149,8 +149,16 @@ namespace MetaOptimize
         /// Get the resulting value assigned to a variable.
         /// </summary>
         /// <param name="objective">The solver solution.</param>
-        public void SetObjective(Zen<Real> objective) {
+        public void SetObjective(Polynomial<Zen<Real>> objective) {
             this._objective = objective;
+        }
+
+        /// <summary>
+        /// Get the resulting value assigned to a variable.
+        /// </summary>
+        /// <param name="objective">The solver solution.</param>
+        public void SetObjective(Zen<Real> objective) {
+            this._objective = new Polynomial<Zen<Real>>(new Term<Zen<Real>>(1, objective));
         }
 
         /// <summary>
@@ -164,7 +172,17 @@ namespace MetaOptimize
                 return Zen.Solve(Zen.And(this.ConstraintExprs.ToArray()));
             }
 
-            return Zen.Maximize(this._objective, subjectTo: Zen.And(this.ConstraintExprs.ToArray()));
+            return Zen.Maximize(this._objective.AsZen(), subjectTo: Zen.And(this.ConstraintExprs.ToArray()));
+        }
+
+        /// <summary>
+        /// Maximize the objective with objective as input.
+        /// </summary>
+        /// <returns>A solution.</returns>
+        public virtual ZenSolution Maximize(Polynomial<Zen<Real>> objective)
+        {
+            SetObjective(objective);
+            return Maximize();
         }
 
         /// <summary>

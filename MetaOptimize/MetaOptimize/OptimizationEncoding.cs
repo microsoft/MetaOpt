@@ -12,9 +12,14 @@ namespace MetaOptimize
     public class OptimizationEncoding<TVar, TSolution>
     {
         /// <summary>
+        /// The global objective.
+        /// </summary>
+        public TVar GlobalObjective { get; set; }
+
+        /// <summary>
         /// The maximization objective.
         /// </summary>
-        public TVar MaximizationObjective { get; set; }
+        public Polynomial<TVar> MaximizationObjective { get; set; }
 
         /// <summary>
         /// The demand expression for any pair of nodes.
