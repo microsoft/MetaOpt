@@ -55,6 +55,11 @@ namespace MetaOptimize
         public Dictionary<(string, string), TVar> DemandVariables { get; set; }
 
         /// <summary>
+        /// The demand constraints in terms of constant values.
+        /// </summary>
+        public Dictionary<int, Dictionary<(string, string), double>> perPartitionDemandConstraints { get; set; }
+
+        /// <summary>
         /// Create a new instance of the <see cref="PopEncoder{TVar, TSolution}"/> class.
         /// </summary>
         /// <param name="solver">The solver to use.</param>
@@ -62,9 +67,7 @@ namespace MetaOptimize
         /// <param name="k">The max number of paths between nodes.</param>
         /// <param name="numPartitions">The number of partitions.</param>
         /// <param name="demandPartitions">The demand partitions.</param>
-        /// <param name="demandEnforcements"> The demand requirements for individual demands.</param>
-        public PopEncoder(ISolver<TVar, TSolution> solver, Topology topology, int k, int numPartitions, IDictionary<(string, string), int> demandPartitions,
-            IDictionary<(string, string), double> demandEnforcements = null)
+        public PopEncoder(ISolver<TVar, TSolution> solver, Topology topology, int k, int numPartitions, IDictionary<(string, string), int> demandPartitions)
         {
             if (numPartitions <= 0)
             {
@@ -86,24 +89,11 @@ namespace MetaOptimize
 
             for (int i = 0; i < this.NumPartitions; i++)
             {
-                var demandConstraints = new Dictionary<(string, string), double>();
-
-                foreach (var demand in this.DemandPartitions)
-                {
-                    if (demandEnforcements != null)
-                    {
-                        demandConstraints[demand.Key] = demandEnforcements[demand.Key];
-                    }
-                    if (demand.Value != i)
-                    {
-                        demandConstraints[demand.Key] = 0;
-                    }
-                }
-                this.PartitionEncoders[i] = new OptimalEncoder<TVar, TSolution>(solver, this.ReducedTopology, this.K, demandConstraints);
+                this.PartitionEncoders[i] = new OptimalEncoder<TVar, TSolution>(solver, this.ReducedTopology, this.K);
             }
         }
 
-        private void InitializeVariables(Dictionary<(string, string), TVar> preDemandVariables) {
+        private void InitializeVariables(Dictionary<(string, string), TVar> preDemandVariables, Dictionary<(string, string), double> demandEnforcements) {
             // establish the demand variables.
             this.DemandVariables = preDemandVariables;
             if (this.DemandVariables == null) {
@@ -113,15 +103,31 @@ namespace MetaOptimize
                     this.DemandVariables[pair] = this.Solver.CreateVariable("demand_" + pair.Item1 + "_" + pair.Item2);
                 }
             }
+            demandEnforcements = demandEnforcements ?? new Dictionary<(string, string), double>();
+            this.perPartitionDemandConstraints = new Dictionary<int, Dictionary<(string, string), double>>();
+            foreach (int i in Enumerable.Range(0, NumPartitions)) {
+                this.perPartitionDemandConstraints[i] = new Dictionary<(string, string), double>();
+                foreach (var demand in this.DemandPartitions)
+                {
+                    if (demand.Value != i)
+                    {
+                        this.perPartitionDemandConstraints[i][demand.Key] = 0;
+                    } else if (demandEnforcements.ContainsKey(demand.Key))
+                    {
+                        this.perPartitionDemandConstraints[i][demand.Key] = demandEnforcements[demand.Key];
+                    }
+                }
+            }
         }
 
         /// <summary>
         /// Encode the problem.
         /// </summary>
         /// <returns>The constraints and maximization objective.</returns>
-        public OptimizationEncoding<TVar, TSolution> Encoding(Dictionary<(string, string), TVar> preDemandVariables = null, bool noKKT = false)
+        public OptimizationEncoding<TVar, TSolution> Encoding(Dictionary<(string, string), TVar> preDemandVariables = null,
+            Dictionary<(string, string), double> demandEqualityConstraints = null, bool noKKT = false)
         {
-            InitializeVariables(preDemandVariables);
+            InitializeVariables(preDemandVariables, demandEqualityConstraints);
             var encodings = new OptimizationEncoding<TVar, TSolution>[NumPartitions];
 
             // get all the separate encodings.
@@ -134,7 +140,7 @@ namespace MetaOptimize
                         partitionPreDemandVariables[pair] = this.DemandVariables[pair];
                     }
                 }
-                encodings[i] = this.PartitionEncoders[i].Encoding(partitionPreDemandVariables, noKKT: noKKT);
+                encodings[i] = this.PartitionEncoders[i].Encoding(partitionPreDemandVariables, this.perPartitionDemandConstraints[i], noKKT: noKKT);
             }
 
             // create new demand variables as the sum of the individual partitions.

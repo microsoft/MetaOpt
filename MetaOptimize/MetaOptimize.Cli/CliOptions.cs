@@ -61,7 +61,7 @@ namespace MetaOptimize.Cli
         /// <summary>
         /// method for finding gap [search or direct].
         /// </summary>
-        [Option('m', "method", Default = MethodChoice.Direct, HelpText = "the method for finding the desirable gap [Direct | Search | FindFeas]")]
+        [Option('m', "method", Default = MethodChoice.Direct, HelpText = "the method for finding the desirable gap [Direct | Search | FindFeas | Random | HillClimber]")]
         public MethodChoice Method { get; set; }
 
         /// <summary>
@@ -81,6 +81,30 @@ namespace MetaOptimize.Cli
         /// </summary>
         [Option('u', "demandupperbound", Default = -1, HelpText = "an upper bound on all the demands.")]
         public double DemandUB { get; set; }
+
+        /// <summary>
+        /// number of trails for random search.
+        /// </summary>
+        [Option('n', "num", Default = 1, HelpText = "number of trials for random search or hill climber.")]
+        public int NumRandom { get; set; }
+
+        /// <summary>
+        /// number of neighbors to look.
+        /// </summary>
+        [Option('k', "neighbors", Default = 1, HelpText = "number of neighbors to search before marking as local optimum [for hill climber].")]
+        public int NumNeighbors { get; set; }
+
+        /// <summary>
+        /// seed.
+        /// </summary>
+        [Option('s', "seed", Default = 1, HelpText = "seed for random generator.")]
+        public int Seed { get; set; }
+
+        /// <summary>
+        /// seed.
+        /// </summary>
+        [Option('b', "stddev", Default = 100, HelpText = "standard deviation for generating neighbor for hill climber.")]
+        public int StdDev { get; set; }
 
         /// <summary>
         /// Whether to print debugging information.
@@ -142,5 +166,13 @@ namespace MetaOptimize.Cli
         /// find a solution with gap at least equal to startinggap.
         /// </summary>
         FindFeas,
+        /// <summary>
+        /// find a solution with random search.
+        /// </summary>
+        Random,
+        /// <summary>
+        /// find a solution with hill climber.
+        /// </summary>
+        HillClimber,
     }
 }

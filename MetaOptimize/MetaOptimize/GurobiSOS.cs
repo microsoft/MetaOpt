@@ -33,6 +33,14 @@ namespace MetaOptimize
         /// </summary>
         protected int _constraintEqCount = 0;
         /// <summary>
+        /// timeout.
+        /// </summary>
+        protected double _timeout = 0;
+        /// <summary>
+        /// verbose.
+        /// </summary>
+        protected int _verbose = 0;
+        /// <summary>
         /// Gurobi Aux vars.
         /// </summary>
         protected Dictionary<string, GRBVar> _auxiliaryVars = new Dictionary<string, GRBVar>();
@@ -74,12 +82,26 @@ namespace MetaOptimize
         /// <summary>
         /// constructor.
         /// </summary>
-        public GurobiSOS(double timeout = double.PositiveInfinity)
+        public GurobiSOS(double timeout = double.PositiveInfinity, int verbose = 0)
         {
             this._env = SetupGurobi();
             this._model = new GRBModel(this._env);
+            this._timeout = timeout;
+            this._verbose = verbose;
             this._model.Parameters.TimeLimit = timeout;
             this._model.Parameters.Presolve = 2;
+            this._model.Parameters.OutputFlag = verbose;
+        }
+
+        /// <summary>
+        /// Reset the solver by removing all the variables and constraints.
+        /// </summary>
+        public void CleanAll() {
+            this._model.Dispose();
+            this._model = new GRBModel(this._env);
+            this._model.Parameters.TimeLimit = this._timeout;
+            this._model.Parameters.Presolve = 2;
+            this._model.Parameters.OutputFlag = this._verbose;
         }
 
         /// <summary>

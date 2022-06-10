@@ -73,15 +73,11 @@ namespace MetaOptimize
         /// <param name="solver">The solver.</param>
         /// <param name="topology">The network topology.</param>
         /// <param name="k">The max number of paths between nodes.</param>
-        /// <param name="demandEqualityConstraints">Any concrete demand constraints.</param>
-        public OptimalEncoder(ISolver<TVar, TSolution>  solver, Topology topology, int k, Dictionary<(string, string), double> demandEqualityConstraints = null)
+        public OptimalEncoder(ISolver<TVar, TSolution>  solver, Topology topology, int k)
         {
             this.Solver = solver;
             this.Topology = topology;
             this.K = k;
-            this.variables = new HashSet<TVar>();
-            this.Paths = new Dictionary<(string, string), string[][]>();
-            this.DemandConstraints = demandEqualityConstraints ?? new Dictionary<(string, string), double>();
         }
 
         private bool IsDemandValid((string, string) pair) {
@@ -93,8 +89,11 @@ namespace MetaOptimize
             return true;
         }
 
-        private void InitializeVariables(Dictionary<(string, string), TVar> preDemandVariables) {
+        private void InitializeVariables(Dictionary<(string, string), TVar> preDemandVariables, Dictionary<(string, string), double> demandEqualityConstraints) {
+            this.variables = new HashSet<TVar>();
+            this.Paths = new Dictionary<(string, string), string[][]>();
             // establish the demand variables.
+            this.DemandConstraints = demandEqualityConstraints ?? new Dictionary<(string, string), double>();
             this.DemandVariables = preDemandVariables;
             if (this.DemandVariables == null) {
                 this.DemandVariables = new Dictionary<(string, string), TVar>();
@@ -149,10 +148,11 @@ namespace MetaOptimize
         /// Encode the problem.
         /// </summary>
         /// <returns>The constraints and maximization objective.</returns>
-        public OptimizationEncoding<TVar, TSolution> Encoding(Dictionary<(string, string), TVar> preDemandVariables = null, bool noKKT = false)
+        public OptimizationEncoding<TVar, TSolution> Encoding(Dictionary<(string, string), TVar> preDemandVariables = null,
+            Dictionary<(string, string), double> demandEqualityConstraints = null, bool noKKT = false)
         {
             // Initialize Variables for the encoding
-            InitializeVariables(preDemandVariables);
+            InitializeVariables(preDemandVariables, demandEqualityConstraints);
             // Compute the maximum demand M.
             // Since we don't know the demands we have to be very conservative.
             // var maxDemand = this.Topology.TotalCapacity() * 10;

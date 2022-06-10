@@ -104,7 +104,18 @@ namespace MetaOptimize
             this._varBounds = varbound;
             this._env = SetupGurobi();
             this._model = new GRBModel(this._env);
+            this._model.Parameters.Presolve = 2;
         }
+
+        /// <summary>
+        /// Reset the solver by removing all the variables and constraints.
+        /// </summary>
+        public void CleanAll() {
+            this._model.Dispose();
+            this._model = new GRBModel(this._env);
+            this._model.Parameters.Presolve = 2;
+        }
+
         /// <summary>
         /// constructor.
         /// </summary>

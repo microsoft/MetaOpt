@@ -6,6 +6,7 @@ namespace MetaOptimize
 {
     using System;
     using System.Collections.Generic;
+    using System.Linq;
 
     /// <summary>
     /// Meta-optimization utility functions for maximizing optimality gaps.
@@ -244,6 +245,171 @@ namespace MetaOptimize
             // solver.ChangeConstraintRHS(nameLBConst, -1 * lbGap);
             solution = solver.CheckFeasibility(lbGap);
             return (optimalEncoder.GetSolution(solution), heuristicEncoder.GetSolution(solution));
+        }
+
+        private (double, (OptimizationSolution, OptimizationSolution)) GetGap (
+            IEncoder<TVar, TSolution> optimalEncoder,
+            IEncoder<TVar, TSolution> heuristicEncoder,
+            Dictionary<(string, string), double> demands)
+        {
+            // solving the hueristic for the demand
+            heuristicEncoder.Solver.CleanAll();
+            var encodingHeuristic = heuristicEncoder.Encoding(demandEqualityConstraints: demands, noKKT: true);
+            var solverSolutionHeuristic = heuristicEncoder.Solver.Maximize(encodingHeuristic.MaximizationObjective);
+            var optimizationSolutionHeuristic = heuristicEncoder.GetSolution(solverSolutionHeuristic);
+
+            // solving the optimal for the demand
+            optimalEncoder.Solver.CleanAll();
+            var encodingOptimal = optimalEncoder.Encoding(demandEqualityConstraints: demands, noKKT: true);
+            var solverSolutionOptimal = optimalEncoder.Solver.Maximize(encodingOptimal.MaximizationObjective);
+            var optimizationSolutionOptimal = optimalEncoder.GetSolution(solverSolutionOptimal);
+            double currGap = optimizationSolutionOptimal.TotalDemandMet - optimizationSolutionHeuristic.TotalDemandMet;
+            return (currGap, (optimizationSolutionOptimal, optimizationSolutionHeuristic));
+        }
+
+        /// <summary>
+        /// Generate some random inputs and takes the max gap as the adversary.
+        /// </summary>
+        public (OptimizationSolution, OptimizationSolution) RandomAdversarialGenerator(
+            IEncoder<TVar, TSolution> optimalEncoder,
+            IEncoder<TVar, TSolution> heuristicEncoder,
+            int numTrials,
+            double demandUB,
+            int seed = 0)
+        {
+            // if (optimalEncoder.Solver == heuristicEncoder.Solver) {
+            //     throw new Exception("solvers should be different for random generator!!!");
+            // }
+            if (numTrials < 1) {
+                throw new Exception("num trials for random generator should be positive but got " + numTrials + "!!");
+            }
+            if (demandUB <= 0) {
+                demandUB = this.Topology.MaxCapacity() * this.K;
+            }
+            double currMaxGap = 0;
+            OptimizationSolution zero_solution = new OptimizationSolution {
+                    TotalDemandMet = 0,
+                    Demands = new Dictionary<(string, string), double> { },
+                    Flows = new Dictionary<(string, string), double> { },
+                    FlowsPaths = new Dictionary<string[], double> { },
+                };
+            (OptimizationSolution, OptimizationSolution) worstResult = (zero_solution, zero_solution);
+            Random rng = new Random(seed);
+
+            foreach (int i in Enumerable.Range(0, numTrials)) {
+                Dictionary<(string, string), double> demands = new Dictionary<(string, string), double>();
+                // initializing some random demands
+                foreach (var pair in this.Topology.GetNodePairs()) {
+                    demands[pair] = rng.NextDouble() * demandUB;
+                }
+                var (currGap, result) = GetGap(optimalEncoder, heuristicEncoder, demands);
+                Console.WriteLine("===========================================================");
+                Console.WriteLine("===========================================================");
+                Console.WriteLine("===========================================================");
+                Console.WriteLine("======== try " + i + " found a solution with gap " + currGap);
+                if (currGap > currMaxGap) {
+                    Console.WriteLine("updating the max gap from " + currMaxGap + " to " + currGap);
+                    currMaxGap = currGap;
+                    worstResult = result;
+                } else {
+                    Console.WriteLine("the max gap remains the same =" + currMaxGap);
+                }
+                Console.WriteLine("===========================================================");
+                Console.WriteLine("===========================================================");
+                Console.WriteLine("===========================================================");
+            }
+            return worstResult;
+        }
+
+        private double GaussianRandomNumberGenerator(Random rng, double mean, double stddev) {
+            // Box–Muller_transform
+            double rnd1 = 1.0 - rng.NextDouble();
+            double rnd2 = 1.0 - rng.NextDouble();
+            double randStdNormal = Math.Sqrt(-2.0 * Math.Log(rnd1)) * Math.Sin(2.0 * Math.PI * rnd2);
+            return mean + stddev * randStdNormal;
+        }
+
+        /// <summary>
+        /// Generate some random inputs and takes the max gap as the adversary.
+        /// </summary>
+        public (OptimizationSolution, OptimizationSolution) HillClimbingAdversarialGenerator(
+            IEncoder<TVar, TSolution> optimalEncoder,
+            IEncoder<TVar, TSolution> heuristicEncoder,
+            int numTrials,
+            int numNeighbors,
+            double demandUB,
+            double stddev,
+            int seed = 0)
+        {
+            if (numTrials < 1) {
+                throw new Exception("num trials for random generator should be positive but got " + numTrials + "!!");
+            }
+            if (demandUB <= 0) {
+                demandUB = this.Topology.MaxCapacity() * this.K;
+            }
+            double currMaxGap = 0;
+            OptimizationSolution zero_solution = new OptimizationSolution {
+                    TotalDemandMet = 0,
+                    Demands = new Dictionary<(string, string), double> { },
+                    Flows = new Dictionary<(string, string), double> { },
+                    FlowsPaths = new Dictionary<string[], double> { },
+                };
+            (OptimizationSolution, OptimizationSolution) worstResult = (zero_solution, zero_solution);
+            Random rng = new Random(seed);
+
+            foreach (int i in Enumerable.Range(0, numTrials)) {
+                Dictionary<(string, string), double> currDemands = new Dictionary<(string, string), double>();
+                // initializing some random demands
+                foreach (var pair in this.Topology.GetNodePairs()) {
+                    currDemands[pair] = rng.NextDouble() * demandUB;
+                }
+                var (currGap, currResult) = GetGap(optimalEncoder, heuristicEncoder, currDemands);
+                bool localMax = true;
+                do {
+                    localMax = true;
+                    foreach (int j in Enumerable.Range(0, numNeighbors)) {
+                        // generating neighbor demands
+                        Dictionary<(string, string), double> neighborDemands = new Dictionary<(string, string), double>();
+                        foreach (var pair in this.Topology.GetNodePairs()) {
+                            neighborDemands[pair] = Math.Max(0, currDemands[pair] + GaussianRandomNumberGenerator(rng, 0, stddev));
+                        }
+                        // finding gap for the neighbor
+                        var (neighborGap, neighborResult) = GetGap(optimalEncoder, heuristicEncoder, neighborDemands);
+                        // check if better advers input
+                        if (neighborGap > currGap) {
+                            Console.WriteLine("===========================================================");
+                            Console.WriteLine("===========================================================");
+                            Console.WriteLine("===========================================================");
+                            Console.WriteLine("======== try " + i + " neighbor " + j + " found a neighbor with gap " + neighborGap + " higher than " + currGap);
+                            currDemands = neighborDemands;
+                            currResult = neighborResult;
+                            currGap = neighborGap;
+                            localMax = false;
+                        } else {
+                            Console.WriteLine("===========================================================");
+                            Console.WriteLine("===========================================================");
+                            Console.WriteLine("===========================================================");
+                            Console.WriteLine("======== try " + i + " neighbor " + j + " has a lower gap " + neighborGap + " than curr gap " + currGap);
+                        }
+                    }
+                } while (!localMax);
+
+                Console.WriteLine("===========================================================");
+                Console.WriteLine("===========================================================");
+                Console.WriteLine("===========================================================");
+                Console.WriteLine("======== try " + i + " found a local maximum with gap " + currGap);
+                if (currGap > currMaxGap) {
+                    Console.WriteLine("updating the max gap from " + currMaxGap + " to " + currGap);
+                    currMaxGap = currGap;
+                    worstResult = currResult;
+                } else {
+                    Console.WriteLine("the max gap remains the same =" + currMaxGap);
+                }
+                Console.WriteLine("===========================================================");
+                Console.WriteLine("===========================================================");
+                Console.WriteLine("===========================================================");
+            }
+            return worstResult;
         }
     }
 }

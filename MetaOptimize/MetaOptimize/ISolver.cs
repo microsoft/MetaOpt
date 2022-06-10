@@ -10,6 +10,11 @@ namespace MetaOptimize
     public interface ISolver<TVar, TSolution>
     {
         /// <summary>
+        /// Reset the solver by removing all the variables and constraints.
+        /// </summary>
+        public void CleanAll();
+
+        /// <summary>
         /// Create a new variable with a given name.
         /// </summary>
         /// <param name="name">The variable name.</param>
@@ -94,9 +99,9 @@ namespace MetaOptimize
         /// <returns>A solution.</returns>
         public TSolution Maximize(TVar objective);
 
-        // <summary>
-        // Check feasibility.
-        // </summary>
+        /// <summary>
+        /// Check feasibility.
+        /// </summary>
         /// <returns>A solution.</returns>
         public TSolution CheckFeasibility(double objectiveValue);
     }

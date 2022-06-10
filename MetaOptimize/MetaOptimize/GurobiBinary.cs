@@ -31,7 +31,7 @@ namespace MetaOptimize
         /// <summary>
         /// Constructor.
         /// </summary>
-        public GurobiBinary(double timeout = double.PositiveInfinity) : base(timeout)
+        public GurobiBinary(double timeout = double.PositiveInfinity, int verbose = 0) : base(timeout, verbose)
         {
         }
 
@@ -72,12 +72,13 @@ namespace MetaOptimize
             this._model.SetObjective(this._objective, GRB.MAXIMIZE);
             // this._model.Parameters.DualReductions = 0;
             // this._model.Parameters.MIPFocus = 3;
+            // this._model.Parameters.Cuts = 3;
 
             this._model.Set(GRB.DoubleParam.IntFeasTol, this._tolerance);
 
-            string exhaust_dir_name = @"c:\tmp\grbsos_exhaust\rand_" + (new Random()).Next(1000) + @"\";
-            Directory.CreateDirectory(exhaust_dir_name);
-            this._model.Write($"{exhaust_dir_name}\\model_" + DateTime.Now.Millisecond + ".lp");
+            // string exhaust_dir_name = @"c:\tmp\grbsos_exhaust\rand_" + (new Random()).Next(1000000) + @"\";
+            // Directory.CreateDirectory(exhaust_dir_name);
+            // this._model.Write($"{exhaust_dir_name}\\model_" + DateTime.Now.Millisecond + ".lp");
 
             this._model.Optimize();
             if (this._model.Status != GRB.Status.OPTIMAL)

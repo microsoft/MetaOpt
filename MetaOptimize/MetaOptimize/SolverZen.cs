@@ -38,6 +38,13 @@ namespace MetaOptimize
         }
 
         /// <summary>
+        /// Reset the solver by removing all the variables and constraints.
+        /// </summary>
+        public void CleanAll() {
+            throw new Exception("need to be implemented");
+        }
+
+        /// <summary>
         /// Create a new variable with a given name.
         /// </summary>
         /// <param name="name">The variable name.</param>
