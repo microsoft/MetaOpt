@@ -412,6 +412,16 @@ namespace MetaOptimize
             return worstResult;
         }
 
+        private Dictionary<(string, string), double> getRandomDemand(Random rng, double demandUB)
+        {
+            Dictionary<(string, string), double> currDemands = new Dictionary<(string, string), double>();
+            // initializing some random demands
+            foreach (var pair in this.Topology.GetNodePairs()) {
+                currDemands[pair] = rng.NextDouble() * demandUB;
+            }
+            return currDemands;
+        }
+
         /// <summary>
         /// Using Simulated Annealing to generate adversarial inputs.
         /// </summary>
@@ -424,6 +434,8 @@ namespace MetaOptimize
             double stddev,
             double initialTmp,
             double tmpDecreaseFactor,
+            int numNoIncreaseToReset = -1,
+            double NoChangeRelThreshold = 0.01,
             int seed = 0)
         {
             if (numTmpSteps < 1) {
@@ -438,19 +450,20 @@ namespace MetaOptimize
             if (demandUB <= 0) {
                 demandUB = this.Topology.MaxCapacity() * this.K;
             }
+            if (numNoIncreaseToReset == -1) {
+                numNoIncreaseToReset = numNeighbors * 2;
+            }
 
             double currTmp = initialTmp;
             Random rng = new Random(seed);
 
-            Dictionary<(string, string), double> currDemands = new Dictionary<(string, string), double>();
-            // initializing some random demands
-            foreach (var pair in this.Topology.GetNodePairs()) {
-                currDemands[pair] = rng.NextDouble() * demandUB;
-            }
+            Dictionary<(string, string), double> currDemands = getRandomDemand(rng, demandUB);
             var (currGap, currResult) = GetGap(optimalEncoder, heuristicEncoder, currDemands);
             (OptimizationSolution, OptimizationSolution) worstResult = currResult;
             double currMaxGap = currGap;
+            double restartMaxGap = currGap;
 
+            int noIncrease = 0;
             foreach (int p in Enumerable.Range(0, numTmpSteps)) {
                 foreach (int Mp in Enumerable.Range(0, numNeighbors)) {
                     // generating neighbor demands
@@ -465,7 +478,8 @@ namespace MetaOptimize
                         Console.WriteLine("===========================================================");
                         Console.WriteLine("===========================================================");
                         Console.WriteLine("===========================================================");
-                        Console.WriteLine("======== try " + p + " neighbor " + Mp + " found a neighbor with gap " + neighborGap + " higher than " + currGap);
+                        Console.WriteLine("======== try " + p + " neighbor " + Mp + " found a neighbor with gap " + neighborGap + " higher than " + currGap +
+                            " max gap = " + currMaxGap);
                         currDemands = neighborDemands;
                         currResult = neighborResult;
                         currGap = neighborGap;
@@ -477,21 +491,41 @@ namespace MetaOptimize
                         Console.WriteLine("===========================================================");
                         Console.WriteLine("===========================================================");
                         Console.WriteLine("===========================================================");
-                        Console.WriteLine("======== try " + p + " neighbor " + Mp + " has a lower gap " + neighborGap + " than curr gap " + currGap);
+                        Console.WriteLine("======== try " + p + " neighbor " + Mp + " has a lower gap " + neighborGap + " than curr gap " + currGap +
+                            " max gap = " + currMaxGap);
                         double currProbability = Math.Exp((neighborGap - currGap) / currTmp);
                         double randomNumber = rng.NextDouble();
-                        Console.WriteLine("current temperature is " + currTmp);
-                        Console.WriteLine("current gap difference is " + (neighborGap - currGap));
-                        Console.WriteLine("current probability is " + currProbability + " and the random number is " + randomNumber);
+                        // Console.WriteLine("current temperature is " + currTmp);
+                        // Console.WriteLine("current gap difference is " + (neighborGap - currGap));
+                        // Console.WriteLine("current probability is " + currProbability + " and the random number is " + randomNumber);
                         if (randomNumber <= currProbability) {
-                            Console.WriteLine("accepting the lower gap");
+                            // Console.WriteLine("accepting the lower gap");
                             currDemands = neighborDemands;
                             currResult = neighborResult;
                             currGap = neighborGap;
                         }
                     }
+
+                    if ((currGap - restartMaxGap) / restartMaxGap > NoChangeRelThreshold) {
+                        noIncrease = 0;
+                        restartMaxGap = currGap;
+                    } else {
+                        noIncrease += 1;
+                    }
                 }
                 currTmp = currTmp * tmpDecreaseFactor;
+                // reset the initial point if no increase in numNoIncreaseToReset iterations
+                if (noIncrease > numNoIncreaseToReset) {
+                    currDemands = getRandomDemand(rng, demandUB);
+                    (currGap, currResult) = GetGap(optimalEncoder, heuristicEncoder, currDemands);
+                    if (currGap > currMaxGap) {
+                        worstResult = currResult;
+                        currMaxGap = currGap;
+                    }
+                    currTmp = initialTmp;
+                    noIncrease = 0;
+                    restartMaxGap = currGap;
+                }
             }
             Console.WriteLine("final max gap is " + currMaxGap);
             return worstResult;
