@@ -61,7 +61,7 @@ namespace MetaOptimize.Cli
         /// <summary>
         /// method for finding gap [search or direct].
         /// </summary>
-        [Option('m', "method", Default = MethodChoice.Direct, HelpText = "the method for finding the desirable gap [Direct | Search | FindFeas | Random | HillClimber]")]
+        [Option('m', "method", Default = MethodChoice.Direct, HelpText = "the method for finding the desirable gap [Direct | Search | FindFeas | Random | HillClimber | SimulatedAnnealing]")]
         public MethodChoice Method { get; set; }
 
         /// <summary>
@@ -79,7 +79,7 @@ namespace MetaOptimize.Cli
         /// <summary>
         /// an upper bound on all the demands to find more useful advers inputs.
         /// </summary>
-        [Option('u', "demandupperbound", Default = -1, HelpText = "an upper bound on all the demands.")]
+        [Option('u', "demandub", Default = -1, HelpText = "an upper bound on all the demands.")]
         public double DemandUB { get; set; }
 
         /// <summary>
@@ -91,8 +91,20 @@ namespace MetaOptimize.Cli
         /// <summary>
         /// number of neighbors to look.
         /// </summary>
-        [Option('k', "neighbors", Default = 1, HelpText = "number of neighbors to search before marking as local optimum [for hill climber].")]
+        [Option('k', "neighbors", Default = 1, HelpText = "number of neighbors to search before marking as local optimum [for hill climber | simulated annealing].")]
         public int NumNeighbors { get; set; }
+
+        /// <summary>
+        /// initial temperature for simulated annealing.
+        /// </summary>
+        [Option('t', "inittmp", Default = 1, HelpText = "initial temperature for simulated annealing.")]
+        public double InitTmp { get; set; }
+
+        /// <summary>
+        /// initial temperature for simulated annealing.
+        /// </summary>
+        [Option('l', "lambda", Default = 1, HelpText = "temperature decrease factor for simulated annealing.")]
+        public double TmpDecreaseFactor { get; set; }
 
         /// <summary>
         /// seed.
@@ -174,5 +186,9 @@ namespace MetaOptimize.Cli
         /// find a solution with hill climber.
         /// </summary>
         HillClimber,
+        /// <summary>
+        /// find a solution with simulated annealing.
+        /// </summary>
+        SimulatedAnnealing,
     }
 }

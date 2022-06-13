@@ -30,16 +30,22 @@ namespace MetaOptimize
         public double GetVariable(TSolution solution, TVar variable);
 
         /// <summary>
-        /// Get the resulting value assigned to a variable.
+        /// set the objective.
         /// </summary>
         /// <param name="objective">The solver solution.</param>
         public void SetObjective(Polynomial<TVar> objective);
 
         /// <summary>
-        /// Get the resulting value assigned to a variable.
+        /// set the objective.
         /// </summary>
         /// <param name="objective">The solver solution.</param>
         public void SetObjective(TVar objective);
+
+        /// <summary>
+        /// set the objective.
+        /// </summary>
+        /// <param name="timeout">value for timeout.</param>
+        public void SetTimeout(double timeout);
 
         /// <summary>
         /// Add a less than or equal to zero constraint.

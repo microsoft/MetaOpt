@@ -45,6 +45,14 @@ namespace MetaOptimize
         }
 
         /// <summary>
+        /// set the timeout.
+        /// </summary>
+        /// <param name="timeout">value for timeout.</param>
+        public void SetTimeout(double timeout) {
+            throw new Exception("have not implemented yet");
+        }
+
+        /// <summary>
         /// Create a new variable with a given name.
         /// </summary>
         /// <param name="name">The variable name.</param>

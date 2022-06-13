@@ -330,7 +330,7 @@ namespace MetaOptimize
         }
 
         /// <summary>
-        /// Generate some random inputs and takes the max gap as the adversary.
+        /// Using some hill climbers to generate some adversary inputs.
         /// </summary>
         public (OptimizationSolution, OptimizationSolution) HillClimbingAdversarialGenerator(
             IEncoder<TVar, TSolution> optimalEncoder,
@@ -342,7 +342,7 @@ namespace MetaOptimize
             int seed = 0)
         {
             if (numTrials < 1) {
-                throw new Exception("num trials for random generator should be positive but got " + numTrials + "!!");
+                throw new Exception("num trials for hill climber should be positive but got " + numTrials + "!!");
             }
             if (demandUB <= 0) {
                 demandUB = this.Topology.MaxCapacity() * this.K;
@@ -409,6 +409,91 @@ namespace MetaOptimize
                 Console.WriteLine("===========================================================");
                 Console.WriteLine("===========================================================");
             }
+            return worstResult;
+        }
+
+        /// <summary>
+        /// Using Simulated Annealing to generate adversarial inputs.
+        /// </summary>
+        public (OptimizationSolution, OptimizationSolution) SimulatedAnnealing(
+            IEncoder<TVar, TSolution> optimalEncoder,
+            IEncoder<TVar, TSolution> heuristicEncoder,
+            int numTmpSteps,
+            int numNeighbors,
+            double demandUB,
+            double stddev,
+            double initialTmp,
+            double tmpDecreaseFactor,
+            int seed = 0)
+        {
+            if (numTmpSteps < 1) {
+                throw new Exception("num temperature steps should be positive but got " + numTmpSteps + "!!");
+            }
+            if (initialTmp <= 0) {
+                throw new Exception("initial temperature should be positive but got " + initialTmp + "!!");
+            }
+            if (tmpDecreaseFactor >= 1 | tmpDecreaseFactor < 0) {
+                throw new Exception("temperature decrease factor should be between 0 and 1 but got " + tmpDecreaseFactor + "!!");
+            }
+            if (demandUB <= 0) {
+                demandUB = this.Topology.MaxCapacity() * this.K;
+            }
+
+            double currTmp = initialTmp;
+            Random rng = new Random(seed);
+
+            Dictionary<(string, string), double> currDemands = new Dictionary<(string, string), double>();
+            // initializing some random demands
+            foreach (var pair in this.Topology.GetNodePairs()) {
+                currDemands[pair] = rng.NextDouble() * demandUB;
+            }
+            var (currGap, currResult) = GetGap(optimalEncoder, heuristicEncoder, currDemands);
+            (OptimizationSolution, OptimizationSolution) worstResult = currResult;
+            double currMaxGap = currGap;
+
+            foreach (int p in Enumerable.Range(0, numTmpSteps)) {
+                foreach (int Mp in Enumerable.Range(0, numNeighbors)) {
+                    // generating neighbor demands
+                    Dictionary<(string, string), double> neighborDemands = new Dictionary<(string, string), double>();
+                    foreach (var pair in this.Topology.GetNodePairs()) {
+                        neighborDemands[pair] = Math.Max(0, currDemands[pair] + GaussianRandomNumberGenerator(rng, 0, stddev));
+                    }
+                    // finding gap for the neighbor
+                    var (neighborGap, neighborResult) = GetGap(optimalEncoder, heuristicEncoder, neighborDemands);
+                    // check if better advers input
+                    if (neighborGap > currGap) {
+                        Console.WriteLine("===========================================================");
+                        Console.WriteLine("===========================================================");
+                        Console.WriteLine("===========================================================");
+                        Console.WriteLine("======== try " + p + " neighbor " + Mp + " found a neighbor with gap " + neighborGap + " higher than " + currGap);
+                        currDemands = neighborDemands;
+                        currResult = neighborResult;
+                        currGap = neighborGap;
+                        if (neighborGap > currMaxGap) {
+                            worstResult = currResult;
+                            currMaxGap = currGap;
+                        }
+                    } else {
+                        Console.WriteLine("===========================================================");
+                        Console.WriteLine("===========================================================");
+                        Console.WriteLine("===========================================================");
+                        Console.WriteLine("======== try " + p + " neighbor " + Mp + " has a lower gap " + neighborGap + " than curr gap " + currGap);
+                        double currProbability = Math.Exp((neighborGap - currGap) / currTmp);
+                        double randomNumber = rng.NextDouble();
+                        Console.WriteLine("current temperature is " + currTmp);
+                        Console.WriteLine("current gap difference is " + (neighborGap - currGap));
+                        Console.WriteLine("current probability is " + currProbability + " and the random number is " + randomNumber);
+                        if (randomNumber <= currProbability) {
+                            Console.WriteLine("accepting the lower gap");
+                            currDemands = neighborDemands;
+                            currResult = neighborResult;
+                            currGap = neighborGap;
+                        }
+                    }
+                }
+                currTmp = currTmp * tmpDecreaseFactor;
+            }
+            Console.WriteLine("final max gap is " + currMaxGap);
             return worstResult;
         }
     }

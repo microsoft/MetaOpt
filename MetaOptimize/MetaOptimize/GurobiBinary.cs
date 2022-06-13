@@ -31,7 +31,7 @@ namespace MetaOptimize
         /// <summary>
         /// Constructor.
         /// </summary>
-        public GurobiBinary(double timeout = double.PositiveInfinity, int verbose = 0) : base(timeout, verbose)
+        public GurobiBinary(double timeout = double.PositiveInfinity, int verbose = 0, int numThreads = 0) : base(timeout, verbose, numThreads)
         {
         }
 
@@ -81,7 +81,7 @@ namespace MetaOptimize
             // this._model.Write($"{exhaust_dir_name}\\model_" + DateTime.Now.Millisecond + ".lp");
 
             this._model.Optimize();
-            if (this._model.Status != GRB.Status.OPTIMAL)
+            if (this._model.Status != GRB.Status.TIME_LIMIT & this._model.Status != GRB.Status.OPTIMAL)
             {
                 throw new Exception($"model not optimal {ModelStatusToString(this._model.Status)}");
             }

@@ -41,6 +41,11 @@ namespace MetaOptimize
         /// </summary>
         protected int _verbose = 0;
         /// <summary>
+        /// number of threads for gurobi.
+        /// </summary>
+        protected int _numThreads = 0;
+
+        /// <summary>
         /// Gurobi Aux vars.
         /// </summary>
         protected Dictionary<string, GRBVar> _auxiliaryVars = new Dictionary<string, GRBVar>();
@@ -82,14 +87,19 @@ namespace MetaOptimize
         /// <summary>
         /// constructor.
         /// </summary>
-        public GurobiSOS(double timeout = double.PositiveInfinity, int verbose = 0)
+        public GurobiSOS(double timeout = double.PositiveInfinity, int verbose = 0, int numThreads = 0)
         {
             this._env = SetupGurobi();
             this._model = new GRBModel(this._env);
             this._timeout = timeout;
             this._verbose = verbose;
+            this._numThreads = numThreads;
             this._model.Parameters.TimeLimit = timeout;
             this._model.Parameters.Presolve = 2;
+            if (numThreads < 0) {
+                throw new Exception("num threads should be either 0 (automatic) or positive but got " + numThreads);
+            }
+            this._model.Parameters.Threads = numThreads;
             this._model.Parameters.OutputFlag = verbose;
         }
 
@@ -101,7 +111,22 @@ namespace MetaOptimize
             this._model = new GRBModel(this._env);
             this._model.Parameters.TimeLimit = this._timeout;
             this._model.Parameters.Presolve = 2;
+            this._constraintIneqCount = 0;
+            this._constraintEqCount = 0;
+            this._variables = new Dictionary<string, GRBVar>();
+            this._auxiliaryVars = new Dictionary<string, GRBVar>();
+            this._objective = 0;
+            this._model.Parameters.Threads = this._numThreads;
             this._model.Parameters.OutputFlag = this._verbose;
+        }
+
+        /// <summary>
+        /// set the timeout.
+        /// </summary>
+        /// <param name="timeout">value for timeout.</param>
+        public void SetTimeout(double timeout) {
+            this._timeout = timeout;
+            this._model.Parameters.TimeLimit = timeout;
         }
 
         /// <summary>
@@ -287,13 +312,14 @@ namespace MetaOptimize
             Console.WriteLine("in maximize call");
             this._model.SetObjective(this._objective, GRB.MAXIMIZE);
             // this._model.Parameters.MIPFocus = 3;
+            // this._model.Parameters.Cuts = 3;
 
             string exhaust_dir_name = @"c:\tmp\grbsos_exhaust\rand_" + (new Random()).Next(1000) + @"\";
             Directory.CreateDirectory(exhaust_dir_name);
             this._model.Write($"{exhaust_dir_name}\\model_" + DateTime.Now.Millisecond + ".lp");
 
             this._model.Optimize();
-            if (this._model.Status != GRB.Status.OPTIMAL)
+            if (this._model.Status != GRB.Status.TIME_LIMIT & this._model.Status != GRB.Status.OPTIMAL)
             {
                 throw new Exception($"model not optimal {ModelStatusToString(this._model.Status)}");
                 // throw new InfeasibleOrUnboundSolution();
@@ -347,11 +373,14 @@ namespace MetaOptimize
         public double GetVariable(GRBModel solution, GRBVar variable)
         {
             // Maximize() above is a synchronous call; not sure if this check is needed
-            if (solution.Status != GRB.Status.USER_OBJ_LIMIT & solution.Status != GRB.Status.OPTIMAL)
+            if (solution.Status != GRB.Status.USER_OBJ_LIMIT & solution.Status != GRB.Status.TIME_LIMIT & solution.Status != GRB.Status.OPTIMAL)
             {
                 throw new Exception("can't read status since model is not optimal");
             }
 
+            if (solution.Status != GRB.Status.OPTIMAL) {
+                return variable.Xn;
+            }
             return variable.X;
         }
     }
