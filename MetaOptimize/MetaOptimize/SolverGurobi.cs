@@ -143,20 +143,24 @@ namespace MetaOptimize
         /// Create a new variable with a given name.
         /// </summary>
         /// <param name="name">The variable name.</param>
+        /// <param name="type">The variable type.</param>
+        /// <param name="lb">The lb on variable.</param>
+        /// <param name="ub">The ub on variable.</param>
         /// <returns>The solver variable.</returns>
-        public GRBVar CreateVariable(string name)
+        public GRBVar CreateVariable(string name, char type = GRB.CONTINUOUS,
+            double lb = double.NegativeInfinity, double ub = double.PositiveInfinity)
         {
             GRBVar variable;
             if (name == "")
             {
                 throw new Exception("bug");
             }
+            lb = Math.Max(-1 * this._varBounds, lb);
+            ub = Math.Min(this._varBounds, ub);
             try
             {
                 string new_name = name + "_" + this._variables.Count;
-                variable = _model.AddVar(
-                    -1 * this._varBounds, this._varBounds, 0, GRB.CONTINUOUS,
-                    new_name);
+                variable = _model.AddVar(lb, ub, 0, type, new_name);
                 this._variables.Add(variable);
                 this._varNames.Add(new_name);
                 return variable;
@@ -249,6 +253,15 @@ namespace MetaOptimize
         }
 
         /// <summary>
+        /// Add a less than or equal to zero constraint (Quadratic).
+        /// Following constraints; A * B + C \leq 0.
+        /// </summary>
+        public string AddLeqZeroConstraint(IList<Polynomial<GRBVar>> coeffPolyList, IList<GRBVar> variableList, Polynomial<GRBVar> linearPoly)
+        {
+            throw new Exception("not implemented yet!!!");
+        }
+
+        /// <summary>
         /// Wrapper for AddEqZeroConstraint that converts types.
         /// </summary>
         /// <param name="polynomial"></param>
@@ -258,6 +271,16 @@ namespace MetaOptimize
             string name = this.AddEqZeroConstraint(poly);
             return name;
         }
+
+        /// <summary>
+        /// Add a equal to zero constraint (Quadratic).
+        /// Following constraints; A * B + C == 0.
+        /// </summary>
+        public string AddEqZeroConstraint(IList<Polynomial<GRBVar>> coeffPolyList, IList<GRBVar> variableList, Polynomial<GRBVar> linearPoly)
+        {
+            throw new Exception("not implemented yet!!!");
+        }
+
         /// <summary>
         /// Add a equal to zero constraint.
         /// </summary>

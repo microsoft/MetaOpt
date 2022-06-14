@@ -116,6 +116,17 @@ namespace MetaOptimize
             return true;
         }
         /// <summary>
+        /// Function that checks if this variable is a constant.
+        /// </summary>
+        public bool isConstant()
+        {
+            if (this.Exponent == 0 || !this.Variable.HasValue)
+            {
+                return true;
+            }
+            return true;
+        }
+        /// <summary>
         /// Negate this polynomial term.
         /// </summary>
         /// <returns></returns>
@@ -128,6 +139,36 @@ namespace MetaOptimize
             else
             {
                 return new Term<TVar>(-1 * this.Coefficient);
+            }
+        }
+        /// <summary>
+        /// Multiply this polynomial term by a number.
+        /// </summary>
+        /// <returns></returns>
+        public Term<TVar> Multiply(double constant)
+        {
+            if (this.Variable.HasValue)
+            {
+                return new Term<TVar>(constant * this.Coefficient, this.Variable.Value, this.Exponent);
+            }
+            else
+            {
+                return new Term<TVar>(constant * this.Coefficient);
+            }
+        }
+        /// <summary>
+        /// Copy this polynomial term.
+        /// </summary>
+        /// <returns></returns>
+        public Term<TVar> Copy()
+        {
+            if (this.Variable.HasValue)
+            {
+                return new Term<TVar>(this.Coefficient, this.Variable.Value, this.Exponent);
+            }
+            else
+            {
+                return new Term<TVar>(this.Coefficient);
             }
         }
 

@@ -53,7 +53,7 @@ namespace MetaOptimize
         /// <summary>
         /// The demand variables for the network (d_k).
         /// </summary>
-        public Dictionary<(string, string), TVar> DemandVariables { get; set; }
+        public Dictionary<(string, string), Polynomial<TVar>> DemandVariables { get; set; }
 
         /// <summary>
         /// The flow variables for the network (f_k).
@@ -104,7 +104,7 @@ namespace MetaOptimize
         /// <summary>
         /// The kkt encoder used to construct the encoding.
         /// </summary>
-        private KktOptimizationGenerator<TVar, TSolution> kktEncoder;
+        private KktOptimizationGenerator<TVar, TSolution> innerProblemEncoder;
 
         /// <summary>
         /// Create a new instance of the <see cref="OptimalEncoder{TVar, TSolution}"/> class.
@@ -121,22 +121,30 @@ namespace MetaOptimize
             this.Threshold = threshold != 0 ? threshold : this.Topology.TotalCapacity();
         }
 
-        private void InitializeVariables(Dictionary<(string, string), TVar> preDemandVariables, Dictionary<(string, string), double> demandConstraints) {
+        private void InitializeVariables(Dictionary<(string, string), Polynomial<TVar>> preDemandVariables, Dictionary<(string, string), double> demandConstraints,
+                InnerEncodingMethodChoice innerEncoding = InnerEncodingMethodChoice.KKT) {
             this.variables = new HashSet<TVar>();
             this.Paths = new Dictionary<(string, string), string[][]>();
             // establish the demand variables.
             this.DemandConstraints = demandConstraints ?? new Dictionary<(string, string), double>();
             this.DemandVariables = preDemandVariables;
+            var demandVariables = new HashSet<TVar>();
+
             if (this.DemandVariables == null) {
-                this.DemandVariables = new Dictionary<(string, string), TVar>();
+                this.DemandVariables = new Dictionary<(string, string), Polynomial<TVar>>();
                 foreach (var pair in this.Topology.GetNodePairs())
                 {
-                    this.DemandVariables[pair] = this.Solver.CreateVariable("demand_" + pair.Item1 + "_" + pair.Item2);
-                    this.variables.Add(this.DemandVariables[pair]);
+                    var variable = this.Solver.CreateVariable("demand_" + pair.Item1 + "_" + pair.Item2);
+                    this.DemandVariables[pair] = new Polynomial<TVar>(new Term<TVar>(1, variable));
+                    this.variables.Add(variable);
+                    demandVariables.Add(variable);
                 }
             } else {
                 foreach (var (pair, variable) in this.DemandVariables) {
-                    this.variables.Add(variable);
+                    foreach (var term in variable.Terms) {
+                        this.variables.Add(term.Variable.Value);
+                        demandVariables.Add(term.Variable.Value);
+                    }
                 }
             }
 
@@ -178,8 +186,17 @@ namespace MetaOptimize
                 }
             }
 
-            var demandVariables = new HashSet<TVar>(this.DemandVariables.Values);
-            this.kktEncoder = new KktOptimizationGenerator<TVar, TSolution>(this.Solver, this.variables, demandVariables);
+            switch (innerEncoding)
+            {
+                case InnerEncodingMethodChoice.KKT:
+                    this.innerProblemEncoder = new KktOptimizationGenerator<TVar, TSolution>(this.Solver, this.variables, demandVariables);
+                    break;
+                case InnerEncodingMethodChoice.PrimalDual:
+                    this.innerProblemEncoder = new PrimalDualOptimizationGenerator<TVar, TSolution>(this.Solver, this.variables, demandVariables);
+                    break;
+                default:
+                    throw new Exception("invalid method for encoding the inner problem");
+            }
         }
 
         private bool IsDemandValid((string, string) pair) {
@@ -198,10 +215,11 @@ namespace MetaOptimize
         /// Encode the problem.
         /// </summary>
         /// <returns>The constraints and maximization objective.</returns>
-        public OptimizationEncoding<TVar, TSolution> Encoding(Dictionary<(string, string), TVar> preDemandVariables = null,
-            Dictionary<(string, string), double> demandConstraints = null, bool noKKT = false)
+        public OptimizationEncoding<TVar, TSolution> Encoding(Dictionary<(string, string), Polynomial<TVar>> preDemandVariables = null,
+            Dictionary<(string, string), double> demandConstraints = null, bool noAdditionalConstraints = false,
+            InnerEncodingMethodChoice innerEncoding = InnerEncodingMethodChoice.KKT)
         {
-            InitializeVariables(preDemandVariables, demandConstraints);
+            InitializeVariables(preDemandVariables, demandConstraints, innerEncoding);
             // Compute the maximum demand M.
             // Since we don't know the demands we have to be very conservative.
             // var maxDemand = this.Topology.TotalCapacity() * 10;
@@ -219,7 +237,7 @@ namespace MetaOptimize
             }
 
             polynomial.Terms.Add(new Term<TVar>(-1, this.TotalDemandMetVariable));
-            this.kktEncoder.AddEqZeroConstraint(polynomial);
+            this.innerProblemEncoder.AddEqZeroConstraint(polynomial);
 
             // Ensure that the demands are finite.
             // This is needed because Z3 can return any value if demands can be infinite.
@@ -234,7 +252,9 @@ namespace MetaOptimize
                 if (constant <= 0) {
                     continue;
                 }
-                this.kktEncoder.AddEqZeroConstraint(new Polynomial<TVar>(new Term<TVar>(1, this.DemandVariables[pair]), new Term<TVar>(-1 * constant)));
+                var poly = this.DemandVariables[pair].Copy();
+                poly.Add(new Term<TVar>(-1 * constant));
+                this.innerProblemEncoder.AddEqZeroConstraint(poly);
             }
 
             // Ensure that f_k geq 0.
@@ -242,7 +262,9 @@ namespace MetaOptimize
             foreach (var (pair, variable) in this.FlowVariables)
             {
                 // this.kktEncoder.AddLeqZeroConstraint(new Polynomial<TVar>(new Term<TVar>(-1, variable)));
-                this.kktEncoder.AddLeqZeroConstraint(new Polynomial<TVar>(new Term<TVar>(1, variable), new Term<TVar>(-1, this.DemandVariables[pair])));
+                var poly = this.DemandVariables[pair].Negate();
+                poly.Add(new Term<TVar>(1, variable));
+                this.innerProblemEncoder.AddLeqZeroConstraint(poly);
             }
 
             // Ensure that f_k^p geq 0.
@@ -253,7 +275,7 @@ namespace MetaOptimize
                 }
                 foreach (var path in paths)
                 {
-                    this.kktEncoder.AddLeqZeroConstraint(new Polynomial<TVar>(new Term<TVar>(-1, this.FlowPathVariables[path])));
+                    this.innerProblemEncoder.AddLeqZeroConstraint(new Polynomial<TVar>(new Term<TVar>(-1, this.FlowPathVariables[path])));
                 }
             }
 
@@ -270,7 +292,7 @@ namespace MetaOptimize
                 }
 
                 poly.Terms.Add(new Term<TVar>(-1, this.FlowVariables[pair]));
-                this.kktEncoder.AddEqZeroConstraint(poly);
+                this.innerProblemEncoder.AddEqZeroConstraint(poly);
             }
 
             // Ensure the capacity constraints hold.
@@ -305,25 +327,25 @@ namespace MetaOptimize
             foreach (var (edge, total) in sumPerEdge)
             {
                 total.Terms.Add(new Term<TVar>(-1 * edge.Capacity));
-                this.kktEncoder.AddLeqZeroConstraint(total);
+                this.innerProblemEncoder.AddLeqZeroConstraint(total);
             }
             // generating the max constraints that achieve pinning.
             foreach (var (pair, polyTerm) in sumNonShortest) {
                 // sum non shortest flows \leq MaxAuxVariables
                 polyTerm.Terms.Add(new Term<TVar>(-1, MaxAuxVariables[pair]));
-                this.kktEncoder.AddLeqZeroConstraint(polyTerm);
+                this.innerProblemEncoder.AddLeqZeroConstraint(polyTerm);
                 // MaxAuxVariables \geq 0
-                this.kktEncoder.AddLeqZeroConstraint(new Polynomial<TVar>(new Term<TVar>(-1, MaxAuxVariables[pair])));
+                this.innerProblemEncoder.AddLeqZeroConstraint(new Polynomial<TVar>(new Term<TVar>(-1, MaxAuxVariables[pair])));
                 // maxNontPinned \geq M(d_k - T_d)
-                var maxNonPinnedLB = new Polynomial<TVar>(new Term<TVar>(this._bigM, this.DemandVariables[pair]));
+                var maxNonPinnedLB = this.DemandVariables[pair].Multiply(this._bigM);
                 maxNonPinnedLB.Terms.Add(new Term<TVar>(-1 * this._bigM * Threshold));
                 maxNonPinnedLB.Terms.Add(new Term<TVar>(-1, MaxAuxVariables[pair]));
-                this.kktEncoder.AddLeqZeroConstraint(maxNonPinnedLB);
+                this.innerProblemEncoder.AddLeqZeroConstraint(maxNonPinnedLB);
                 // demand - shortest path flows \leq MaxAuxVariables
-                var shortestPathUB = new Polynomial<TVar>(new Term<TVar>(1, DemandVariables[pair]));
+                var shortestPathUB = this.DemandVariables[pair].Copy();
                 shortestPathUB.Terms.Add(new Term<TVar>(-1, shortestFlowVariables[pair]));
                 shortestPathUB.Terms.Add(new Term<TVar>(-1, MaxAuxVariables[pair]));
-                this.kktEncoder.AddLeqZeroConstraint(shortestPathUB);
+                this.innerProblemEncoder.AddLeqZeroConstraint(shortestPathUB);
             }
 
             var objectiveFunction = new Polynomial<TVar>(new Term<TVar>(1, this.TotalDemandMetVariable));
@@ -334,7 +356,7 @@ namespace MetaOptimize
             }
 
             // Generate the full constraints.
-            this.kktEncoder.AddMaximizationConstraints(objectiveFunction, noKKT);
+            this.innerProblemEncoder.AddMaximizationConstraints(objectiveFunction, noAdditionalConstraints);
 
             // Optimization objective is the total demand met.
             // Return the encoding, including the feasibility constraints, objective, and KKT conditions.
@@ -356,9 +378,12 @@ namespace MetaOptimize
             var flows = new Dictionary<(string, string), double>();
             var flowPaths = new Dictionary<string[], double>(new PathComparer());
 
-            foreach (var (pair, variable) in this.DemandVariables)
+            foreach (var (pair, poly) in this.DemandVariables)
             {
-                demands[pair] = this.Solver.GetVariable(solution, variable);
+                demands[pair] = 0;
+                foreach (var term in poly.Terms) {
+                    demands[pair] += this.Solver.GetVariable(solution, term.Variable.Value) * term.Coefficient;
+                }
             }
 
             foreach (var (pair, variable) in this.FlowVariables)

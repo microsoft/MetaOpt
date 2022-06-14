@@ -19,7 +19,8 @@ namespace MetaOptimize
     public class GurobiSOS : ISolver<GRBVar, GRBModel>
     {
         private GRBEnv _env = null;
-
+        private double _bigM = Math.Pow(10, 8);
+        private IList<GRBVar> auxQVarList = new List<GRBVar>();
         /// <summary>
         /// Gurobi Vars.
         /// </summary>
@@ -118,6 +119,7 @@ namespace MetaOptimize
             this._objective = 0;
             this._model.Parameters.Threads = this._numThreads;
             this._model.Parameters.OutputFlag = this._verbose;
+            this.auxQVarList = new List<GRBVar>();
         }
 
         /// <summary>
@@ -133,8 +135,12 @@ namespace MetaOptimize
         /// Create a new variable with a given name.
         /// </summary>
         /// <param name="name">The variable name.</param>
+        /// <param name="type">the type of variable.</param>
+        /// <param name="lb">The lb on the variable.</param>
+        /// <param name="ub">The ub on the variable.</param>
         /// <returns>The solver variable.</returns>
-        public GRBVar CreateVariable(string name)
+        public GRBVar CreateVariable(string name, char type = GRB.CONTINUOUS,
+            double lb = double.NegativeInfinity, double ub = double.PositiveInfinity)
         {
             if (name == null || name.Length == 0)
             {
@@ -144,7 +150,7 @@ namespace MetaOptimize
             try
             {
                 var new_name = $"{name}_{this._variables.Count}";
-                var variable = _model.AddVar(Double.NegativeInfinity, Double.PositiveInfinity, 0, GRB.CONTINUOUS, new_name);
+                var variable = _model.AddVar(lb, ub, 0, GRB.CONTINUOUS, new_name);
                 this._variables.Add(new_name, variable);
                 return variable;
             }
@@ -176,7 +182,7 @@ namespace MetaOptimize
         /// </summary>
         /// <param name="poly"></param>
         /// <returns>Linear expression.</returns>
-        public GRBLinExpr Convert(Polynomial<GRBVar> poly)
+        protected internal GRBLinExpr Convert(Polynomial<GRBVar> poly)
         {
             GRBLinExpr obj = 0;
             foreach (var term in poly.Terms)
@@ -208,6 +214,71 @@ namespace MetaOptimize
         }
 
         /// <summary>
+        /// Converts to quadratic form for Gurobi.
+        /// </summary>
+        /// <returns>Linear expression.</returns>
+        private GRBLinExpr ConvertQE(IList<Polynomial<GRBVar>> coeffPolyList, IList<GRBVar> variableList, Polynomial<GRBVar> linearPoly)
+        {
+            GRBLinExpr obj = 0;
+            foreach (var term in linearPoly.Terms) {
+                switch (term.Exponent)
+                {
+                    case 1:
+                        obj.AddTerm(term.Coefficient, term.Variable.Value);
+                        break;
+                    case 0:
+                        obj += (term.Coefficient);
+                        break;
+                    default:
+                        throw new Exception("non 0|1 exponent is not modeled");
+                }
+            }
+
+            for (int i = 0; i < coeffPolyList.Count; i++) {
+                Polynomial<GRBVar> coeffPoly = coeffPolyList[i];
+                GRBVar variable = variableList[i];
+                foreach (var term in coeffPoly.Terms) {
+                    switch (term.Exponent) {
+                        case 1:
+                            GRBVar binary_variable = term.Variable.Value;
+                            var auxVar = this.CreateVariable("aux_qe");
+                            // if (binary_variable.VType == GRB.BINARY) {
+                            obj.AddTerm(term.Coefficient, auxVar);
+                            var auxConst = new Polynomial<GRBVar>(new Term<GRBVar>(1, variable));
+                            auxConst.Add(new Term<GRBVar>(1 * this._bigM));
+                            auxConst.Add(new Term<GRBVar>(-1 * this._bigM, binary_variable));
+                            auxConst.Add(new Term<GRBVar>(-1, auxVar));
+                            this.AddLeqZeroConstraint(auxConst.Negate());
+                            this.AddLeqZeroConstraint(new Polynomial<GRBVar>(new Term<GRBVar>(1, auxVar)));
+                            auxQVarList.Add(auxVar);
+                            // } else {
+                            //     throw new Exception("coefficient should be binary but it is not");
+                            // }
+                            break;
+                        case 0:
+                            obj.AddTerm(term.Coefficient, variable);
+                            break;
+                        default:
+                            throw new Exception("non 0|1 exponent is not modeled!!");
+                    }
+                }
+            }
+            return obj;
+        }
+
+        /// <summary>
+        /// Add a less than or equal to zero constraint (Quadratic).
+        /// Following constraints; A * B + C \leq 0.
+        /// </summary>
+        public string AddLeqZeroConstraint(IList<Polynomial<GRBVar>> coeffPolyList, IList<GRBVar> variableList, Polynomial<GRBVar> linearPoly)
+        {
+            string name = "ineq_index_" + this._constraintIneqCount++;
+            GRBLinExpr quadConstraint = this.ConvertQE(coeffPolyList, variableList, linearPoly);
+            this._model.AddConstr(quadConstraint, GRB.LESS_EQUAL, 0.0, name);
+            return name;
+        }
+
+        /// <summary>
         /// Wrapper for AddEqZeroConstraint that converts types.
         /// </summary>
         /// <param name="polynomial"></param>
@@ -217,6 +288,19 @@ namespace MetaOptimize
             this._model.AddConstr(this.Convert(polynomial), GRB.EQUAL, 0.0, name);
             return name;
         }
+
+        /// <summary>
+        /// Add a equal to zero constraint (Quadratic).
+        /// Following constraints; A * B + C \leq 0.
+        /// </summary>
+        public string AddEqZeroConstraint(IList<Polynomial<GRBVar>> coeffPolyList, IList<GRBVar> variableList, Polynomial<GRBVar> linearPoly)
+        {
+            string name = "ineq_index_" + this._constraintIneqCount++;
+            GRBLinExpr quadConstraint = this.ConvertQE(coeffPolyList, variableList, linearPoly);
+            this._model.AddConstr(quadConstraint, GRB.EQUAL, 0.0, name);
+            return name;
+        }
+
         /// <summary>
         /// Combine the constraints and variables of another solver into this one.
         /// </summary>
@@ -310,7 +394,11 @@ namespace MetaOptimize
         public virtual GRBModel Maximize()
         {
             Console.WriteLine("in maximize call");
-            this._model.SetObjective(this._objective, GRB.MAXIMIZE);
+            GRBLinExpr objective = 0;
+            foreach (var auxVar in auxQVarList) {
+                objective += auxVar / this._bigM;
+            }
+            this._model.SetObjective(objective + this._objective, GRB.MAXIMIZE);
             // this._model.Parameters.MIPFocus = 3;
             // this._model.Parameters.Cuts = 3;
 

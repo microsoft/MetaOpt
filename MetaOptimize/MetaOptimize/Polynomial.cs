@@ -70,12 +70,50 @@ namespace MetaOptimize
         }
 
         /// <summary>
+        /// add a new term.
+        /// </summary>
+        /// <param name="newTerm">a new Term.</param>
+        public void Add(Term<TVar> newTerm)
+        {
+            this.Terms.Add(newTerm);
+        }
+
+        /// <summary>
+        /// add a new term.
+        /// </summary>
+        /// <param name="newPolynomial">a new Polynomial.</param>
+        public void Add(Polynomial<TVar> newPolynomial)
+        {
+            foreach (var newTerm in newPolynomial.Terms) {
+                this.Add(newTerm);
+            }
+        }
+
+        /// <summary>
         /// Negate the polynomial.
         /// </summary>
         /// <returns>The result as a polynomial.</returns>
         public Polynomial<TVar> Negate()
         {
             return new Polynomial<TVar>(this.Terms.Select(x => x.Negate()).ToList());
+        }
+
+        /// <summary>
+        /// copy the polynomial.
+        /// </summary>
+        /// <returns>The result as a polynomial.</returns>
+        public Polynomial<TVar> Copy()
+        {
+            return new Polynomial<TVar>(this.Terms.Select(x => x.Copy()).ToList());
+        }
+
+        /// <summary>
+        /// multiply the polynomial by a constant.
+        /// </summary>
+        /// <returns>The result as a polynomial.</returns>
+        public Polynomial<TVar> Multiply(double constant)
+        {
+            return new Polynomial<TVar>(this.Terms.Select(x => x.Multiply(constant)).ToList());
         }
 
         /// <summary>
@@ -102,6 +140,33 @@ namespace MetaOptimize
                 return true;
             }
             return false;
+        }
+        /// <summary>
+        /// returns the constant of the polynomial.
+        /// </summary>
+        public Polynomial<TVar> getRHS(ISet<TVar> constVariables)
+        {
+            Polynomial<TVar> rhs = new Polynomial<TVar>();
+            foreach (var term in this.Terms) {
+                if (term.isInSetOrConst(constVariables)) {
+                    rhs.Add(term);
+                }
+            }
+            return rhs;
+        }
+        /// <summary>
+        /// returns if the polynomial containts single variable.
+        /// </summary>
+        public bool isSingleVariable()
+        {
+            ISet<Option<TVar>> vars = new HashSet<Option<TVar>>();
+            foreach (var term in this.Terms) {
+                if (term.isConstant()) {
+                    continue;
+                }
+                vars.Add(term.Variable);
+            }
+            return (vars.Count() == 1);
         }
     }
 }

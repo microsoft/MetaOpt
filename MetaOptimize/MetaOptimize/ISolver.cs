@@ -4,6 +4,8 @@
 
 namespace MetaOptimize
 {
+    using System.Collections.Generic;
+    using Gurobi;
     /// <summary>
     /// An interface for an optimization solver.
     /// </summary>
@@ -18,8 +20,12 @@ namespace MetaOptimize
         /// Create a new variable with a given name.
         /// </summary>
         /// <param name="name">The variable name.</param>
+        /// <param name="type">the type of variable.</param>
+        /// <param name="lb">The lb on the variable.</param>
+        /// <param name="ub">The ub on the variable.</param>
         /// <returns>The solver variable.</returns>
-        public TVar CreateVariable(string name);
+        public TVar CreateVariable(string name, char type = GRB.CONTINUOUS,
+                 double lb = double.NegativeInfinity, double ub = double.PositiveInfinity);
 
         /// <summary>
         /// Get the resulting value assigned to a variable.
@@ -55,11 +61,31 @@ namespace MetaOptimize
         public string AddLeqZeroConstraint(Polynomial<TVar> polynomial);
 
         /// <summary>
+        /// Add a less than or equal to zero constraint (Quadratic).
+        /// Following constraints; A * B + C \leq 0.
+        /// </summary>
+        /// <param name="coeffPolyList">The coefficent polynomial list (A).</param>
+        /// <param name="variableList">The variable list (B).</param>
+        /// <param name="linearPoly">The linear term (C).</param>
+        /// <returns>name of the constraint.</returns>
+        public string AddLeqZeroConstraint(IList<Polynomial<TVar>> coeffPolyList, IList<TVar> variableList, Polynomial<TVar> linearPoly);
+
+        /// <summary>
         /// Add a equal to zero constraint.
         /// </summary>
         /// <param name="polynomial">The polynomial.</param>
         /// <returns>name of the constraint.</returns>
         public string AddEqZeroConstraint(Polynomial<TVar> polynomial);
+
+        /// <summary>
+        /// Add a equal to zero constraint (Quadratic).
+        /// Following constraints; A * B + C == 0.
+        /// </summary>
+        /// <param name="coeffPolyList">The coefficent polynomial list (A).</param>
+        /// <param name="variableList">The variable list (B).</param>
+        /// <param name="linearPoly">The linear term (C).</param>
+        /// <returns>name of the constraint.</returns>
+        public string AddEqZeroConstraint(IList<Polynomial<TVar>> coeffPolyList, IList<TVar> variableList, Polynomial<TVar> linearPoly);
 
         /// <summary>
         /// Add or equals zero.

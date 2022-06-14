@@ -7,8 +7,8 @@ namespace MetaOptimize
     using System;
     using System.Collections.Generic;
     using System.Linq;
+    using Gurobi;
     using ZenLib;
-
     /// <summary>
     /// An interface for an optimization solver.
     /// </summary>
@@ -56,11 +56,27 @@ namespace MetaOptimize
         /// Create a new variable with a given name.
         /// </summary>
         /// <param name="name">The variable name.</param>
+        /// <param name="type">The variable type.</param>
+        /// <param name="lb">The lb on the variable.</param>
+        /// <param name="ub">The ub on the variable.</param>
         /// <returns>The solver variable.</returns>
-        public Zen<Real> CreateVariable(string name)
+        public Zen<Real> CreateVariable(string name, char type = GRB.CONTINUOUS,
+            double lb = double.NegativeInfinity, double ub = double.PositiveInfinity)
         {
             var variable = Zen.Symbolic<Real>(name);
+            switch (type) {
+                case GRB.CONTINUOUS:
+                    break;
+                case GRB.BINARY:
+                    throw new Exception("not implemented");
+                case GRB.INTEGER:
+                    throw new Exception("not implemented");
+                default:
+                    throw new Exception("invalid variable type");
+            }
             this.Variables.Add(variable);
+            // this.ConstraintExprs.Add(variable <= (Real)ub);
+            // this.ConstraintExprs.Add(variable >= (Real)lb);
             return variable;
         }
 
@@ -96,6 +112,15 @@ namespace MetaOptimize
         }
 
         /// <summary>
+        /// Add a less than or equal to zero constraint (Quadratic).
+        /// Following constraints; A * B + C \leq 0.
+        /// </summary>
+        public string AddLeqZeroConstraint(IList<Polynomial<Zen<Real>>> coeffPolyList, IList<Zen<Real>> variableList, Polynomial<Zen<Real>> linearPoly)
+        {
+            throw new Exception("not implemented yet!!!");
+        }
+
+        /// <summary>
         /// Add a equal to zero constraint.
         /// </summary>
         /// <param name="polynomial">The polynomial.</param>
@@ -103,6 +128,15 @@ namespace MetaOptimize
         {
             this.ConstraintExprs.Add(polynomial.AsZen() == (Real)0);
             return "dummyName";
+        }
+
+        /// <summary>
+        /// Add a equal to zero constraint (Quadratic).
+        /// Following constraints; A * B + C == 0.
+        /// </summary>
+        public string AddEqZeroConstraint(IList<Polynomial<Zen<Real>>> coeffPolyList, IList<Zen<Real>> variableList, Polynomial<Zen<Real>> linearPoly)
+        {
+            throw new Exception("not implemented yet!!!");
         }
 
         /// <summary>

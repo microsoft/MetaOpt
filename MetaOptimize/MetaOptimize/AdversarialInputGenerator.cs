@@ -7,6 +7,7 @@ namespace MetaOptimize
     using System;
     using System.Collections.Generic;
     using System.Linq;
+    using Gurobi;
 
     /// <summary>
     /// Meta-optimization utility functions for maximizing optimality gaps.
@@ -26,7 +27,7 @@ namespace MetaOptimize
         /// <summary>
         /// The demand variables.
         /// </summary>
-        public Dictionary<(string, string), TVar> DemandVariables { get; set; }
+        public Dictionary<(string, string), Polynomial<TVar>> DemandVariables { get; set; }
 
         /// <summary>
         /// Constructor.
@@ -41,21 +42,29 @@ namespace MetaOptimize
         /// <param name="optimalEncoder">The optimal encoder.</param>
         /// <param name="heuristicEncoder">The heuristic encoder.</param>
         /// <param name="demandUB">upper bound on all the demands.</param>
+        /// <param name="innerEncoding">The method for encoding the inner problem.</param>
+        /// <param name="demandList">the quantized list of demands, will only use if method=PrimalDual.</param>
         public (OptimizationSolution, OptimizationSolution) MaximizeOptimalityGap(
             IEncoder<TVar, TSolution> optimalEncoder,
             IEncoder<TVar, TSolution> heuristicEncoder,
-            double demandUB = -1)
+            double demandUB = -1,
+            InnerEncodingMethodChoice innerEncoding = InnerEncodingMethodChoice.KKT,
+            ISet<double> demandList = null)
         {
             if (optimalEncoder.Solver != heuristicEncoder.Solver)
             {
-                throw new System.Exception("Solver mismatch between optimal and heuristic encoders.");
+                throw new Exception("Solver mismatch between optimal and heuristic encoders.");
+            }
+            if (innerEncoding == InnerEncodingMethodChoice.PrimalDual & demandList == null)
+            {
+                throw new Exception("should provide the demand list if inner encoding method is primal dual.");
             }
 
             var solver = optimalEncoder.Solver;
 
-            CreateDemandVariables(solver);
-            var optimalEncoding = optimalEncoder.Encoding(preDemandVariables: this.DemandVariables);
-            var heuristicEncoding = heuristicEncoder.Encoding(preDemandVariables: this.DemandVariables);
+            CreateDemandVariables(solver, innerEncoding, demandList);
+            var optimalEncoding = optimalEncoder.Encoding(preDemandVariables: this.DemandVariables, innerEncoding: innerEncoding);
+            var heuristicEncoding = heuristicEncoder.Encoding(preDemandVariables: this.DemandVariables, innerEncoding: innerEncoding);
 
             // ensures that demand in both problems is the same and lower than demand upper bound constraint.
             EnsureDemandUB(solver, demandUB);
@@ -88,20 +97,27 @@ namespace MetaOptimize
         /// <param name="heuristicEncoder">The heuristic encoder.</param>
         /// <param name="minDifference">The minimum difference.</param>
         /// <param name="demandUB">upper bound on all the demands.</param>
+        /// <param name="innerEncoding">The method for encoding the inner problem.</param>
+        /// <param name="demandList">the quantized list of demands, will only use if method=PrimalDual.</param>
         public (OptimizationSolution, OptimizationSolution) FindOptimalityGapAtLeast(
             IEncoder<TVar, TSolution> optimalEncoder,
             IEncoder<TVar, TSolution> heuristicEncoder,
             double minDifference,
-            double demandUB = -1)
+            double demandUB = -1,
+            InnerEncodingMethodChoice innerEncoding = InnerEncodingMethodChoice.KKT,
+            ISet<double> demandList = null)
         {
             if (optimalEncoder.Solver != heuristicEncoder.Solver)
             {
                 throw new System.Exception("Solver mismatch between optimal and heuristic encoders.");
             }
-
+            if (innerEncoding == InnerEncodingMethodChoice.PrimalDual & demandList == null)
+            {
+                throw new Exception("should provide the demand list if inner encoding method is primal dual.");
+            }
             var solver = optimalEncoder.Solver;
 
-            CreateDemandVariables(solver);
+            CreateDemandVariables(solver, innerEncoding, demandList);
             var optimalEncoding = optimalEncoder.Encoding(this.DemandVariables);
             var heuristicEncoding = heuristicEncoder.Encoding(this.DemandVariables);
 
@@ -151,16 +167,36 @@ namespace MetaOptimize
             {
                 // var heuristicVariable = heuristicEncoding.DemandVariables[pair];
                 // solver.AddEqZeroConstraint(new Polynomial<TVar>(new Term<TVar>(1, variable), new Term<TVar>(-1, heuristicVariable)));
-                solver.AddLeqZeroConstraint(new Polynomial<TVar>(new Term<TVar>(-1 * demandUB), new Term<TVar>(1, variable)));
+                var poly = variable.Copy();
+                poly.Add(new Term<TVar>(-1 * demandUB));
+                solver.AddLeqZeroConstraint(poly);
                 // solver.AddLeqZeroConstraint(new Polynomial<TVar>(new Term<TVar>(-1 * demandUB), new Term<TVar>(1, heuristicVariable)));
             }
         }
 
-        private void CreateDemandVariables(ISolver<TVar, TSolution> solver) {
-            this.DemandVariables = new Dictionary<(string, string), TVar>();
+        private void CreateDemandVariables(ISolver<TVar, TSolution> solver, InnerEncodingMethodChoice innerEncoding, ISet<double> demandList) {
+            this.DemandVariables = new Dictionary<(string, string), Polynomial<TVar>>();
             foreach (var pair in this.Topology.GetNodePairs())
             {
-                this.DemandVariables[pair] = solver.CreateVariable("demand_" + pair.Item1 + "_" + pair.Item2);
+                switch (innerEncoding) {
+                    case InnerEncodingMethodChoice.KKT:
+                        this.DemandVariables[pair] = new Polynomial<TVar>(new Term<TVar>(1, solver.CreateVariable("demand_" + pair.Item1 + "_" + pair.Item2)));
+                        break;
+                    case InnerEncodingMethodChoice.PrimalDual:
+                        demandList.Remove(0);
+                        var axVariableConstraint = new Polynomial<TVar>(new Term<TVar>(-1));
+                        var demandLvlEnforcement = new Polynomial<TVar>();
+                        foreach (double demandlvl in demandList) {
+                            var demandAuxVar = solver.CreateVariable("aux_demand_" + pair.Item1 + "_" + pair.Item2);
+                            demandLvlEnforcement.Add(new Term<TVar>(demandlvl, demandAuxVar));
+                            axVariableConstraint.Add(new Term<TVar>(1, demandAuxVar));
+                        }
+                        solver.AddLeqZeroConstraint(axVariableConstraint);
+                        this.DemandVariables[pair] = demandLvlEnforcement;
+                        break;
+                    default:
+                        throw new Exception("wrong method for inner problem encoder!");
+                }
             }
         }
 
@@ -172,12 +208,16 @@ namespace MetaOptimize
         /// <param name="intervalConf"></param>
         /// <param name="startGap"></param>
         /// <param name="demandUB">upper bound on all the demands.</param>
+        /// <param name="innerEncoding">The method for encoding the inner problem.</param>
+        /// <param name="demandList">the quantized list of demands, will only use if method=PrimalDual.</param>
         public (OptimizationSolution, OptimizationSolution) FindMaximumGapInterval(
             IEncoder<TVar, TSolution> optimalEncoder,
             IEncoder<TVar, TSolution> heuristicEncoder,
             double intervalConf,
             double startGap,
-            double demandUB = double.PositiveInfinity)
+            double demandUB = double.PositiveInfinity,
+            InnerEncodingMethodChoice innerEncoding = InnerEncodingMethodChoice.KKT,
+            ISet<double> demandList = null)
         {
             if (optimalEncoder.Solver != heuristicEncoder.Solver)
             {
@@ -190,7 +230,7 @@ namespace MetaOptimize
             }
             var solver = optimalEncoder.Solver;
 
-            CreateDemandVariables(solver);
+            CreateDemandVariables(solver, innerEncoding, demandList);
             var optimalEncoding = optimalEncoder.Encoding(this.DemandVariables);
             var heuristicEncoding = heuristicEncoder.Encoding(this.DemandVariables);
 
@@ -254,13 +294,13 @@ namespace MetaOptimize
         {
             // solving the hueristic for the demand
             heuristicEncoder.Solver.CleanAll();
-            var encodingHeuristic = heuristicEncoder.Encoding(demandEqualityConstraints: demands, noKKT: true);
+            var encodingHeuristic = heuristicEncoder.Encoding(demandEqualityConstraints: demands, noAdditionalConstraints: true);
             var solverSolutionHeuristic = heuristicEncoder.Solver.Maximize(encodingHeuristic.MaximizationObjective);
             var optimizationSolutionHeuristic = heuristicEncoder.GetSolution(solverSolutionHeuristic);
 
             // solving the optimal for the demand
             optimalEncoder.Solver.CleanAll();
-            var encodingOptimal = optimalEncoder.Encoding(demandEqualityConstraints: demands, noKKT: true);
+            var encodingOptimal = optimalEncoder.Encoding(demandEqualityConstraints: demands, noAdditionalConstraints: true);
             var solverSolutionOptimal = optimalEncoder.Solver.Maximize(encodingOptimal.MaximizationObjective);
             var optimizationSolutionOptimal = optimalEncoder.GetSolution(solverSolutionOptimal);
             double currGap = optimizationSolutionOptimal.TotalDemandMet - optimizationSolutionHeuristic.TotalDemandMet;

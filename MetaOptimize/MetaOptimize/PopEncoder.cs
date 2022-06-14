@@ -52,7 +52,7 @@ namespace MetaOptimize
         /// <summary>
         /// The demand variables for the network (d_k).
         /// </summary>
-        public Dictionary<(string, string), TVar> DemandVariables { get; set; }
+        public Dictionary<(string, string), Polynomial<TVar>> DemandVariables { get; set; }
 
         /// <summary>
         /// The demand constraints in terms of constant values.
@@ -93,14 +93,14 @@ namespace MetaOptimize
             }
         }
 
-        private void InitializeVariables(Dictionary<(string, string), TVar> preDemandVariables, Dictionary<(string, string), double> demandEnforcements) {
+        private void InitializeVariables(Dictionary<(string, string), Polynomial<TVar>> preDemandVariables, Dictionary<(string, string), double> demandEnforcements) {
             // establish the demand variables.
             this.DemandVariables = preDemandVariables;
             if (this.DemandVariables == null) {
-                this.DemandVariables = new Dictionary<(string, string), TVar>();
+                this.DemandVariables = new Dictionary<(string, string), Polynomial<TVar>>();
                 foreach (var pair in this.Topology.GetNodePairs())
                 {
-                    this.DemandVariables[pair] = this.Solver.CreateVariable("demand_" + pair.Item1 + "_" + pair.Item2);
+                    this.DemandVariables[pair] = new Polynomial<TVar>(new Term<TVar>(1, this.Solver.CreateVariable("demand_" + pair.Item1 + "_" + pair.Item2)));
                 }
             }
             demandEnforcements = demandEnforcements ?? new Dictionary<(string, string), double>();
@@ -124,8 +124,9 @@ namespace MetaOptimize
         /// Encode the problem.
         /// </summary>
         /// <returns>The constraints and maximization objective.</returns>
-        public OptimizationEncoding<TVar, TSolution> Encoding(Dictionary<(string, string), TVar> preDemandVariables = null,
-            Dictionary<(string, string), double> demandEqualityConstraints = null, bool noKKT = false)
+        public OptimizationEncoding<TVar, TSolution> Encoding(Dictionary<(string, string), Polynomial<TVar>> preDemandVariables = null,
+            Dictionary<(string, string), double> demandEqualityConstraints = null, bool noAdditionalConstraints = false,
+            InnerEncodingMethodChoice innerEncoding = InnerEncodingMethodChoice.KKT)
         {
             InitializeVariables(preDemandVariables, demandEqualityConstraints);
             var encodings = new OptimizationEncoding<TVar, TSolution>[NumPartitions];
@@ -133,18 +134,19 @@ namespace MetaOptimize
             // get all the separate encodings.
             for (int i = 0; i < this.NumPartitions; i++)
             {
-                Dictionary<(string, string), TVar> partitionPreDemandVariables = null;
-                partitionPreDemandVariables = new Dictionary<(string, string), TVar>();
+                Dictionary<(string, string), Polynomial<TVar>> partitionPreDemandVariables = null;
+                partitionPreDemandVariables = new Dictionary<(string, string), Polynomial<TVar>>();
                 foreach (var (pair, partitionID) in this.DemandPartitions) {
                     if (partitionID == i) {
                         partitionPreDemandVariables[pair] = this.DemandVariables[pair];
                     }
                 }
-                encodings[i] = this.PartitionEncoders[i].Encoding(partitionPreDemandVariables, this.perPartitionDemandConstraints[i], noKKT: noKKT);
+                encodings[i] = this.PartitionEncoders[i].Encoding(partitionPreDemandVariables, this.perPartitionDemandConstraints[i], noAdditionalConstraints: noAdditionalConstraints,
+                                                                innerEncoding: innerEncoding);
             }
 
             // create new demand variables as the sum of the individual partitions.
-            var demandVariables = new Dictionary<(string, string), TVar>();
+            var demandVariables = new Dictionary<(string, string), Polynomial<TVar>>();
             foreach (var pair in this.Topology.GetNodePairs())
             {
                 int partitionID = this.DemandPartitions[pair];
@@ -162,7 +164,7 @@ namespace MetaOptimize
 
             // compute the objective to optimize.
             var objectiveVariable = this.Solver.CreateVariable("objective_pop");
-            if (noKKT)
+            if (noAdditionalConstraints)
             {
                 var maxDemand = this.Topology.TotalCapacity() * -10;
                 this.Solver.AddLeqZeroConstraint(new Polynomial<TVar>(new Term<TVar>(1, objectiveVariable), new Term<TVar>(maxDemand)));
@@ -212,9 +214,12 @@ namespace MetaOptimize
             //     }
             // }
 
-            foreach (var (pair, variable) in this.DemandVariables)
+            foreach (var (pair, poly) in this.DemandVariables)
             {
-                demands[pair] = this.Solver.GetVariable(solution, variable);
+                demands[pair] = 0;
+                foreach (var term in poly.Terms) {
+                    demands[pair] += this.Solver.GetVariable(solution, term.Variable.Value) * term.Coefficient;
+                }
             }
 
             for (int i = 0; i < this.NumPartitions; i++) {

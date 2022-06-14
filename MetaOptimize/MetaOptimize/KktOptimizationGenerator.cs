@@ -16,17 +16,17 @@ namespace MetaOptimize
         /// <summary>
         /// The solver being used.
         /// </summary>
-        private ISolver<TVar, TSolution> solver;
+        protected internal ISolver<TVar, TSolution> solver;
 
         /// <summary>
         /// The constraints for polynomial less than or equal to zero.
         /// </summary>
-        private IList<Polynomial<TVar>> leqZeroConstraints;
+        protected internal IList<Polynomial<TVar>> leqZeroConstraints;
 
         /// <summary>
         /// The constraints for polynomial equals zero.
         /// </summary>
-        private IList<Polynomial<TVar>> eqZeroConstraints;
+        protected internal IList<Polynomial<TVar>> eqZeroConstraints;
 
         /// <summary>
         /// The constructed lambda variables for the KKT conditions.
@@ -44,17 +44,17 @@ namespace MetaOptimize
         public ISet<TVar> Variables;
 
         /// <summary>
-        /// The variables to avoid taking the derivative for.
+        /// The variables to consider constant for the optimization (avoid derivative).
         /// </summary>
-        public ISet<TVar> AvoidDerivativeVariables;
+        public ISet<TVar> constantVariables;
 
         /// <summary>
         /// Creates a new instance of the <see cref="KktOptimizationGenerator{TVar, TSolution}"/> class.
         /// </summary>
         /// <param name="variables">The encoding variables.</param>
-        /// <param name="avoidDerivativeVariables">The variables to avoid the deriviatve for.</param>
+        /// <param name="constVariables">The variables to avoid the deriviatve for.</param>
         /// <param name="solver">The solver.</param>
-        public KktOptimizationGenerator(ISolver<TVar, TSolution>  solver, ISet<TVar> variables, ISet<TVar> avoidDerivativeVariables)
+        public KktOptimizationGenerator(ISolver<TVar, TSolution>  solver, ISet<TVar> variables, ISet<TVar> constVariables)
         {
             this.Variables = variables;
             this.solver = solver;
@@ -62,7 +62,7 @@ namespace MetaOptimize
             this.eqZeroConstraints = new List<Polynomial<TVar>>();
             this.lambdaVariables = new List<TVar>();
             this.nuVariables = new List<TVar>();
-            this.AvoidDerivativeVariables = avoidDerivativeVariables;
+            this.constantVariables = constVariables;
         }
 
         /// <summary>
@@ -117,7 +117,7 @@ namespace MetaOptimize
         /// <param name="objective">The objective.</param>
         /// <param name="noKKT"> To not solve through KKT.</param>
         /// <returns>The result as a Zen boolean expression.</returns>
-        public void AddMinimizationConstraints(Polynomial<TVar> objective, bool noKKT)
+        public virtual void AddMinimizationConstraints(Polynomial<TVar> objective, bool noKKT)
         {
             foreach (var leqZeroConstraint in this.leqZeroConstraints)
             {
@@ -135,7 +135,7 @@ namespace MetaOptimize
                 for (int i = 0; i < this.leqZeroConstraints.Count; i++)
                 {
                     var leqConstraint = this.leqZeroConstraints[i];
-                    if (leqConstraint.isallInSetOrConst(this.AvoidDerivativeVariables))
+                    if (leqConstraint.isallInSetOrConst(this.constantVariables))
                     {
                         continue;
                     }
@@ -149,7 +149,7 @@ namespace MetaOptimize
                 Dictionary<int, int> haveNu = new Dictionary<int, int>();
                 for (int i = 0; i < this.eqZeroConstraints.Count; i++)
                 {
-                    if (this.eqZeroConstraints[i].isallInSetOrConst(this.AvoidDerivativeVariables))
+                    if (this.eqZeroConstraints[i].isallInSetOrConst(this.constantVariables))
                     {
                         continue;
                     }
@@ -159,7 +159,7 @@ namespace MetaOptimize
 
                 foreach (var variable in this.Variables)
                 {
-                    if (this.AvoidDerivativeVariables.Contains(variable))
+                    if (this.constantVariables.Contains(variable))
                     {
                         continue;
                     }
