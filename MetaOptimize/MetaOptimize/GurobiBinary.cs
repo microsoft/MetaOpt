@@ -73,6 +73,7 @@ namespace MetaOptimize
             // this._model.Parameters.DualReductions = 0;
             // this._model.Parameters.MIPFocus = 3;
             // this._model.Parameters.Cuts = 3;
+            // this._model.Parameters.Heuristics = 0.5;
 
             this._model.Set(GRB.DoubleParam.IntFeasTol, this._tolerance);
 

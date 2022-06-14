@@ -30,5 +30,10 @@ namespace MetaOptimize
         /// The flow path allocation for the problem.
         /// </summary>
         public IDictionary<string[], double> FlowsPaths { get; set; }
+
+        /// <summary>
+        /// Each sample total demand.
+        /// </summary>
+        public IList<double> TotalDemmandMetSample = null;
     }
 }

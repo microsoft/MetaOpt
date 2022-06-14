@@ -401,6 +401,7 @@ namespace MetaOptimize
             this._model.SetObjective(objective + this._objective, GRB.MAXIMIZE);
             // this._model.Parameters.MIPFocus = 3;
             // this._model.Parameters.Cuts = 3;
+            // this._model.Parameters.Heuristics = 0.5;
 
             string exhaust_dir_name = @"c:\tmp\grbsos_exhaust\rand_" + (new Random()).Next(1000) + @"\";
             Directory.CreateDirectory(exhaust_dir_name);

@@ -25,7 +25,7 @@ namespace MetaOptimize.Cli
         /// <summary>
         /// The heuristic encoder to use.
         /// </summary>
-        [Option('h', "heuristic", Required = true, HelpText = "The heuristic encoder to use (Pop | DemandPinning).")]
+        [Option('h', "heuristic", Required = true, HelpText = "The heuristic encoder to use (Pop | DemandPinning | ExpectedPop).")]
         public Heuristic Heuristic { get; set; }
 
         /// <summary>
@@ -140,6 +140,11 @@ namespace MetaOptimize.Cli
         /// The pop heuristic.
         /// </summary>
         Pop,
+
+        /// <summary>
+        /// The average pop heuristic over multiple sample
+        /// </summary>
+        ExpectedPop,
 
         /// <summary>
         /// The threshold heuristic.
