@@ -41,6 +41,12 @@ namespace MetaOptimize.Cli
         public double Timeout { get; set; }
 
         /// <summary>
+        /// terminates if no improvement after specified time.
+        /// </summary>
+        [Option('x', "timetoterminate", Default = -1, HelpText = "gurobi solver terminates if no improvement in best objective after the specified time (only applies to MIP)")]
+        public double TimeToTerminateIfNoImprovement { get; set; }
+
+        /// <summary>
         /// The number of pop slices to use.
         /// </summary>
         [Option('s', "slices", Default = 2, HelpText = "The number of pop slices to use.")]

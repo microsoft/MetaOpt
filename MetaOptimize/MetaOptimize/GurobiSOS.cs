@@ -62,6 +62,13 @@ namespace MetaOptimize
         protected GRBLinExpr _objective = 0;
 
         /// <summary>
+        /// this shows how many seconds should wait before terminating
+        /// if best objective does not improve
+        /// only applies to MIP.
+        /// </summary>
+        protected double _timeToTerminateIfNoImprovement = -1;
+
+        /// <summary>
         /// releases gurobi environment. // sk: not sure about this.
         /// </summary>
         public void Delete()
@@ -88,7 +95,7 @@ namespace MetaOptimize
         /// <summary>
         /// constructor.
         /// </summary>
-        public GurobiSOS(double timeout = double.PositiveInfinity, int verbose = 0, int numThreads = 0)
+        public GurobiSOS(double timeout = double.PositiveInfinity, int verbose = 0, int numThreads = 0, double timeToTerminateNoImprovement = -1)
         {
             this._env = SetupGurobi();
             this._model = new GRBModel(this._env);
@@ -102,6 +109,7 @@ namespace MetaOptimize
             }
             this._model.Parameters.Threads = numThreads;
             this._model.Parameters.OutputFlag = verbose;
+            this._timeToTerminateIfNoImprovement = timeToTerminateNoImprovement;
         }
 
         /// <summary>
@@ -407,8 +415,11 @@ namespace MetaOptimize
             Directory.CreateDirectory(exhaust_dir_name);
             this._model.Write($"{exhaust_dir_name}\\model_" + DateTime.Now.Millisecond + ".lp");
 
+            if (this._timeToTerminateIfNoImprovement > 0) {
+                this._model.SetCallback(new GurobiTerminationCallback(this._model, this._timeToTerminateIfNoImprovement * 1000));
+            }
             this._model.Optimize();
-            if (this._model.Status != GRB.Status.TIME_LIMIT & this._model.Status != GRB.Status.OPTIMAL)
+            if (this._model.Status != GRB.Status.TIME_LIMIT & this._model.Status != GRB.Status.OPTIMAL & this._model.Status != GRB.Status.INTERRUPTED)
             {
                 throw new Exception($"model not optimal {ModelStatusToString(this._model.Status)}");
                 // throw new InfeasibleOrUnboundSolution();
@@ -462,7 +473,8 @@ namespace MetaOptimize
         public double GetVariable(GRBModel solution, GRBVar variable)
         {
             // Maximize() above is a synchronous call; not sure if this check is needed
-            if (solution.Status != GRB.Status.USER_OBJ_LIMIT & solution.Status != GRB.Status.TIME_LIMIT & solution.Status != GRB.Status.OPTIMAL)
+            if (solution.Status != GRB.Status.USER_OBJ_LIMIT & solution.Status != GRB.Status.TIME_LIMIT
+                & solution.Status != GRB.Status.OPTIMAL & solution.Status != GRB.Status.INTERRUPTED)
             {
                 throw new Exception("can't read status since model is not optimal");
             }
