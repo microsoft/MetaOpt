@@ -31,7 +31,8 @@ namespace MetaOptimize
         /// <summary>
         /// Constructor.
         /// </summary>
-        public GurobiBinary(double timeout = double.PositiveInfinity, int verbose = 0, int numThreads = 0, double timeToTerminateNoImprovement = -1) : base(timeout, verbose, numThreads, timeToTerminateNoImprovement)
+        public GurobiBinary(double timeout = double.PositiveInfinity, int verbose = 0, int numThreads = 0, double timeToTerminateNoImprovement = -1,
+                bool recordProgress = false, string logPath = null) : base(timeout, verbose, numThreads, timeToTerminateNoImprovement, recordProgress, logPath)
         {
         }
 
@@ -80,9 +81,6 @@ namespace MetaOptimize
             // string exhaust_dir_name = @"c:\tmp\grbsos_exhaust\rand_" + (new Random()).Next(1000000) + @"\";
             // Directory.CreateDirectory(exhaust_dir_name);
             // this._model.Write($"{exhaust_dir_name}\\model_" + DateTime.Now.Millisecond + ".lp");
-            if (this._timeToTerminateIfNoImprovement > 0) {
-                this._model.SetCallback(new GurobiTerminationCallback(this._model, this._timeToTerminateIfNoImprovement * 1000));
-            }
             this._model.Optimize();
             if (this._model.Status != GRB.Status.TIME_LIMIT & this._model.Status != GRB.Status.OPTIMAL & this._model.Status != GRB.Status.INTERRUPTED)
             {

@@ -6,30 +6,31 @@ namespace MetaOptimize
 {
     using System;
     using System.Diagnostics;
+    using System.IO;
     using Gurobi;
-    class GurobiTerminationCallback : GRBCallback
+    class GurobiStoreProgressCallback : GRBCallback
     {
         private GRBModel model;
-        private double prevObj;
         private Stopwatch timer;
-        private double terminateNoImprovement_ms;
+        private String dirname;
+        private String filename;
 
-        public GurobiTerminationCallback(GRBModel model, double terminateNoImprovement_ms) {
+        public GurobiStoreProgressCallback(GRBModel model, String dirname, String filename) {
             this.model = model;
-            this.prevObj = double.NaN;
+            this.dirname = dirname;
+            this.filename = filename;
+            Utils.CreateFile(dirname, filename, removeIfExist: false);
+            Console.WriteLine("will store the progress in dir: " + this.dirname + " on file " + this.filename);
             this.timer = Stopwatch.StartNew();
-            this.terminateNoImprovement_ms = terminateNoImprovement_ms;
+            Utils.AppendToFile(this.dirname, this.filename, timer.ElapsedMilliseconds + ", " + 0);
         }
 
         protected override void Callback()
         {
             try {
                 if (where == GRB.Callback.MIP) {
-                    var obj = GetDoubleInfo(GRB.Callback.MIPNODE_OBJBST);
+                    var obj = GetDoubleInfo(GRB.Callback.MIP_OBJBST);
                     CallCallback(obj);
-                }
-                if (this.timer.ElapsedMilliseconds > terminateNoImprovement_ms) {
-                    this.model.Terminate();
                 }
             } catch (GRBException e) {
                 Console.WriteLine("Error code: " + e.ErrorCode);
@@ -41,16 +42,9 @@ namespace MetaOptimize
             }
         }
 
-        public void CallCallback(double obj)
+        public void CallCallback(double objective)
         {
-            if (Double.IsNaN(prevObj)) {
-                prevObj = obj;
-                this.timer = Stopwatch.StartNew();
-            }
-            if (Math.Abs(obj - prevObj) > 0.01) {
-                prevObj = obj;
-                this.timer = Stopwatch.StartNew();
-            }
+            Utils.AppendToFile(dirname, filename, timer.ElapsedMilliseconds + ", " + objective);
         }
     }
 }

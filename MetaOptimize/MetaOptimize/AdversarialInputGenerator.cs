@@ -6,6 +6,7 @@ namespace MetaOptimize
 {
     using System;
     using System.Collections.Generic;
+    using System.Diagnostics;
     using System.Linq;
     using Gurobi;
 
@@ -61,6 +62,7 @@ namespace MetaOptimize
             }
 
             var solver = optimalEncoder.Solver;
+            solver.CleanAll();
 
             CreateDemandVariables(solver, innerEncoding, demandList);
             var optimalEncoding = optimalEncoder.Encoding(preDemandVariables: this.DemandVariables, innerEncoding: innerEncoding);
@@ -116,6 +118,7 @@ namespace MetaOptimize
                 throw new Exception("should provide the demand list if inner encoding method is primal dual.");
             }
             var solver = optimalEncoder.Solver;
+            solver.CleanAll();
 
             CreateDemandVariables(solver, innerEncoding, demandList);
             var optimalEncoding = optimalEncoder.Encoding(this.DemandVariables);
@@ -229,6 +232,7 @@ namespace MetaOptimize
                 throw new System.Exception("Starting Gap too small...");
             }
             var solver = optimalEncoder.Solver;
+            solver.CleanAll();
 
             CreateDemandVariables(solver, innerEncoding, demandList);
             var optimalEncoding = optimalEncoder.Encoding(this.DemandVariables);
@@ -315,7 +319,11 @@ namespace MetaOptimize
             IEncoder<TVar, TSolution> heuristicEncoder,
             int numTrials,
             double demandUB,
-            int seed = 0)
+            int seed = 0,
+            bool verbose = false,
+            bool storeProgress = false,
+            string logPath = null,
+            double timeout = Double.PositiveInfinity)
         {
             // if (optimalEncoder.Solver == heuristicEncoder.Solver) {
             //     throw new Exception("solvers should be different for random generator!!!");
@@ -326,6 +334,13 @@ namespace MetaOptimize
             if (demandUB <= 0) {
                 demandUB = this.Topology.MaxCapacity() * this.K;
             }
+            if (storeProgress) {
+                if (logPath == null) {
+                    throw new Exception("should specify logPath if storeprogress = true!");
+                } else {
+                    logPath = Utils.CreateFile(logPath, removeIfExist: true, addFid: true);
+                }
+            }
             double currMaxGap = 0;
             OptimizationSolution zero_solution = new OptimizationSolution {
                     TotalDemandMet = 0,
@@ -335,6 +350,9 @@ namespace MetaOptimize
                 };
             (OptimizationSolution, OptimizationSolution) worstResult = (zero_solution, zero_solution);
             Random rng = new Random(seed);
+            double timeout_ms = timeout * 1000;
+            Stopwatch timer = Stopwatch.StartNew();
+            Utils.StoreProgress(logPath, timer.ElapsedMilliseconds + ", " + currMaxGap, storeProgress);
 
             foreach (int i in Enumerable.Range(0, numTrials)) {
                 Dictionary<(string, string), double> demands = new Dictionary<(string, string), double>();
@@ -343,20 +361,24 @@ namespace MetaOptimize
                     demands[pair] = rng.NextDouble() * demandUB;
                 }
                 var (currGap, result) = GetGap(optimalEncoder, heuristicEncoder, demands);
-                Console.WriteLine("===========================================================");
-                Console.WriteLine("===========================================================");
-                Console.WriteLine("===========================================================");
-                Console.WriteLine("======== try " + i + " found a solution with gap " + currGap);
+                Utils.WriteToConsole("===========================================================", verbose);
+                Utils.WriteToConsole("===========================================================", verbose);
+                Utils.WriteToConsole("===========================================================", verbose);
+                Utils.WriteToConsole("======== try " + i + " found a solution with gap " + currGap, verbose);
                 if (currGap > currMaxGap) {
-                    Console.WriteLine("updating the max gap from " + currMaxGap + " to " + currGap);
+                    Utils.WriteToConsole("updating the max gap from " + currMaxGap + " to " + currGap, verbose);
                     currMaxGap = currGap;
                     worstResult = result;
                 } else {
-                    Console.WriteLine("the max gap remains the same =" + currMaxGap);
+                    Utils.WriteToConsole("the max gap remains the same =" + currMaxGap, verbose);
                 }
-                Console.WriteLine("===========================================================");
-                Console.WriteLine("===========================================================");
-                Console.WriteLine("===========================================================");
+                Utils.WriteToConsole("===========================================================", verbose);
+                Utils.WriteToConsole("===========================================================", verbose);
+                Utils.WriteToConsole("===========================================================", verbose);
+                Utils.StoreProgress(logPath, timer.ElapsedMilliseconds + ", " + currMaxGap, storeProgress);
+                if (timer.ElapsedMilliseconds > timeout_ms) {
+                    break;
+                }
             }
             return worstResult;
         }
@@ -379,7 +401,11 @@ namespace MetaOptimize
             int numNeighbors,
             double demandUB,
             double stddev,
-            int seed = 0)
+            int seed = 0,
+            bool verbose = false,
+            bool storeProgress = false,
+            string logPath = null,
+            double timeout = Double.PositiveInfinity)
         {
             if (numTrials < 1) {
                 throw new Exception("num trials for hill climber should be positive but got " + numTrials + "!!");
@@ -387,6 +413,14 @@ namespace MetaOptimize
             if (demandUB <= 0) {
                 demandUB = this.Topology.MaxCapacity() * this.K;
             }
+            if (storeProgress) {
+                if (logPath == null) {
+                    throw new Exception("should specify logPath if storeprogress = true!");
+                } else {
+                    logPath = Utils.CreateFile(logPath, removeIfExist: true, addFid: true);
+                }
+            }
+
             double currMaxGap = 0;
             OptimizationSolution zero_solution = new OptimizationSolution {
                     TotalDemandMet = 0,
@@ -396,7 +430,11 @@ namespace MetaOptimize
                 };
             (OptimizationSolution, OptimizationSolution) worstResult = (zero_solution, zero_solution);
             Random rng = new Random(seed);
+            double timeout_ms = timeout * 1000;
+            Stopwatch timer = Stopwatch.StartNew();
+            Utils.StoreProgress(logPath, timer.ElapsedMilliseconds + ", " + currMaxGap, storeProgress);
 
+            bool timeoutReached = false;
             foreach (int i in Enumerable.Range(0, numTrials)) {
                 Dictionary<(string, string), double> currDemands = new Dictionary<(string, string), double>();
                 // initializing some random demands
@@ -404,6 +442,7 @@ namespace MetaOptimize
                     currDemands[pair] = rng.NextDouble() * demandUB;
                 }
                 var (currGap, currResult) = GetGap(optimalEncoder, heuristicEncoder, currDemands);
+                Utils.StoreProgress(logPath, timer.ElapsedMilliseconds + ", " + Math.Max(currGap, currMaxGap), storeProgress);
                 bool localMax = true;
                 do {
                     localMax = true;
@@ -417,37 +456,42 @@ namespace MetaOptimize
                         var (neighborGap, neighborResult) = GetGap(optimalEncoder, heuristicEncoder, neighborDemands);
                         // check if better advers input
                         if (neighborGap > currGap) {
-                            Console.WriteLine("===========================================================");
-                            Console.WriteLine("===========================================================");
-                            Console.WriteLine("===========================================================");
-                            Console.WriteLine("======== try " + i + " neighbor " + j + " found a neighbor with gap " + neighborGap + " higher than " + currGap);
+                            Utils.WriteToConsole("===========================================================", verbose);
+                            Utils.WriteToConsole("===========================================================", verbose);
+                            Utils.WriteToConsole("===========================================================", verbose);
+                            Utils.WriteToConsole("======== try " + i + " neighbor " + j + " found a neighbor with gap " + neighborGap + " higher than " + currGap, verbose);
                             currDemands = neighborDemands;
                             currResult = neighborResult;
                             currGap = neighborGap;
                             localMax = false;
                         } else {
-                            Console.WriteLine("===========================================================");
-                            Console.WriteLine("===========================================================");
-                            Console.WriteLine("===========================================================");
-                            Console.WriteLine("======== try " + i + " neighbor " + j + " has a lower gap " + neighborGap + " than curr gap " + currGap);
+                            Utils.WriteToConsole("===========================================================", verbose);
+                            Utils.WriteToConsole("===========================================================", verbose);
+                            Utils.WriteToConsole("===========================================================", verbose);
+                            Utils.WriteToConsole("======== try " + i + " neighbor " + j + " has a lower gap " + neighborGap + " than curr gap " + currGap, verbose);
+                        }
+                        Utils.StoreProgress(logPath, timer.ElapsedMilliseconds + ", " + Math.Max(currGap, currMaxGap), storeProgress);
+                        if (timer.ElapsedMilliseconds > timeout_ms) {
+                            timeoutReached = true;
+                            break;
                         }
                     }
                 } while (!localMax);
 
-                Console.WriteLine("===========================================================");
-                Console.WriteLine("===========================================================");
-                Console.WriteLine("===========================================================");
-                Console.WriteLine("======== try " + i + " found a local maximum with gap " + currGap);
+                Utils.WriteToConsole("===========================================================", verbose);
+                Utils.WriteToConsole("===========================================================", verbose);
+                Utils.WriteToConsole("===========================================================", verbose);
+                Utils.WriteToConsole("======== try " + i + " found a local maximum with gap " + currGap, verbose);
                 if (currGap > currMaxGap) {
-                    Console.WriteLine("updating the max gap from " + currMaxGap + " to " + currGap);
+                    Utils.WriteToConsole("updating the max gap from " + currMaxGap + " to " + currGap, verbose);
                     currMaxGap = currGap;
                     worstResult = currResult;
                 } else {
-                    Console.WriteLine("the max gap remains the same =" + currMaxGap);
+                    Utils.WriteToConsole("the max gap remains the same =" + currMaxGap, verbose);
                 }
-                Console.WriteLine("===========================================================");
-                Console.WriteLine("===========================================================");
-                Console.WriteLine("===========================================================");
+                if (timeoutReached) {
+                    break;
+                }
             }
             return worstResult;
         }
@@ -476,7 +520,11 @@ namespace MetaOptimize
             double tmpDecreaseFactor,
             int numNoIncreaseToReset = -1,
             double NoChangeRelThreshold = 0.01,
-            int seed = 0)
+            int seed = 0,
+            bool verbose = false,
+            bool storeProgress = false,
+            string logPath = null,
+            double timeout = Double.PositiveInfinity)
         {
             if (numTmpSteps < 1) {
                 throw new Exception("num temperature steps should be positive but got " + numTmpSteps + "!!");
@@ -490,18 +538,29 @@ namespace MetaOptimize
             if (demandUB <= 0) {
                 demandUB = this.Topology.MaxCapacity() * this.K;
             }
+            if (storeProgress) {
+                if (logPath == null) {
+                    throw new Exception("should specify logPath if storeprogress = true!");
+                } else {
+                    logPath = Utils.CreateFile(logPath, removeIfExist: true, addFid: true);
+                }
+            }
             if (numNoIncreaseToReset == -1) {
                 numNoIncreaseToReset = numNeighbors * 2;
             }
 
             double currTmp = initialTmp;
             Random rng = new Random(seed);
-
+            bool timeoutReached = false;
+            var timeout_ms = timeout * 1000;
+            Stopwatch timer = Stopwatch.StartNew();
+            Utils.StoreProgress(logPath, timer.ElapsedMilliseconds + ", " + 0, storeProgress);
             Dictionary<(string, string), double> currDemands = getRandomDemand(rng, demandUB);
             var (currGap, currResult) = GetGap(optimalEncoder, heuristicEncoder, currDemands);
             (OptimizationSolution, OptimizationSolution) worstResult = currResult;
             double currMaxGap = currGap;
             double restartMaxGap = currGap;
+            Utils.StoreProgress(logPath, timer.ElapsedMilliseconds + ", " + currMaxGap, storeProgress);
 
             int noIncrease = 0;
             foreach (int p in Enumerable.Range(0, numTmpSteps)) {
@@ -513,13 +572,15 @@ namespace MetaOptimize
                     }
                     // finding gap for the neighbor
                     var (neighborGap, neighborResult) = GetGap(optimalEncoder, heuristicEncoder, neighborDemands);
+                    Utils.StoreProgress(logPath, timer.ElapsedMilliseconds + ", " + currMaxGap, storeProgress);
+
                     // check if better advers input
                     if (neighborGap > currGap) {
-                        Console.WriteLine("===========================================================");
-                        Console.WriteLine("===========================================================");
-                        Console.WriteLine("===========================================================");
-                        Console.WriteLine("======== try " + p + " neighbor " + Mp + " found a neighbor with gap " + neighborGap + " higher than " + currGap +
-                            " max gap = " + currMaxGap);
+                        Utils.WriteToConsole("===========================================================", verbose);
+                        Utils.WriteToConsole("===========================================================", verbose);
+                        Utils.WriteToConsole("===========================================================", verbose);
+                        Utils.WriteToConsole("======== try " + p + " neighbor " + Mp + " found a neighbor with gap " + neighborGap + " higher than " + currGap +
+                            " max gap = " + currMaxGap, verbose);
                         currDemands = neighborDemands;
                         currResult = neighborResult;
                         currGap = neighborGap;
@@ -528,11 +589,11 @@ namespace MetaOptimize
                             currMaxGap = currGap;
                         }
                     } else {
-                        Console.WriteLine("===========================================================");
-                        Console.WriteLine("===========================================================");
-                        Console.WriteLine("===========================================================");
-                        Console.WriteLine("======== try " + p + " neighbor " + Mp + " has a lower gap " + neighborGap + " than curr gap " + currGap +
-                            " max gap = " + currMaxGap);
+                        Utils.WriteToConsole("===========================================================", verbose);
+                        Utils.WriteToConsole("===========================================================", verbose);
+                        Utils.WriteToConsole("===========================================================", verbose);
+                        Utils.WriteToConsole("======== try " + p + " neighbor " + Mp + " has a lower gap " + neighborGap + " than curr gap " + currGap +
+                            " max gap = " + currMaxGap, verbose);
                         double currProbability = Math.Exp((neighborGap - currGap) / currTmp);
                         double randomNumber = rng.NextDouble();
                         // Console.WriteLine("current temperature is " + currTmp);
@@ -545,13 +606,20 @@ namespace MetaOptimize
                             currGap = neighborGap;
                         }
                     }
-
+                    Utils.StoreProgress(logPath, timer.ElapsedMilliseconds + ", " + currMaxGap, storeProgress);
+                    if (timer.ElapsedMilliseconds > timeout_ms) {
+                        timeoutReached = true;
+                        break;
+                    }
                     if ((currGap - restartMaxGap) / restartMaxGap > NoChangeRelThreshold) {
                         noIncrease = 0;
                         restartMaxGap = currGap;
                     } else {
                         noIncrease += 1;
                     }
+                }
+                if (timeoutReached) {
+                    break;
                 }
                 currTmp = currTmp * tmpDecreaseFactor;
                 // reset the initial point if no increase in numNoIncreaseToReset iterations

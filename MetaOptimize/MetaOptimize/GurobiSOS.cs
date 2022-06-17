@@ -69,6 +69,23 @@ namespace MetaOptimize
         protected double _timeToTerminateIfNoImprovement = -1;
 
         /// <summary>
+        /// this show whether we want to store the progress in some
+        /// file or not.
+        /// </summary>
+        protected bool _storeProgress = false;
+
+        /// <summary>
+        /// file to store the progress (path to the directory).
+        /// will consider this only if _storeProgress = true.
+        /// </summary>
+        protected string _logFileDirname = null;
+        /// <summary>
+        /// file to store the progress (file name)
+        /// will consider this only if _storeProgress = true.
+        /// </summary>
+        protected string _logFileFilename = null;
+
+        /// <summary>
         /// releases gurobi environment. // sk: not sure about this.
         /// </summary>
         public void Delete()
@@ -92,10 +109,23 @@ namespace MetaOptimize
             return env;
         }
 
+        private void SetCallbacks() {
+            var fileExtension = Path.GetExtension(this._logFileFilename);
+            var filename = Path.GetFileNameWithoutExtension(this._logFileFilename);
+            if (this._timeToTerminateIfNoImprovement > 0 & this._storeProgress) {
+                this._model.SetCallback(new GurobiCallback(this._model, this._logFileDirname,
+                        filename + "_" + Utils.GetFID() + fileExtension, this._timeToTerminateIfNoImprovement * 1000));
+            } else if (this._timeToTerminateIfNoImprovement > 0) {
+                this._model.SetCallback(new GurobiTerminationCallback(this._model, this._timeToTerminateIfNoImprovement * 1000));
+            } else if (this._storeProgress) {
+                this._model.SetCallback(new GurobiStoreProgressCallback(this._model, this._logFileDirname, filename + "_" + Utils.GetFID() + fileExtension));
+            }
+        }
         /// <summary>
         /// constructor.
         /// </summary>
-        public GurobiSOS(double timeout = double.PositiveInfinity, int verbose = 0, int numThreads = 0, double timeToTerminateNoImprovement = -1)
+        public GurobiSOS(double timeout = double.PositiveInfinity, int verbose = 0, int numThreads = 0, double timeToTerminateNoImprovement = -1,
+                bool recordProgress = false, string logPath = null)
         {
             this._env = SetupGurobi();
             this._model = new GRBModel(this._env);
@@ -110,6 +140,16 @@ namespace MetaOptimize
             this._model.Parameters.Threads = numThreads;
             this._model.Parameters.OutputFlag = verbose;
             this._timeToTerminateIfNoImprovement = timeToTerminateNoImprovement;
+            this._storeProgress = recordProgress;
+            if (recordProgress) {
+                if (logPath != null) {
+                    this._logFileDirname = Path.GetDirectoryName(logPath);
+                    this._logFileFilename = Path.GetFileName(logPath);
+                } else {
+                    throw new Exception("logDirname and logFilename should be specified when recordProgress is true");
+                }
+            }
+            SetCallbacks();
         }
 
         /// <summary>
@@ -128,6 +168,7 @@ namespace MetaOptimize
             this._model.Parameters.Threads = this._numThreads;
             this._model.Parameters.OutputFlag = this._verbose;
             this.auxQVarList = new List<GRBVar>();
+            SetCallbacks();
         }
 
         /// <summary>
@@ -415,9 +456,6 @@ namespace MetaOptimize
             Directory.CreateDirectory(exhaust_dir_name);
             this._model.Write($"{exhaust_dir_name}\\model_" + DateTime.Now.Millisecond + ".lp");
 
-            if (this._timeToTerminateIfNoImprovement > 0) {
-                this._model.SetCallback(new GurobiTerminationCallback(this._model, this._timeToTerminateIfNoImprovement * 1000));
-            }
             this._model.Optimize();
             if (this._model.Status != GRB.Status.TIME_LIMIT & this._model.Status != GRB.Status.OPTIMAL & this._model.Status != GRB.Status.INTERRUPTED)
             {

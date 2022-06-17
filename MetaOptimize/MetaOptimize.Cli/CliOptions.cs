@@ -125,6 +125,18 @@ namespace MetaOptimize.Cli
         public int StdDev { get; set; }
 
         /// <summary>
+        /// store trajectory.
+        /// </summary>
+        [Option('m', "storeprogress", Default = false, HelpText = "store the progress for the specified approach.")]
+        public bool StoreProgress { get; set; }
+
+        /// <summary>
+        /// log file.
+        /// </summary>
+        [Option('t', "logfile", Default = null, HelpText = "path to the log file to store the progress.")]
+        public string LogFile { get; set; }
+
+        /// <summary>
         /// Whether to print debugging information.
         /// </summary>
         [Option('d', "debug", Default = false, HelpText = "Prints debugging messages to standard output.")]
