@@ -56,7 +56,7 @@ namespace MetaOptimize.Cli
         /// The threshold for demand pinning.
         /// </summary>
         [Option('t', "pinthreshold", Default = 5, HelpText = "The threshold for the demand pinning heuristic.")]
-        public int DemandPinningThreshold { get; set; }
+        public double DemandPinningThreshold { get; set; }
 
         /// <summary>
         /// The maximum number of paths to use for a demand.

@@ -352,7 +352,7 @@ namespace MetaOptimize
             Random rng = new Random(seed);
             double timeout_ms = timeout * 1000;
             Stopwatch timer = Stopwatch.StartNew();
-            Utils.StoreProgress(logPath, timer.ElapsedMilliseconds + ", " + currMaxGap, storeProgress);
+            // Utils.StoreProgress(logPath, timer.ElapsedMilliseconds + ", " + currMaxGap, storeProgress);
 
             foreach (int i in Enumerable.Range(0, numTrials)) {
                 Dictionary<(string, string), double> demands = new Dictionary<(string, string), double>();
@@ -432,7 +432,7 @@ namespace MetaOptimize
             Random rng = new Random(seed);
             double timeout_ms = timeout * 1000;
             Stopwatch timer = Stopwatch.StartNew();
-            Utils.StoreProgress(logPath, timer.ElapsedMilliseconds + ", " + currMaxGap, storeProgress);
+            // Utils.StoreProgress(logPath, timer.ElapsedMilliseconds + ", " + currMaxGap, storeProgress);
 
             bool timeoutReached = false;
             foreach (int i in Enumerable.Range(0, numTrials)) {

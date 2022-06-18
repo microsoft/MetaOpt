@@ -229,6 +229,19 @@ namespace MetaOptimize
         }
 
         /// <summary>
+        /// the minimum link capacity among all the edges in the topology.
+        /// </summary>
+        /// <returns>The maximum link capacity.</returns>
+        public double MinCapacity()
+        {
+            double minCapacity = double.PositiveInfinity;
+            foreach (var edge in this.GetAllEdges()) {
+                minCapacity = Math.Min(minCapacity, edge.Capacity);
+            }
+            return minCapacity;
+        }
+
+        /// <summary>
         /// Split the capacity of each edge in the topology.
         /// </summary>
         /// <param name="k">The number of copies of the topology.</param>

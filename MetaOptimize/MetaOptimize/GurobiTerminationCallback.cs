@@ -24,7 +24,7 @@ namespace MetaOptimize
         protected override void Callback()
         {
             try {
-                if (where == GRB.Callback.MIP) {
+                if (where == GRB.Callback.MIPNODE) {
                     var obj = GetDoubleInfo(GRB.Callback.MIPNODE_OBJBST);
                     CallCallback(obj);
                 }

@@ -118,7 +118,7 @@ namespace MetaOptimize
             this.Solver = solver;
             this.Topology = topology;
             this.K = k;
-            this.Threshold = threshold != 0 ? threshold : this.Topology.TotalCapacity();
+            this.Threshold = threshold;
         }
 
         private void InitializeVariables(Dictionary<(string, string), Polynomial<TVar>> preDemandVariables, Dictionary<(string, string), double> demandConstraints,
