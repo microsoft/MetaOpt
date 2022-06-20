@@ -57,6 +57,17 @@ namespace MetaOptimize
         }
 
         /// <summary>
+        /// whether the graph contains the specified edge.
+        /// </summary>
+        /// <param name="source">The source node.</param>
+        /// <param name="target">The target node.</param>
+        /// <param name="capacity">The capacity of the edge.</param>
+        public bool ContaintsEdge(string source, string target, double capacity)
+        {
+            return this.Graph.ContainsEdge(new EquatableTaggedEdge<string, double>(source, target, capacity));
+        }
+
+        /// <summary>
         /// Get all the nodes in the topology.
         /// </summary>
         /// <returns>The nodes.</returns>
@@ -183,7 +194,33 @@ namespace MetaOptimize
                 return new string[0][];
             }
         }
+        /// <summary>
+        /// Computes the average shortest path length.
+        /// </summary>
+        public double avgShortestPathLength()
+        {
+            double sumLen = 0;
+            double numPairs = 0;
+            foreach (var pair in this.GetNodePairs()) {
+                var path = this.ShortestKPaths(1, pair.Item1, pair.Item2);
+                sumLen += path[0].Count();
+                numPairs += 1;
+            }
+            return (sumLen / numPairs);
+        }
 
+        /// <summary>
+        /// Computes diameter of the topology.
+        /// </summary>
+        public int diameter()
+        {
+            int diameter = 0;
+            foreach (var pair in this.GetNodePairs()) {
+                var path = this.ShortestKPaths(1, pair.Item1, pair.Item2);
+                diameter = Math.Max(diameter, path[0].Count());
+            }
+            return diameter;
+        }
         /// <summary>
         /// Randomly partition the pairs of nodes in the network.
         /// </summary>
@@ -259,6 +296,96 @@ namespace MetaOptimize
                 t.AddEdge(edge.Source, edge.Target, edge.Capacity / k);
             }
 
+            return t;
+        }
+
+        /// <summary>
+        /// create random regular graph.
+        /// </summary>
+        public static Topology RandomRegularGraph(int numNodes, int radix, double capacity, int seed = 0)
+        {
+            // References
+            // ----------
+            // .. [1] A. Steger and N. Wormald,
+            //    Generating random regular graphs quickly,
+            //    Probability and Computing 8 (1999), 377-396, 1999.
+            //    http://citeseer.ist.psu.edu/steger99generating.html.
+            // .. [2] Jeong Han Kim and Van H. Vu,
+            //    Generating random regular graphs,
+            //    Proceedings of the thirty-fifth ACM symposium on Theory of computing,
+            //    San Diego, CA, USA, pp 213--222, 2003.
+            //    http://portal.acm.org/citation.cfm?id=780542.780576.
+            if (radix >= numNodes) {
+                throw new Exception("radix should be less than numNodes");
+            }
+            if (radix * numNodes % 2 != 0) {
+                throw new Exception("radix * numNodes should be event.");
+            }
+            if (radix <= 0) {
+                throw new Exception("radix should be positive.");
+            }
+            Console.WriteLine("Creating random graph.");
+            var rng = new Random(seed);
+            bool found = false;
+            Topology t = null;
+            do {
+                t = new Topology();
+                List<string> nodes = new List<string>();
+                Dictionary<string, int> remRadix = new Dictionary<string, int>();
+                for (int i = 0; i < numNodes; i++) {
+                    t.AddNode(i.ToString());
+                    for (int j = 0; j < radix; j++) {
+                        nodes.Add(i.ToString());
+                    }
+                }
+                bool stop = false;
+                do {
+                    for (int i = 0; i < numNodes; i++) {
+                        remRadix[i.ToString()] = 0;
+                    }
+                    var shuffledNodes = nodes.OrderBy(a => rng.Next()).ToList();
+                    for (int i = 0; i < shuffledNodes.Count(); i += 2) {
+                        var node1 = shuffledNodes[i];
+                        var node2 = shuffledNodes[i + 1];
+                        if (node1.Equals(node2) | t.ContaintsEdge(node1, node2, capacity)) {
+                            remRadix[node1] += 1;
+                            remRadix[node2] += 1;
+                        } else {
+                            t.AddEdge(node1, node2, capacity);
+                            t.AddEdge(node2, node1, capacity);
+                        }
+                    }
+                    bool infeas = true;
+                    bool allZero = true;
+                    foreach (var (n1, r1) in remRadix) {
+                        foreach (var (n2, r2) in remRadix) {
+                            if (n1.Equals(n2) | r1 <= 0 | r2 <= 0) {
+                                break;
+                            }
+                            allZero = false;
+                            if (!t.ContaintsEdge(n1, n2, capacity)) {
+                                infeas = false;
+                            }
+                        }
+                    }
+                    nodes = new List<string>();
+                    foreach (var (node, remR) in remRadix) {
+                        for (int i = 0; i < remR; i++) {
+                            nodes.Add(i.ToString());
+                        }
+                    }
+                    if (allZero) {
+                        stop = true;
+                        found = true;
+                    } else if (infeas) {
+                        stop = true;
+                        found = false;
+                    } else {
+                        stop = false;
+                        found = false;
+                    }
+                } while (!stop);
+            } while (!found);
             return t;
         }
     }
