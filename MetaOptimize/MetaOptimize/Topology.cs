@@ -359,19 +359,18 @@ namespace MetaOptimize
                     bool allZero = true;
                     foreach (var (n1, r1) in remRadix) {
                         foreach (var (n2, r2) in remRadix) {
-                            if (n1.Equals(n2) | r1 <= 0 | r2 <= 0) {
-                                break;
-                            }
-                            allZero = false;
-                            if (!t.ContaintsEdge(n1, n2, capacity)) {
-                                infeas = false;
+                            if (!n1.Equals(n2) & r1 > 0 & r2 > 0) {
+                                allZero = false;
+                                if (!t.ContaintsEdge(n1, n2, capacity)) {
+                                    infeas = false;
+                                }
                             }
                         }
                     }
                     nodes = new List<string>();
                     foreach (var (node, remR) in remRadix) {
                         for (int i = 0; i < remR; i++) {
-                            nodes.Add(i.ToString());
+                            nodes.Add(node.ToString());
                         }
                     }
                     if (allZero) {
