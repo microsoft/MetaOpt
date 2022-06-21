@@ -11,8 +11,8 @@ namespace MetaOptimize.Cli {
         /// </summary>
         public static (IEncoder<TVar, TSolution>, IDictionary<(string, string), int>, IList<IDictionary<(string, string), int>>) getHeuristic<TVar, TSolution>(
                 ISolver<TVar, TSolution> solver,
-                Topology topology, Heuristic h, int numPaths, int numSlices = 1, double demandPinningThreshold = 0,
-                IDictionary<(string, string), int> partition = null, int numSamples = 1, IList<IDictionary<(string, string), int>> partitionsList = null)
+                Topology topology, Heuristic h, int numPaths, int numSlices = -1, double demandPinningThreshold = -1,
+                IDictionary<(string, string), int> partition = null, int numSamples = -1, IList<IDictionary<(string, string), int>> partitionsList = null)
         {
             IEncoder<TVar, TSolution> heuristicEncoder;
             switch (h)

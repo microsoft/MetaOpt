@@ -251,7 +251,7 @@ namespace MetaOptimize
             logDir = logDir + Utils.GetFID() + @"\";
             string kktFile = @"kkt_" + heuristicName + ".txt";
             ISolver<GRBVar, GRBModel> solver = (ISolver<GRBVar, GRBModel>)new GurobiSOS(timeout, 1, numThreads, recordProgress: true, logPath: Path.Combine(logDir, kktFile));
-            var (heuristicEncoder, _, _) = CliUtils.getHeuristic<GRBVar, GRBModel>(solver, topology, heuristicName, numPaths, demandPinningThreshold);
+            var (heuristicEncoder, _, _) = CliUtils.getHeuristic<GRBVar, GRBModel>(solver: solver, topology: topology, h: heuristicName, numPaths: numPaths, demandPinningThreshold: demandPinningThreshold);
             var optimalEncoder = new OptimalEncoder<GRBVar, GRBModel>(solver, topology, numPaths);
             var adversarialInputGenerator = new AdversarialInputGenerator<GRBVar, GRBModel>(topology, numPaths);
             (OptimizationSolution, OptimizationSolution) result = adversarialInputGenerator.MaximizeOptimalityGap(optimalEncoder, heuristicEncoder);
@@ -268,7 +268,7 @@ namespace MetaOptimize
                 double stddev = 500;
                 int numDemands = 1000000;
                 solver = (ISolver<GRBVar, GRBModel>)new GurobiSOS(timeout, 0, numThreads, recordProgress: false);
-                (heuristicEncoder, _, _) = CliUtils.getHeuristic<GRBVar, GRBModel>(solver, topology, heuristicName, numPaths, demandPinningThreshold);
+                (heuristicEncoder, _, _) = CliUtils.getHeuristic<GRBVar, GRBModel>(solver, topology, heuristicName, numPaths, demandPinningThreshold: demandPinningThreshold);
                 optimalEncoder = new OptimalEncoder<GRBVar, GRBModel>(solver, topology, numPaths);
                 adversarialInputGenerator = new AdversarialInputGenerator<GRBVar, GRBModel>(topology, numPaths);
                 result = adversarialInputGenerator.HillClimbingAdversarialGenerator(optimalEncoder, heuristicEncoder, numTrials: numDemands,
@@ -283,7 +283,7 @@ namespace MetaOptimize
                 stddev = 500;
                 int numTmpSteps = 1000000;
                 solver = (ISolver<GRBVar, GRBModel>)new GurobiSOS(timeout, 0, numThreads, recordProgress: false);
-                (heuristicEncoder, _, _) = CliUtils.getHeuristic<GRBVar, GRBModel>(solver, topology, heuristicName, numPaths, demandPinningThreshold);
+                (heuristicEncoder, _, _) = CliUtils.getHeuristic<GRBVar, GRBModel>(solver, topology, heuristicName, numPaths, demandPinningThreshold: demandPinningThreshold);
                 optimalEncoder = new OptimalEncoder<GRBVar, GRBModel>(solver, topology, numPaths);
                 adversarialInputGenerator = new AdversarialInputGenerator<GRBVar, GRBModel>(topology, numPaths);
                 result = adversarialInputGenerator.SimulatedAnnealing(optimalEncoder, heuristicEncoder, numTmpSteps,
@@ -296,7 +296,7 @@ namespace MetaOptimize
 
                 numDemands = 1000000;
                 solver = (ISolver<GRBVar, GRBModel>)new GurobiSOS(timeout, 0, numThreads, recordProgress: false);
-                (heuristicEncoder, _, _) = CliUtils.getHeuristic<GRBVar, GRBModel>(solver, topology, heuristicName, numPaths, demandPinningThreshold);
+                (heuristicEncoder, _, _) = CliUtils.getHeuristic<GRBVar, GRBModel>(solver, topology, heuristicName, numPaths, demandPinningThreshold: demandPinningThreshold);
                 optimalEncoder = new OptimalEncoder<GRBVar, GRBModel>(solver, topology, numPaths);
                 adversarialInputGenerator = new AdversarialInputGenerator<GRBVar, GRBModel>(topology, numPaths);
                 result = adversarialInputGenerator.RandomAdversarialGenerator(optimalEncoder, heuristicEncoder, numDemands,
