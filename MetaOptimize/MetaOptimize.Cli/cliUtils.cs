@@ -12,7 +12,8 @@ namespace MetaOptimize.Cli {
         public static (IEncoder<TVar, TSolution>, IDictionary<(string, string), int>, IList<IDictionary<(string, string), int>>) getHeuristic<TVar, TSolution>(
                 ISolver<TVar, TSolution> solver,
                 Topology topology, Heuristic h, int numPaths, int numSlices = -1, double demandPinningThreshold = -1,
-                IDictionary<(string, string), int> partition = null, int numSamples = -1, IList<IDictionary<(string, string), int>> partitionsList = null)
+                IDictionary<(string, string), int> partition = null, int numSamples = -1, IList<IDictionary<(string, string), int>> partitionsList = null,
+                double partitionSensitivity = -1)
         {
             IEncoder<TVar, TSolution> heuristicEncoder;
             switch (h)
@@ -22,7 +23,7 @@ namespace MetaOptimize.Cli {
                         partition = topology.RandomPartition(numSlices);
                     }
                     Console.WriteLine("Exploring pop heuristic");
-                    heuristicEncoder = new PopEncoder<TVar, TSolution>(solver, topology, numPaths, numSlices, partition);
+                    heuristicEncoder = new PopEncoder<TVar, TSolution>(solver, topology, numPaths, numSlices, partition, partitionSensitivity: partitionSensitivity);
                     break;
                 case Heuristic.DemandPinning:
                     Console.WriteLine("Exploring demand pinning heuristic");

@@ -43,7 +43,7 @@ namespace MetaOptimize
         /// Partitioning of the demands.
         /// </summary>
         public IDictionary<(string, string), int> DemandPartitions { get; set; }
-        
+
         /// <summary>
         /// Partitioning of the demands.
         /// </summary>
@@ -73,7 +73,7 @@ namespace MetaOptimize
         /// <param name="numPartitions">The number of partitions.</param>
         /// <param name="demandPartitions">The demand partitions.</param>
         /// <param name="partitionSensitivity">how different total demands can be in each partition.</param>
-        public PopEncoder(ISolver<TVar, TSolution> solver, Topology topology, int k, int numPartitions, IDictionary<(string, string), int> demandPartitions, 
+        public PopEncoder(ISolver<TVar, TSolution> solver, Topology topology, int k, int numPartitions, IDictionary<(string, string), int> demandPartitions,
             double partitionSensitivity = -1)
         {
             if (numPartitions <= 0)
