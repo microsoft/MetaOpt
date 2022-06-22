@@ -43,6 +43,11 @@ namespace MetaOptimize
         /// Partitioning of the demands.
         /// </summary>
         public IDictionary<(string, string), int> DemandPartitions { get; set; }
+        
+        /// <summary>
+        /// Partitioning of the demands.
+        /// </summary>
+        public double PartitionSensitivity { get; set; }
 
         /// <summary>
         /// The individual encoders for each partition.
@@ -67,7 +72,9 @@ namespace MetaOptimize
         /// <param name="k">The max number of paths between nodes.</param>
         /// <param name="numPartitions">The number of partitions.</param>
         /// <param name="demandPartitions">The demand partitions.</param>
-        public PopEncoder(ISolver<TVar, TSolution> solver, Topology topology, int k, int numPartitions, IDictionary<(string, string), int> demandPartitions)
+        /// <param name="partitionSensitivity">how different total demands can be in each partition.</param>
+        public PopEncoder(ISolver<TVar, TSolution> solver, Topology topology, int k, int numPartitions, IDictionary<(string, string), int> demandPartitions, 
+            double partitionSensitivity = -1)
         {
             if (numPartitions <= 0)
             {
@@ -77,6 +84,9 @@ namespace MetaOptimize
             {
                 throw new ArgumentOutOfRangeException("You need to adjust the max demand allowed.");
             }
+            if (partitionSensitivity != -1 & partitionSensitivity < 0 & partitionSensitivity > 1) {
+                throw new Exception("production sensitivity should be between 0 and 1");
+            }
 
             this.Solver = solver;
             this.Topology = topology;
@@ -84,6 +94,7 @@ namespace MetaOptimize
             this.ReducedTopology = topology.SplitCapacity(numPartitions);
             this.NumPartitions = numPartitions;
             this.DemandPartitions = demandPartitions;
+            this.PartitionSensitivity = partitionSensitivity;
 
             this.PartitionEncoders = new OptimalEncoder<TVar, TSolution>[this.NumPartitions];
 
@@ -147,10 +158,15 @@ namespace MetaOptimize
 
             // create new demand variables as the sum of the individual partitions.
             var demandVariables = new Dictionary<(string, string), Polynomial<TVar>>();
+            var partitionToTotalDemand = new Dictionary<int, Polynomial<TVar>>();
             foreach (var pair in this.Topology.GetNodePairs())
             {
                 int partitionID = this.DemandPartitions[pair];
                 demandVariables[pair] = this.PartitionEncoders[partitionID].DemandVariables[pair];
+                if (!partitionToTotalDemand.ContainsKey(partitionID)) {
+                    partitionToTotalDemand[partitionID] = new Polynomial<TVar>();
+                }
+                partitionToTotalDemand[partitionID].Add(demandVariables[pair]);
                 // var demandVariable = this.Solver.CreateVariable("demand_pop_" + pair.Item1 + "_" + pair.Item2);
                 // var polynomial = new Polynomial<TVar>(new Term<TVar>(-1, demandVariable));
 
@@ -162,6 +178,19 @@ namespace MetaOptimize
                 // demandVariables[pair] = demandVariable;
             }
 
+            // enforce sensitivity
+            if (this.PartitionSensitivity != -1) {
+                for (int i = 0; i < this.NumPartitions; i++) {
+                    for (int j = 0; j < this.NumPartitions; j++) {
+                        if (i == j) {
+                            continue;
+                        }
+                        var poly = partitionToTotalDemand[i].Copy().Multiply(-1 * (1 + this.PartitionSensitivity));
+                        poly.Add(partitionToTotalDemand[j]);
+                        this.Solver.AddLeqZeroConstraint(poly);
+                    }
+                }
+            }
             // compute the objective to optimize.
             var objectiveVariable = this.Solver.CreateVariable("objective_pop");
             if (noAdditionalConstraints)
