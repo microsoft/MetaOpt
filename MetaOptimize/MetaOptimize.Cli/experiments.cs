@@ -171,6 +171,45 @@ namespace MetaOptimize
         }
 
         /// <summary>
+        /// Vaying the number of nodes and neighbors in small word topology.
+        /// </summary>
+        public static void ImpactNumNodesRadixSmallWordTopoDemandPinning()
+        {
+            double capacity = 5000;
+            int thresholdPerc = 5;
+            int numPaths = 2;
+            int timeToTerminate = 3600;
+            string logDir = @"..\logs\demand_pinning_sweep_topo\" + Utils.GetFID() + @"\";
+            string logFile = @"small_word_graphs_" + Heuristic.DemandPinning + ".txt";
+            Utils.CreateFile(logDir, logFile, removeIfExist: true);
+            // evaluation sweep parameters
+            int startNodes = 13;
+            int stepNodes = 2;
+            int endNodes = 13;
+            int startRadix = 4;
+            int stepRadix = 2;
+            int endRadix = 8;
+
+            ISolver<GRBVar, GRBModel> solver = (ISolver<GRBVar, GRBModel>)new GurobiSOS(verbose: 1, timeToTerminateNoImprovement: timeToTerminate);
+            for (int sn = startNodes; sn <= endNodes; sn += stepNodes) {
+                for (int sr = startRadix; sr <= endRadix; sr += stepRadix) {
+                    var topo = Topology.SmallWordGraph(sn, sr, capacity);
+                    var maxThreshold = topo.MinCapacity();
+                    var threshold = thresholdPerc * maxThreshold / 100;
+                    var (optimal, heuristic, demands) = CliUtils.maximizeOptimalityGapDemandPinning<GRBVar, GRBModel>(
+                        solver: solver, topology: topo, numPaths: numPaths, threshold: threshold);
+                    double gap = optimal - heuristic;
+                    var diameter = topo.diameter();
+                    var avgShortestPathLen = topo.avgShortestPathLength();
+                    Utils.AppendToFile(logDir, logFile, sn + ", " + sr + ", " + numPaths + ", " +
+                        threshold + ", " + diameter + ", " + avgShortestPathLen + ", " + optimal + ", " + heuristic + ", " + gap);
+                    Console.WriteLine("==== Gap --> " + " numNodes=" + sn + " numRadix=" + sr + " numPaths=" + numPaths + " threshold=" + threshold +
+                        " optimal=" + optimal + " heuristic=" + heuristic + " gap=" + gap);
+                }
+            }
+        }
+
+        /// <summary>
         /// evaluating impact of number of paths and partitions for pop.
         /// </summary>
         public static void ImpactNumPathsPartitionsPop()
@@ -215,7 +254,7 @@ namespace MetaOptimize
                     solver.CleanAll();
                     solver.SetTimeout(timeout);
                     var (heuristicEncoder, _, _) = CliUtils.getHeuristic<GRBVar, GRBModel>(solver, topology, heuristicName, numPaths, numPartitions, demandPinningThreshold,
-                        partition: partition);
+                        partition: partition, partitionSensitivity: 0.1);
                     var optimalEncoder = new OptimalEncoder<GRBVar, GRBModel>(solver, topology, numPaths);
                     var timer = System.Diagnostics.Stopwatch.StartNew();
                     var adversarialInputGenerator = new AdversarialInputGenerator<GRBVar, GRBModel>(topology, numPaths);
@@ -240,9 +279,9 @@ namespace MetaOptimize
         public static void compareGapDelayDiffMethodsDP()
         {
             var topology = Parser.ReadTopologyJson(@"..\Topologies\b4-teavar.json");
-            int numPaths = 1;
+            int numPaths = 2;
             int numThreads = 1;
-            double timeout = 1000;
+            double timeout = 5000;
             var heuristicName = Heuristic.DemandPinning;
             var demandUB = -1;
             var demandPinningThreshold = 250;
@@ -250,7 +289,7 @@ namespace MetaOptimize
             string logDir = @"..\logs\gap_vs_time\" + heuristicName + "_";
             logDir = logDir + Utils.GetFID() + @"\";
             string kktFile = @"kkt_" + heuristicName + ".txt";
-            ISolver<GRBVar, GRBModel> solver = (ISolver<GRBVar, GRBModel>)new GurobiSOS(timeout, 1, numThreads, recordProgress: true, logPath: Path.Combine(logDir, kktFile));
+            ISolver<GRBVar, GRBModel> solver = (ISolver<GRBVar, GRBModel>)new GurobiSOS(timeout, 0, numThreads, recordProgress: true, logPath: Path.Combine(logDir, kktFile));
             var (heuristicEncoder, _, _) = CliUtils.getHeuristic<GRBVar, GRBModel>(solver: solver, topology: topology, h: heuristicName, numPaths: numPaths, demandPinningThreshold: demandPinningThreshold);
             var optimalEncoder = new OptimalEncoder<GRBVar, GRBModel>(solver, topology, numPaths);
             var adversarialInputGenerator = new AdversarialInputGenerator<GRBVar, GRBModel>(topology, numPaths);
