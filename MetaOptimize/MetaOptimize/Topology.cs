@@ -387,6 +387,41 @@ namespace MetaOptimize
             } while (!found);
             return t;
         }
+
+        /// <summary>
+        /// create small world graph.
+        /// </summary>
+        public static Topology SmallWordGraph(int numNodes, int k, double capacity) {
+            if (k >= numNodes) {
+                throw new Exception("k should be less than numNodes");
+            }
+            if (k < 0) {
+                throw new Exception("k should be positive.");
+            }
+            if (numNodes < 0) {
+                throw new Exception("numNodes should be positive.");
+            }
+            if (k % 2 != 0) {
+                throw new Exception("k should be even.");
+            }
+            var topo = new Topology();
+            for (int i = 0; i < numNodes; i++) {
+                topo.AddNode(i.ToString());
+            }
+
+            for (int i = 0; i < numNodes; i++) {
+                var node1 = i.ToString();
+                var pos = k / 2;
+                for (int j = 1; j <= pos; j++) {
+                    var node2 = ((i + j) % numNodes).ToString();
+                    if (!topo.ContaintsEdge(node1, node2, capacity)) {
+                        topo.AddEdge(node1, node2, capacity);
+                        topo.AddEdge(node2, node1, capacity);
+                    }
+                }
+            }
+            return topo;
+        }
     }
 
     /// <summary>

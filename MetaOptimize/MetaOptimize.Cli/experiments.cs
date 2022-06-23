@@ -171,6 +171,45 @@ namespace MetaOptimize
         }
 
         /// <summary>
+        /// Vaying the number of nodes and neighbors in small word topology.
+        /// </summary>
+        public static void ImpactNumNodesRadixSmallWordTopoDemandPinning()
+        {
+            double capacity = 5000;
+            int thresholdPerc = 5;
+            int numPaths = 2;
+            int timeToTerminate = 3600;
+            string logDir = @"..\logs\demand_pinning_sweep_topo\" + Utils.GetFID() + @"\";
+            string logFile = @"small_word_graphs_" + Heuristic.DemandPinning + ".txt";
+            Utils.CreateFile(logDir, logFile, removeIfExist: true);
+            // evaluation sweep parameters
+            int startNodes = 13;
+            int stepNodes = 2;
+            int endNodes = 13;
+            int startRadix = 4;
+            int stepRadix = 2;
+            int endRadix = 8;
+
+            ISolver<GRBVar, GRBModel> solver = (ISolver<GRBVar, GRBModel>)new GurobiSOS(verbose: 1, timeToTerminateNoImprovement: timeToTerminate);
+            for (int sn = startNodes; sn <= endNodes; sn += stepNodes) {
+                for (int sr = startRadix; sr <= endRadix; sr += stepRadix) {
+                    var topo = Topology.SmallWordGraph(sn, sr, capacity);
+                    var maxThreshold = topo.MinCapacity();
+                    var threshold = thresholdPerc * maxThreshold / 100;
+                    var (optimal, heuristic, demands) = CliUtils.maximizeOptimalityGapDemandPinning<GRBVar, GRBModel>(
+                        solver: solver, topology: topo, numPaths: numPaths, threshold: threshold);
+                    double gap = optimal - heuristic;
+                    var diameter = topo.diameter();
+                    var avgShortestPathLen = topo.avgShortestPathLength();
+                    Utils.AppendToFile(logDir, logFile, sn + ", " + sr + ", " + numPaths + ", " +
+                        threshold + ", " + diameter + ", " + avgShortestPathLen + ", " + optimal + ", " + heuristic + ", " + gap);
+                    Console.WriteLine("==== Gap --> " + " numNodes=" + sn + " numRadix=" + sr + " numPaths=" + numPaths + " threshold=" + threshold +
+                        " optimal=" + optimal + " heuristic=" + heuristic + " gap=" + gap);
+                }
+            }
+        }
+
+        /// <summary>
         /// evaluating impact of number of paths and partitions for pop.
         /// </summary>
         public static void ImpactNumPathsPartitionsPop()
