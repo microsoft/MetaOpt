@@ -54,6 +54,11 @@ namespace MetaOptimize
         public void SetTimeout(double timeout);
 
         /// <summary>
+        /// get model.
+        /// </summary>
+        public TSolution GetModel();
+
+        /// <summary>
         /// Add a less than or equal to zero constraint.
         /// </summary>
         /// <param name="polynomial">The polynomial.</param>

@@ -89,6 +89,12 @@ namespace MetaOptimize.Cli
         public double DemandUB { get; set; }
 
         /// <summary>
+        /// an upper bound on all the demands to find more useful advers inputs.
+        /// </summary>
+        [Option('x', "partitionSensitivity", Default = -1, HelpText = "the difference of total demands in each partition.")]
+        public double PartitionSensitivity { get; set; }
+
+        /// <summary>
         /// number of trails for random search.
         /// </summary>
         [Option('n', "num", Default = 1, HelpText = "number of trials for random search or hill climber.")]

@@ -38,6 +38,13 @@ namespace MetaOptimize
         }
 
         /// <summary>
+        /// get model.
+        /// </summary>
+        public ZenSolution GetModel() {
+            throw new Exception("need to be implemented");
+        }
+
+        /// <summary>
         /// Reset the solver by removing all the variables and constraints.
         /// </summary>
         public void CleanAll() {

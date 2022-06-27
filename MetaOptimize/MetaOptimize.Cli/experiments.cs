@@ -444,7 +444,7 @@ namespace MetaOptimize
         /// compare problem size vs topo size and latency vs topo size.
         /// </summary>
         public static void compareTopoSizeLatency() {
-            Heuristic heuristicName = Heuristic.Pop;
+            Heuristic heuristicName = Heuristic.DemandPinning;
             var topoName = "B4";
             var topology = Parser.ReadTopologyJson(@"..\Topologies\b4-teavar.json");
             string logDir = @"..\logs\scale_latency_problem\" + Utils.GetFID() + @"\";
@@ -460,32 +460,37 @@ namespace MetaOptimize
             Utils.AppendToFile(logDir, logFile, maxThreshold + ", " + timeToTerminate);
             var threshold = thresholdPerc * maxThreshold / 100;
 
-            // gurobi outer
-            solver.CleanAll();
-            solver.GetModel().Parameters.LogFile = Path.Combine(logDir, logFile + "_outer.txt");
-            var (heuristicEncoder, _, _) = CliUtils.getHeuristic<GRBVar, GRBModel>(solver, topology, heuristicName,
-                numPaths, demandPinningThreshold: threshold, numSlices: numPartitions, partition: partition);
-            var optimalEncoder = new OptimalEncoder<GRBVar, GRBModel>(solver, topology, numPaths);
-            var adversarialInputGenerator = new AdversarialInputGenerator<GRBVar, GRBModel>(topology, numPaths);
-            var timer = Stopwatch.StartNew();
-            (OptimizationSolution, OptimizationSolution) result =
-                adversarialInputGenerator.MaximizeOptimalityGap(optimalEncoder, heuristicEncoder);
-            var outer_gurobi_time = timer.ElapsedMilliseconds;
-            double optimal = result.Item1.TotalDemandMet;
-            double heuristic = result.Item2.TotalDemandMet;
-            var demands = result.Item1.Demands;
-            var outer_sos_constr = solver.GetModel().NumSOS;
-            var outer_vars = solver.GetModel().NumVars;
-            var outer_lin_constraints = solver.GetModel().NumConstrs;
-            double gap = optimal - heuristic;
-            var dic_demands = (Dictionary<(string, string), double>)demands;
-            Console.WriteLine("=====metaoptimize " + outer_gurobi_time + " sos=" + outer_sos_constr + " lin " + outer_lin_constraints);
-
+            // // gurobi outer
+            // solver.CleanAll();
+            // solver.GetModel().Parameters.LogFile = Path.Combine(logDir, logFile + "_outer.txt");
+            // var (heuristicEncoder, _, _) = CliUtils.getHeuristic<GRBVar, GRBModel>(solver, topology, heuristicName,
+            //     numPaths, demandPinningThreshold: threshold, numSlices: numPartitions, partition: partition);
+            // var optimalEncoder = new OptimalEncoder<GRBVar, GRBModel>(solver, topology, numPaths);
+            // var adversarialInputGenerator = new AdversarialInputGenerator<GRBVar, GRBModel>(topology, numPaths);
+            // var timer = Stopwatch.StartNew();
+            // (OptimizationSolution, OptimizationSolution) result =
+            //     adversarialInputGenerator.MaximizeOptimalityGap(optimalEncoder, heuristicEncoder);
+            // var outer_gurobi_time = timer.ElapsedMilliseconds;
+            // double optimal = result.Item1.TotalDemandMet;
+            // double heuristic = result.Item2.TotalDemandMet;
+            // var demands = result.Item1.Demands;
+            // var outer_sos_constr = solver.GetModel().NumSOS;
+            // var outer_vars = solver.GetModel().NumVars;
+            // var outer_lin_constraints = solver.GetModel().NumConstrs;
+            // double gap = optimal - heuristic;
+            // var dic_demands = (Dictionary<(string, string), double>)demands;
+            // Console.WriteLine("=====metaoptimize " + outer_gurobi_time + " sos=" + outer_sos_constr + " lin " + outer_lin_constraints);
+            Dictionary<(string, string), double> dic_demands = new Dictionary<(string, string), double>();
+            var rng = new Random();
+            foreach (var pair in topology.GetNodePairs()) {
+                dic_demands[pair] = rng.NextDouble() * 5000 * 0.5;
+            }
             solver.CleanAll();
             solver.GetModel().Parameters.LogFile = Path.Combine(logDir, logFile + "_inner_heuristic.txt");
-            (heuristicEncoder, _, _) = CliUtils.getHeuristic<GRBVar, GRBModel>(solver, topology, heuristicName,
+            var (heuristicEncoder, _, _) = CliUtils.getHeuristic<GRBVar, GRBModel>(solver, topology, heuristicName,
                 numPaths, demandPinningThreshold: threshold, DirectEncoder: true, numSlices: numPartitions, partition: partition);
 
+            Stopwatch timer;
             if (heuristicName == Heuristic.Pop) {
                 for (int i = 0; i < numPartitions; i++) {
                     solver.CleanAll();
@@ -519,7 +524,7 @@ namespace MetaOptimize
 
             solver.CleanAll();
             solver.GetModel().Parameters.LogFile = Path.Combine(logDir, logFile + "_inner_optimal.txt");
-            optimalEncoder = new OptimalEncoder<GRBVar, GRBModel>(solver, topology, numPaths);
+            var optimalEncoder = new OptimalEncoder<GRBVar, GRBModel>(solver, topology, numPaths);
             var optimalEncoding = optimalEncoder.Encoding(demandEqualityConstraints: dic_demands, noAdditionalConstraints: true);
             // gurobi optimal inner
             timer = Stopwatch.StartNew();
@@ -532,7 +537,7 @@ namespace MetaOptimize
             //     ", " + outer_gurobi_time + ", " + outer_lin_constraints + ", " + outer_sos_constr + ", " + outer_vars +
             //     ", " + inner_heuristic_time + ", " + inner_heuristic_lin_constraints + ", " + inner_heuristic_vars + ", " + inner_optimal_time +
             //     ", " + inner_optimal_linear_constraints + ", " + inner_optimal_vars);
-            Console.WriteLine("==== Gap --> " + " numPaths=" + numPaths + " threshold=" + threshold + " optimal=" + optimal + " heuristic=" + heuristic + " gap=" + gap);
+            // Console.WriteLine("==== Gap --> " + " numPaths=" + numPaths + " threshold=" + threshold + " optimal=" + optimal + " heuristic=" + heuristic + " gap=" + gap);
         }
     }
 }

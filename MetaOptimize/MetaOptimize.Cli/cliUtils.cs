@@ -13,7 +13,7 @@ namespace MetaOptimize.Cli {
                 ISolver<TVar, TSolution> solver,
                 Topology topology, Heuristic h, int numPaths, int numSlices = -1, double demandPinningThreshold = -1,
                 IDictionary<(string, string), int> partition = null, int numSamples = -1, IList<IDictionary<(string, string), int>> partitionsList = null,
-                double partitionSensitivity = -1)
+                double partitionSensitivity = -1, bool DirectEncoder = false)
         {
             IEncoder<TVar, TSolution> heuristicEncoder;
             switch (h)
@@ -23,11 +23,21 @@ namespace MetaOptimize.Cli {
                         partition = topology.RandomPartition(numSlices);
                     }
                     Console.WriteLine("Exploring pop heuristic");
-                    heuristicEncoder = new PopEncoder<TVar, TSolution>(solver, topology, numPaths, numSlices, partition, partitionSensitivity: partitionSensitivity);
+                    if (DirectEncoder) {
+                        heuristicEncoder = new OptimalEncoder<TVar, TSolution>(solver, topology.SplitCapacity(numSlices), numPaths);
+                    } else {
+                        heuristicEncoder = new PopEncoder<TVar, TSolution>(solver, topology, numPaths, numSlices, partition, partitionSensitivity: partitionSensitivity);
+                    }
                     break;
                 case Heuristic.DemandPinning:
                     Console.WriteLine("Exploring demand pinning heuristic");
-                    heuristicEncoder = new DemandPinningEncoder<TVar, TSolution>(solver, topology, numPaths, demandPinningThreshold);
+                    if (DirectEncoder) {
+                        Console.WriteLine("Direct DP");
+                        heuristicEncoder = new DirectDemandPinningEncoder<TVar, TSolution>(solver, topology, numPaths, demandPinningThreshold);
+                    } else {
+                        Console.WriteLine("Indirect DP");
+                        heuristicEncoder = new DemandPinningEncoder<TVar, TSolution>(solver, topology, numPaths, demandPinningThreshold);
+                    }
                     break;
                 case Heuristic.ExpectedPop:
                     if (partitionsList == null) {

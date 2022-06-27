@@ -140,6 +140,13 @@ namespace MetaOptimize
         }
 
         /// <summary>
+        /// get model.
+        /// </summary>
+        public GRBModel GetModel() {
+            return this._model;
+        }
+
+        /// <summary>
         /// Create a new variable with a given name.
         /// </summary>
         /// <param name="name">The variable name.</param>

@@ -554,7 +554,6 @@ namespace MetaOptimize
             bool timeoutReached = false;
             var timeout_ms = timeout * 1000;
             Stopwatch timer = Stopwatch.StartNew();
-            Utils.StoreProgress(logPath, timer.ElapsedMilliseconds + ", " + 0, storeProgress);
             Dictionary<(string, string), double> currDemands = getRandomDemand(rng, demandUB);
             var (currGap, currResult) = GetGap(optimalEncoder, heuristicEncoder, currDemands);
             (OptimizationSolution, OptimizationSolution) worstResult = currResult;
