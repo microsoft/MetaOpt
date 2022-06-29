@@ -206,7 +206,7 @@ namespace MetaOptimize
             try
             {
                 var new_name = $"{name}_{this._variables.Count}";
-                var variable = _model.AddVar(lb, ub, 0, GRB.CONTINUOUS, new_name);
+                var variable = _model.AddVar(lb, ub, 0, type, new_name);
                 this._variables.Add(new_name, variable);
                 return variable;
             }

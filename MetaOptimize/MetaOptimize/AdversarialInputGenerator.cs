@@ -18,17 +18,17 @@ namespace MetaOptimize
         /// <summary>
         /// The topology for the network.
         /// </summary>
-        public Topology Topology { get; set; }
+        protected Topology Topology { get; set; }
 
         /// <summary>
         /// The maximum number of paths to use between any two nodes.
         /// </summary>
-        public int K { get; set; }
+        protected int K { get; set; }
 
         /// <summary>
         /// The demand variables.
         /// </summary>
-        public Dictionary<(string, string), Polynomial<TVar>> DemandVariables { get; set; }
+        protected Dictionary<(string, string), Polynomial<TVar>> DemandVariables { get; set; }
 
         /// <summary>
         /// Constructor.
@@ -45,12 +45,14 @@ namespace MetaOptimize
         /// <param name="demandUB">upper bound on all the demands.</param>
         /// <param name="innerEncoding">The method for encoding the inner problem.</param>
         /// <param name="demandList">the quantized list of demands, will only use if method=PrimalDual.</param>
+        /// <param name="simplify">will simplify the final solution if this parameter is true.</param>,
         public (OptimizationSolution, OptimizationSolution) MaximizeOptimalityGap(
             IEncoder<TVar, TSolution> optimalEncoder,
             IEncoder<TVar, TSolution> heuristicEncoder,
             double demandUB = -1,
             InnerEncodingMethodChoice innerEncoding = InnerEncodingMethodChoice.KKT,
-            ISet<double> demandList = null)
+            ISet<double> demandList = null,
+            bool simplify = false)
         {
             if (optimalEncoder.Solver != heuristicEncoder.Solver)
             {
@@ -76,6 +78,16 @@ namespace MetaOptimize
                         new Term<TVar>(1, optimalEncoding.GlobalObjective),
                         new Term<TVar>(-1, heuristicEncoding.GlobalObjective));
             var solution = solver.Maximize(objective);
+
+            if (simplify) {
+                Console.WriteLine("===== Going to simplify the solution....");
+                var simplifier = new AdversarialInputSimplifier<TVar, TSolution>(Topology, K, DemandVariables);
+                var optimalObj = optimalEncoder.GetSolution(solution).TotalDemandMet;
+                var heuristicObj = heuristicEncoder.GetSolution(solution).TotalDemandMet;
+                var gap = optimalObj - heuristicObj;
+                var simplifyObj = simplifier.AddDirectMinConstraintsAndObjectives(solver, objective, gap);
+                solution = solver.Maximize(simplifyObj);
+            }
 
             return (optimalEncoder.GetSolution(solution), heuristicEncoder.GetSolution(solution));
 

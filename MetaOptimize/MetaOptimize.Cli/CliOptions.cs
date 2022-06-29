@@ -35,6 +35,12 @@ namespace MetaOptimize.Cli
         public SolverChoice SolverChoice { get; set; }
 
         /// <summary>
+        /// whether to simplify the final solution or not.
+        /// </summary>
+        [Option('s', "simplify", Default = false, HelpText = "Whether to simplify the final solution or not")]
+        public bool Simplify { get; set; }
+
+        /// <summary>
         /// Timeout for gurobi solver.
         /// </summary>
         [Option('o', "timeout", Default = double.PositiveInfinity, HelpText = "gurobi solver terminates after the specified time")]
