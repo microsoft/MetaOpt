@@ -416,6 +416,14 @@ namespace MetaOptimize
         }
 
         /// <summary>
+        /// Reset the timer and then maximize.
+        /// </summary>
+        public virtual GRBModel Maximize(Polynomial<GRBVar> objective, bool reset)
+        {
+            throw new Exception("this part should be reimplemented based GurobiSoS");
+        }
+
+        /// <summary>
         /// Maximize the objective with objective as input.
         /// </summary>
         /// <returns>A solution.</returns>

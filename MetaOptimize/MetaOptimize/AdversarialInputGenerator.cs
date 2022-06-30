@@ -37,6 +37,22 @@ namespace MetaOptimize
             this.Topology = topology;
             this.K = k;
         }
+
+        private TSolution SimplifyAdversarialInputs(bool simplify, IEncoder<TVar, TSolution> optimalEncoder, IEncoder<TVar, TSolution> heuristicEncoder,
+            TSolution solution, Polynomial<TVar> objective)
+        {
+            if (simplify) {
+                var solver = optimalEncoder.Solver;
+                Console.WriteLine("===== Going to simplify the solution....");
+                var simplifier = new AdversarialInputSimplifier<TVar, TSolution>(Topology, K, DemandVariables);
+                var optimalObj = optimalEncoder.GetSolution(solution).TotalDemandMet;
+                var heuristicObj = heuristicEncoder.GetSolution(solution).TotalDemandMet;
+                var gap = optimalObj - heuristicObj;
+                var simplifyObj = simplifier.AddDirectMinConstraintsAndObjectives(solver, objective, gap);
+                solution = solver.Maximize(simplifyObj, reset: true);
+            }
+            return solution;
+        }
         /// <summary>
         /// Find an adversarial input that maximizes the optimality gap between two optimizations.
         /// </summary>
@@ -78,17 +94,7 @@ namespace MetaOptimize
                         new Term<TVar>(1, optimalEncoding.GlobalObjective),
                         new Term<TVar>(-1, heuristicEncoding.GlobalObjective));
             var solution = solver.Maximize(objective);
-
-            if (simplify) {
-                Console.WriteLine("===== Going to simplify the solution....");
-                var simplifier = new AdversarialInputSimplifier<TVar, TSolution>(Topology, K, DemandVariables);
-                var optimalObj = optimalEncoder.GetSolution(solution).TotalDemandMet;
-                var heuristicObj = heuristicEncoder.GetSolution(solution).TotalDemandMet;
-                var gap = optimalObj - heuristicObj;
-                var simplifyObj = simplifier.AddDirectMinConstraintsAndObjectives(solver, objective, gap);
-                solution = solver.Maximize(simplifyObj);
-            }
-
+            solution = SimplifyAdversarialInputs(simplify, optimalEncoder, heuristicEncoder, solution, objective);
             return (optimalEncoder.GetSolution(solution), heuristicEncoder.GetSolution(solution));
 
             /* if (!solution.IsSatisfiable())
@@ -113,13 +119,15 @@ namespace MetaOptimize
         /// <param name="demandUB">upper bound on all the demands.</param>
         /// <param name="innerEncoding">The method for encoding the inner problem.</param>
         /// <param name="demandList">the quantized list of demands, will only use if method=PrimalDual.</param>
+        /// <param name="simplify">will simplify the final solution if this parameter is true.</param>,
         public (OptimizationSolution, OptimizationSolution) FindOptimalityGapAtLeast(
             IEncoder<TVar, TSolution> optimalEncoder,
             IEncoder<TVar, TSolution> heuristicEncoder,
             double minDifference,
             double demandUB = -1,
             InnerEncodingMethodChoice innerEncoding = InnerEncodingMethodChoice.KKT,
-            ISet<double> demandList = null)
+            ISet<double> demandList = null,
+            bool simplify = false)
         {
             if (optimalEncoder.Solver != heuristicEncoder.Solver)
             {
@@ -154,9 +162,8 @@ namespace MetaOptimize
 
             // var solution = solver.Maximize(solver.CreateVariable("dummy"));
             var solution = solver.CheckFeasibility(minDifference);
-
+            solution = SimplifyAdversarialInputs(simplify, optimalEncoder, heuristicEncoder, solution, objective);
             return (optimalEncoder.GetSolution(solution), heuristicEncoder.GetSolution(solution));
-
             /* if (!solution.IsSatisfiable())
             {
                 Console.WriteLine($"No solution found!");

@@ -52,5 +52,11 @@ namespace MetaOptimize
                 this.timer = Stopwatch.StartNew();
             }
         }
+
+        public void ResetTermination()
+        {
+            this.prevObj = double.NaN;
+            this.timer = Stopwatch.StartNew();
+        }
     }
 }

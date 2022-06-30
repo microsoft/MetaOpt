@@ -232,6 +232,14 @@ namespace MetaOptimize
         }
 
         /// <summary>
+        /// Reset the timer and then maximize.
+        /// </summary>
+        public virtual ZenSolution Maximize(Polynomial<Zen<Real>> objective, bool reset)
+        {
+            throw new Exception("this part should be reimplemented for Zen.");
+        }
+
+        /// <summary>
         /// Maximize the objective with objective as input.
         /// </summary>
         /// <returns>A solution.</returns>

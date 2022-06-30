@@ -132,6 +132,13 @@ namespace MetaOptimize
 
         /// <summary>
         /// Maximize the objective with objective as input.
+        /// reset the callback timer.
+        /// </summary>
+        /// <returns>A solution.</returns>
+        public TSolution Maximize(Polynomial<TVar> objective, bool reset);
+
+        /// <summary>
+        /// Maximize the objective with objective as input.
         /// </summary>
         /// <returns>A solution.</returns>
         public TSolution Maximize(TVar objective);

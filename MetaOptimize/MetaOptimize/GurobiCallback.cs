@@ -35,5 +35,10 @@ namespace MetaOptimize
                 Console.WriteLine(e.StackTrace);
             }
         }
+
+        public void ResetTermination()
+        {
+            this.terminationCallback.ResetTermination();
+        }
     }
 }

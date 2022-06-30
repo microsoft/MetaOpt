@@ -109,16 +109,35 @@ namespace MetaOptimize
             return env;
         }
 
+        private GurobiCallback guorbiCallback;
+        private GurobiTerminationCallback gurobiTerminationCallback;
+        private GurobiStoreProgressCallback gurobiStoreProgressCallback;
         private void SetCallbacks() {
             var fileExtension = Path.GetExtension(this._logFileFilename);
             var filename = Path.GetFileNameWithoutExtension(this._logFileFilename);
             if (this._timeToTerminateIfNoImprovement > 0 & this._storeProgress) {
-                this._model.SetCallback(new GurobiCallback(this._model, this._logFileDirname,
-                        filename + "_" + Utils.GetFID() + fileExtension, this._timeToTerminateIfNoImprovement * 1000));
+                this.guorbiCallback = new GurobiCallback(this._model, this._logFileDirname,
+                        filename + "_" + Utils.GetFID() + fileExtension, this._timeToTerminateIfNoImprovement * 1000);
+                this._model.SetCallback(this.guorbiCallback);
             } else if (this._timeToTerminateIfNoImprovement > 0) {
-                this._model.SetCallback(new GurobiTerminationCallback(this._model, this._timeToTerminateIfNoImprovement * 1000));
+                this.gurobiTerminationCallback = new GurobiTerminationCallback(this._model, this._timeToTerminateIfNoImprovement * 1000);
+                this._model.SetCallback(this.gurobiTerminationCallback);
             } else if (this._storeProgress) {
-                this._model.SetCallback(new GurobiStoreProgressCallback(this._model, this._logFileDirname, filename + "_" + Utils.GetFID() + fileExtension));
+                this.gurobiStoreProgressCallback = new GurobiStoreProgressCallback(this._model, this._logFileDirname, filename + "_" + Utils.GetFID() + fileExtension);
+                this._model.SetCallback(this.gurobiStoreProgressCallback);
+            }
+        }
+
+        /// <summary>
+        /// to reset the timer for termination.
+        /// </summary>
+        protected void ResetCallbackTimer() {
+            if (this._timeToTerminateIfNoImprovement > 0 & this._storeProgress) {
+                this.guorbiCallback.ResetTermination();
+                this._model.SetCallback(this.guorbiCallback);
+            } else if (this._timeToTerminateIfNoImprovement > 0) {
+                this.gurobiTerminationCallback.ResetTermination();
+            } else if (this._storeProgress) {
             }
         }
         /// <summary>
@@ -471,6 +490,17 @@ namespace MetaOptimize
             }
 
             return this._model;
+        }
+
+        /// <summary>
+        /// Reset the timer and then maximize.
+        /// </summary>
+        public virtual GRBModel Maximize(Polynomial<GRBVar> objective, bool reset)
+        {
+            if (reset) {
+                this.ResetCallbackTimer();
+            }
+            return Maximize(objective);
         }
 
         /// <summary>
