@@ -27,11 +27,11 @@ namespace MetaOptimize
         /// <summary>
         /// Get the primal dual constraints for minimal solution.
         /// </summary>
-        /// <param name="objective">The objective.</param>
-        /// <param name="noPrimalDual"> To not solve through Primal-Dual.</param>
-        public override void AddMinimizationConstraints(Polynomial<TVar> objective, bool noPrimalDual)
+        public override void AddMinimizationConstraints(Polynomial<TVar> objective, bool noPrimalDual, bool verbose = false)
         {
+            Utils.logger("using primal dual encoding", verbose, Utils.LogState.WARNING);
             // adding primal constraints
+            Utils.logger("adding primal constraints", verbose);
             this.AddConstraints();
 
             if (!noPrimalDual) {
@@ -39,6 +39,7 @@ namespace MetaOptimize
                 Dictionary<int, TVar> eqDualVariables = new Dictionary<int, TVar>();
                 IList<TVar> dualObjectiveTerms = new List<TVar>();
                 IList<Polynomial<TVar>> dualObjectiveCoeff = new List<Polynomial<TVar>>();
+                Utils.logger("computing dual objective coefficients for inequality constraints.", verbose);
                 for (int i = 0; i < leqZeroConstraints.Count; i++)
                 {
                     var leqConstraint = this.leqZeroConstraints[i];
@@ -51,6 +52,7 @@ namespace MetaOptimize
                     dualObjectiveTerms.Add(leqDualVariables[i]);
                     dualObjectiveCoeff.Add(constraintRHS.Negate());
                 }
+                Utils.logger("computing dual objective coefficients for equality constraints.", verbose);
                 for (int i = 0; i < eqZeroConstraints.Count; i++)
                 {
                     var eqConstraint = this.eqZeroConstraints[i];
@@ -63,38 +65,84 @@ namespace MetaOptimize
                     dualObjectiveTerms.Add(eqDualVariables[i]);
                     dualObjectiveCoeff.Add(constraintRHS.Negate());
                 }
+                Utils.logger("ensuring primal objective == dual objective.", verbose);
                 // adding primal = dual constraint
                 var primalObjective = objective.Negate();
                 this.solver.AddEqZeroConstraint(dualObjectiveCoeff, dualObjectiveTerms, primalObjective);
                 // adding bound on dual variables
+                Utils.logger("ensuring bound on dual variables.", verbose);
                 foreach (var (idx, var) in leqDualVariables) {
                     this.solver.AddLeqZeroConstraint(new Polynomial<TVar>(new Term<TVar>(1, var)));
                 }
                 // adding dual constraints
+                Utils.logger("adding dual constraints.", verbose);
+                var variableToDualConstraint = new Dictionary<TVar, Polynomial<TVar>>();
                 foreach (var variable in this.Variables) {
                     if (this.constantVariables.Contains(variable)) {
                         continue;
                     }
+                    var objCoeff = objective.Derivative(variable);
+                    variableToDualConstraint[variable] = new Polynomial<TVar>(new Term<TVar>(-1 * objCoeff));
+                }
 
-                    Polynomial<TVar> dualConstraint = new Polynomial<TVar>();
-                    for (int i = 0; i < leqZeroConstraints.Count; i++) {
-                        var leqConstraint = leqZeroConstraints[i];
+                for (int i = 0; i < leqZeroConstraints.Count; i++) {
+                    var leqConstraint = leqZeroConstraints[i];
+                    foreach (Term<TVar> term in leqConstraint.Terms) {
+                        if (term.isInSetOrConst(this.constantVariables)) {
+                            continue;
+                        }
+                        TVar variable = term.Variable.Value;
                         var deriv = leqConstraint.Derivative(variable);
                         if (deriv != 0) {
-                            dualConstraint.Add(new Term<TVar>(deriv, leqDualVariables[i]));
+                            variableToDualConstraint[variable].Add(new Term<TVar>(deriv, leqDualVariables[i]));
                         }
                     }
-                    for (int i = 0; i < eqZeroConstraints.Count; i++) {
-                        var eqConstraint = eqZeroConstraints[i];
+                }
+
+                for (int i = 0; i < eqZeroConstraints.Count; i++) {
+                    var eqConstraint = eqZeroConstraints[i];
+                    foreach (Term<TVar> term in eqConstraint.Terms) {
+                        if (term.isInSetOrConst(this.constantVariables)) {
+                            continue;
+                        }
+                        TVar variable = term.Variable.Value;
                         var deriv = eqConstraint.Derivative(variable);
                         if (deriv != 0) {
-                            dualConstraint.Add(new Term<TVar>(deriv, eqDualVariables[i]));
+                            variableToDualConstraint[variable].Add(new Term<TVar>(deriv, eqDualVariables[i]));
                         }
                     }
-                    var objCoeff = objective.Derivative(variable);
-                    dualConstraint.Add(new Term<TVar>(-1 * objCoeff));
-                    this.solver.AddEqZeroConstraint(dualConstraint);
                 }
+
+                foreach (var (variable, dualConstr) in variableToDualConstraint) {
+                    if (dualConstr.isallInSetOrConst(new HashSet<TVar>())) {
+                        throw new System.Exception("should not be consant!!!");
+                    }
+                    this.solver.AddEqZeroConstraint(dualConstr);
+                }
+
+                // foreach (var variable in this.Variables) {
+                //     if (this.constantVariables.Contains(variable)) {
+                //         continue;
+                //     }
+                //     Polynomial<TVar> dualConstraint = new Polynomial<TVar>();
+                //     for (int i = 0; i < leqZeroConstraints.Count; i++) {
+                //         var leqConstraint = leqZeroConstraints[i];
+                //         var deriv = leqConstraint.Derivative(variable);
+                //         if (deriv != 0) {
+                //             dualConstraint.Add(new Term<TVar>(deriv, leqDualVariables[i]));
+                //         }
+                //     }
+                //     for (int i = 0; i < eqZeroConstraints.Count; i++) {
+                //         var eqConstraint = eqZeroConstraints[i];
+                //         var deriv = eqConstraint.Derivative(variable);
+                //         if (deriv != 0) {
+                //             dualConstraint.Add(new Term<TVar>(deriv, eqDualVariables[i]));
+                //         }
+                //     }
+                //     var objCoeff = objective.Derivative(variable);
+                //     dualConstraint.Add(new Term<TVar>(-1 * objCoeff));
+                //     this.solver.AddEqZeroConstraint(dualConstraint);
+                // }
             }
         }
     }

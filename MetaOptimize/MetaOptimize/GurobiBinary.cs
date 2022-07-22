@@ -70,7 +70,11 @@ namespace MetaOptimize
         public override GRBModel Maximize()
         {
             Console.WriteLine("in maximize call");
-            this._model.SetObjective(this._objective, GRB.MAXIMIZE);
+            GRBLinExpr objective = 0;
+            foreach (var auxVar in this.auxQVarList) {
+                objective += auxVar / this._bigM;
+            }
+            this._model.SetObjective(objective + this._objective, GRB.MAXIMIZE);
             // this._model.Parameters.DualReductions = 0;
             // this._model.Parameters.MIPFocus = 3;
             // this._model.Parameters.Cuts = 3;

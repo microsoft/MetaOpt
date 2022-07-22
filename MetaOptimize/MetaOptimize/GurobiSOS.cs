@@ -20,7 +20,10 @@ namespace MetaOptimize
     {
         private GRBEnv _env = null;
         private double _bigM = Math.Pow(10, 8);
-        private IList<GRBVar> auxQVarList = new List<GRBVar>();
+        /// <summary>
+        /// list of Aux Vars for Q.
+        /// </summary>
+        protected IList<GRBVar> auxQVarList = new List<GRBVar>();
         /// <summary>
         /// Gurobi Vars.
         /// </summary>

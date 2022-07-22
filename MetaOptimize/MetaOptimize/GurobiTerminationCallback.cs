@@ -17,7 +17,7 @@ namespace MetaOptimize
         public GurobiTerminationCallback(GRBModel model, double terminateNoImprovement_ms) {
             this.model = model;
             this.prevObj = double.NaN;
-            this.timer = Stopwatch.StartNew();
+            this.timer = null;
             this.terminateNoImprovement_ms = terminateNoImprovement_ms;
         }
 
@@ -27,6 +27,9 @@ namespace MetaOptimize
                 if (where == GRB.Callback.MIPNODE) {
                     var obj = GetDoubleInfo(GRB.Callback.MIPNODE_OBJBST);
                     CallCallback(obj);
+                }
+                if (this.timer == null) {
+                    this.timer = Stopwatch.StartNew();
                 }
                 if (this.timer.ElapsedMilliseconds > terminateNoImprovement_ms) {
                     this.model.Terminate();
