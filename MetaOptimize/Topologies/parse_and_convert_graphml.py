@@ -19,7 +19,7 @@ def read_graph_graphml(fname):
         G[u][v]['capacity'] = 1000.0
     return G
 
-def write_graph_json(G, fname):
+def write_graph_json(G: nx.Graph, fname):
     assert fname.endswith('json')
     with open(fname, 'w') as w:
         json.dump(json_graph.node_link_data(G), w)
@@ -27,8 +27,9 @@ def write_graph_json(G, fname):
 
 
 print("Hi")
-fname = '/mnt/d/Pooria/risk-aware-automitigation/traffic_engineering/ncflow/topologies/topology-zoo/Ion.graphml'
-G = read_graph_graphml(fname)
-fname = '/mnt/d/Pooria/risk-aware-automitigation/traffic_engineering/ncflow/topologies/topology-zoo/Ion.json'
-write_graph_json(G, fname)
-
+topo_name_list = ["GtsCe", "Cogentco"]
+for topo_name in topo_name_list:
+    fname = f'../../../ncflow/topologies/topology-zoo/{topo_name}.graphml'
+    G = read_graph_graphml(fname)
+    fname = f'./{topo_name}.json'
+    write_graph_json(G, fname)
