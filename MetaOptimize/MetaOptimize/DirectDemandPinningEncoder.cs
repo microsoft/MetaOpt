@@ -99,13 +99,11 @@ namespace MetaOptimize
         /// Create a new instance of the <see cref="OptimalEncoder{TVar, TSolution}"/> class.
         /// </summary>
         /// <param name="solver">The solver.</param>
-        /// <param name="topology">The network topology.</param>
         /// <param name="k">The max number of paths between nodes.</param>
         /// <param name="threshold"> The threshold to use for demand pinning.</param>
-        public DirectDemandPinningEncoder(ISolver<TVar, TSolution> solver, Topology topology, int k, double threshold = 0)
+        public DirectDemandPinningEncoder(ISolver<TVar, TSolution> solver, int k, double threshold = 0)
         {
             this.Solver = solver;
-            this.Topology = topology;
             this.K = k;
             this.Threshold = threshold;
         }
@@ -177,10 +175,11 @@ namespace MetaOptimize
         /// Encode the problem.
         /// </summary>
         /// <returns>The constraints and maximization objective.</returns>
-        public OptimizationEncoding<TVar, TSolution> Encoding(Dictionary<(string, string), Polynomial<TVar>> preDemandVariables = null,
+        public OptimizationEncoding<TVar, TSolution> Encoding(Topology topology, Dictionary<(string, string), Polynomial<TVar>> preDemandVariables = null,
             Dictionary<(string, string), double> demandEqualityConstraints = null, bool noAdditionalConstraints = false,
-            InnerEncodingMethodChoice innerEncoding = InnerEncodingMethodChoice.KKT)
+            InnerEncodingMethodChoice innerEncoding = InnerEncodingMethodChoice.KKT, bool verbose = false)
         {
+            this.Topology = topology;
             InitializeVariables(demandEqualityConstraints);
             // Compute the maximum demand M.
             // Since we don't know the demands we have to be very conservative.

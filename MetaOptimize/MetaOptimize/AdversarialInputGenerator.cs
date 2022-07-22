@@ -56,19 +56,15 @@ namespace MetaOptimize
         /// <summary>
         /// Find an adversarial input that maximizes the optimality gap between two optimizations.
         /// </summary>
-        /// <param name="optimalEncoder">The optimal encoder.</param>
-        /// <param name="heuristicEncoder">The heuristic encoder.</param>
-        /// <param name="demandUB">upper bound on all the demands.</param>
-        /// <param name="innerEncoding">The method for encoding the inner problem.</param>
-        /// <param name="demandList">the quantized list of demands, will only use if method=PrimalDual.</param>
-        /// <param name="simplify">will simplify the final solution if this parameter is true.</param>,
         public (OptimizationSolution, OptimizationSolution) MaximizeOptimalityGap(
             IEncoder<TVar, TSolution> optimalEncoder,
             IEncoder<TVar, TSolution> heuristicEncoder,
             double demandUB = -1,
             InnerEncodingMethodChoice innerEncoding = InnerEncodingMethodChoice.KKT,
             ISet<double> demandList = null,
-            bool simplify = false)
+            IDictionary<(string, string), double> constrainedDemands = null,
+            bool simplify = false,
+            bool verbose = false)
         {
             if (optimalEncoder.Solver != heuristicEncoder.Solver)
             {
@@ -82,18 +78,79 @@ namespace MetaOptimize
             var solver = optimalEncoder.Solver;
             solver.CleanAll();
 
+            Utils.logger("creating demand variables.", verbose);
             CreateDemandVariables(solver, innerEncoding, demandList);
-            var optimalEncoding = optimalEncoder.Encoding(preDemandVariables: this.DemandVariables, innerEncoding: innerEncoding);
-            var heuristicEncoding = heuristicEncoder.Encoding(preDemandVariables: this.DemandVariables, innerEncoding: innerEncoding);
+            Utils.logger("generating optimal encoding.", verbose);
+            var optimalEncoding = optimalEncoder.Encoding(this.Topology, preDemandVariables: this.DemandVariables, innerEncoding: innerEncoding, verbose: verbose);
+            Utils.logger("generating heuristic encoding.", verbose);
+            var heuristicEncoding = heuristicEncoder.Encoding(this.Topology, preDemandVariables: this.DemandVariables, innerEncoding: innerEncoding, verbose: verbose);
 
             // ensures that demand in both problems is the same and lower than demand upper bound constraint.
+            Utils.logger("adding constraints for upper bound on demands.", verbose);
             EnsureDemandUB(solver, demandUB);
+            Utils.logger("adding equality constraints for specified demands.", verbose);
+            EnsureDemandEquality(solver, constrainedDemands);
 
+            // var pairNameToConstraintMapping = new Dictionary<(string, string), string>();
+            // foreach (var (pair, demandVar) in this.DemandVariables) {
+            //     var constrName = solver.AddLeqZeroConstraint(demandVar);
+            //     pairNameToConstraintMapping[pair] = constrName;
+            // }
             // var objectiveVariable = solver.CreateVariable("objective");
+            Utils.logger("setting the objective.", verbose);
             var objective = new Polynomial<TVar>(
                         new Term<TVar>(1, optimalEncoding.GlobalObjective),
                         new Term<TVar>(-1, heuristicEncoding.GlobalObjective));
-            var solution = solver.Maximize(objective);
+            var solution = solver.Maximize(objective, reset: true);
+
+            // var allNodeNames = this.Topology.GetAllNodes();
+            // if (demandUB < 0) {
+            //     demandUB = this.K * this.Topology.MaxCapacity();
+            // }
+
+            // var newBstGapFound = false;
+            // var iterNo = 0;
+            // var currBstGap = 0.0;
+            // var rng = new Random();
+            // do {
+            //     var seenNodes = new HashSet<string>();
+            //     var prevBstGap = currBstGap;
+            //     newBstGapFound = false;
+            //     var randomized1 = allNodeNames.OrderBy(item => rng.Next()).ToList<string>();
+            //     var randomized2 = allNodeNames.OrderBy(item => rng.Next()).ToList<string>();
+            //     foreach (var id in Enumerable.Range(0, allNodeNames.Count())) {
+            //         var node1 = randomized1[id];
+            //         var node2 = randomized2[id];
+            //         Utils.logger("== greedy iteration " + iterNo + " demand from " + node1 + " and " + node2 + " curr bst gap=" + currBstGap + " prev bst gap=" + prevBstGap, verbose);
+            //         foreach (var (pair, demandVar) in this.DemandVariables) {
+            //             if (pair.Item1.Equals(node1) || pair.Item1.Equals(node2)) {
+            //                 // Console.WriteLine("[INFO] setting demand from " + pair.Item1 + " to " + pair.Item2 + " max!!");
+            //                 solver.ChangeConstraintRHS(pairNameToConstraintMapping[pair], demandUB);
+            //             }
+            //         }
+            //         solution = solver.Maximize(objective, reset: true);
+            //         // solution = SimplifyAdversarialInputs(simplify, optimalEncoder, heuristicEncoder, solution, objective);
+            //         var demands = optimalEncoder.GetSolution(solution).Demands;
+            //         var currGap = optimalEncoder.GetSolution(solution).TotalDemandMet - heuristicEncoder.GetSolution(solution).TotalDemandMet;
+            //         if (currGap >= currBstGap + 0.01) {
+            //             currBstGap = currGap;
+            //             newBstGapFound = true;
+            //         }
+            //         seenNodes.Add(node1);
+            //         seenNodes.Add(node2);
+            //         foreach (var (pair, rate) in demands) {
+            //             if (seenNodes.Contains(pair.Item1)) {
+            //                 // Console.WriteLine("[INFO] setting demand from " + pair.Item1 + " to " + pair.Item2 + " = " + rate + "!!");
+            //                 solver.ChangeConstraintRHS(pairNameToConstraintMapping[pair], rate);
+            //                 // var ratePoly = this.DemandVariables[pair].Copy();
+            //                 // ratePoly.Add(new Term<TVar>(-1 * rate));
+            //                 // solver.AddEqZeroConstraint(ratePoly);
+            //             }
+            //         }
+            //     }
+            //     iterNo += 1;
+            // } while (newBstGapFound);
+
             solution = SimplifyAdversarialInputs(simplify, optimalEncoder, heuristicEncoder, solution, objective);
             return (optimalEncoder.GetSolution(solution), heuristicEncoder.GetSolution(solution));
 
@@ -108,6 +165,57 @@ namespace MetaOptimize
             Console.WriteLine();
             Console.WriteLine("Optimal (Pop):");
             heuristicEncoder.DisplaySolution(solution); */
+        }
+
+        /// <summary>
+        /// Maximize optimality gap with clustering method used for scale up.
+        /// </summary>
+        public (OptimizationSolution, OptimizationSolution) MaximizeOptimalityGapWithClustering(
+            List<Topology> clusters,
+            IEncoder<TVar, TSolution> optimalEncoder,
+            IEncoder<TVar, TSolution> heuristicEncoder,
+            double demandUB = -1,
+            InnerEncodingMethodChoice innerEncoding = InnerEncodingMethodChoice.KKT,
+            ISet<double> demandList = null,
+            bool simplify = false,
+            bool verbose = false)
+        {
+            var seenNode = new HashSet<string>();
+            foreach (var cluster in clusters) {
+                foreach (var node in cluster.GetAllNodes()) {
+                    if (seenNode.Contains(node)) {
+                        throw new Exception("duplicate nodes over two clusters");
+                    }
+                    seenNode.Add(node);
+                }
+            }
+            if (seenNode.Count() != this.Topology.GetAllNodes().Count()) {
+                throw new Exception("missmatch between number of nodes in original problem and clustered version");
+            }
+
+            var demandMatrix = new Dictionary<(string, string), double>();
+            foreach (var cluster in clusters) {
+                optimalEncoder.Solver.CleanAll();
+                Utils.logger("Cluster with " + cluster.GetAllNodes().Count() + " nodes and " + cluster.GetAllEdges().Count() + " edges", verbose);
+                var adversarialInputGenerator = new AdversarialInputGenerator<TVar, TSolution>(cluster, this.K);
+                var clusterResult = adversarialInputGenerator.MaximizeOptimalityGap(optimalEncoder, heuristicEncoder, demandUB, innerEncoding, demandList: demandList,
+                        simplify: simplify, verbose: verbose);
+                foreach (var pair in cluster.GetNodePairs()) {
+                    if (demandMatrix.ContainsKey(pair)) {
+                        throw new Exception("cluster are not independepnt");
+                    }
+                    demandMatrix[pair] = clusterResult.Item1.Demands[pair];
+                }
+            }
+
+            foreach (var pair in this.Topology.GetNodePairs()) {
+                if (!demandMatrix.ContainsKey(pair)) {
+                    demandMatrix[pair] = 0;
+                }
+            }
+            var output = GetGap(optimalEncoder, heuristicEncoder, demandMatrix);
+            Utils.logger("Final gap: " + output.Item1, verbose);
+            return output.Item2;
         }
 
         /// <summary>
@@ -141,8 +249,8 @@ namespace MetaOptimize
             solver.CleanAll();
 
             CreateDemandVariables(solver, innerEncoding, demandList);
-            var optimalEncoding = optimalEncoder.Encoding(this.DemandVariables);
-            var heuristicEncoding = heuristicEncoder.Encoding(this.DemandVariables);
+            var optimalEncoding = optimalEncoder.Encoding(this.Topology, this.DemandVariables);
+            var heuristicEncoding = heuristicEncoder.Encoding(this.Topology, this.DemandVariables);
 
             if (optimalEncoder.Solver != heuristicEncoder.Solver)
             {
@@ -196,8 +304,26 @@ namespace MetaOptimize
             }
         }
 
+        private void EnsureDemandEquality(
+            ISolver<TVar, TSolution> solver,
+            IDictionary<(string, string), double> constrainedDemands)
+        {
+            if (constrainedDemands == null) {
+                return;
+            }
+            foreach (var (pair, demand) in constrainedDemands) {
+                var demandVar = this.DemandVariables[pair];
+                var poly = demandVar.Copy();
+                poly.Add(new Term<TVar>(-1 * demand));
+                solver.AddEqZeroConstraint(poly);
+            }
+        }
+
         private void CreateDemandVariables(ISolver<TVar, TSolution> solver, InnerEncodingMethodChoice innerEncoding, ISet<double> demandList) {
             this.DemandVariables = new Dictionary<(string, string), Polynomial<TVar>>();
+            Console.WriteLine("[INFO] In total " + this.Topology.GetNodePairs().Count() + " pairs");
+            // var sumAllAuxVars = new Polynomial<TVar>(new Term<TVar>(-0.01 * this.Topology.GetNodePairs().Count()));
+            // var sumAllAuxVars = new Polynomial<TVar>(new Term<TVar>(-5));
             foreach (var pair in this.Topology.GetNodePairs())
             {
                 switch (innerEncoding) {
@@ -209,9 +335,10 @@ namespace MetaOptimize
                         var axVariableConstraint = new Polynomial<TVar>(new Term<TVar>(-1));
                         var demandLvlEnforcement = new Polynomial<TVar>();
                         foreach (double demandlvl in demandList) {
-                            var demandAuxVar = solver.CreateVariable("aux_demand_" + pair.Item1 + "_" + pair.Item2);
+                            var demandAuxVar = solver.CreateVariable("aux_demand_" + pair.Item1 + "_" + pair.Item2, type: GRB.BINARY);
                             demandLvlEnforcement.Add(new Term<TVar>(demandlvl, demandAuxVar));
                             axVariableConstraint.Add(new Term<TVar>(1, demandAuxVar));
+                            // sumAllAuxVars.Add(new Term<TVar>(1, demandAuxVar));
                         }
                         solver.AddLeqZeroConstraint(axVariableConstraint);
                         this.DemandVariables[pair] = demandLvlEnforcement;
@@ -220,6 +347,7 @@ namespace MetaOptimize
                         throw new Exception("wrong method for inner problem encoder!");
                 }
             }
+            // solver.AddLeqZeroConstraint(sumAllAuxVars);
         }
 
         /// <summary>
@@ -243,22 +371,23 @@ namespace MetaOptimize
         {
             if (optimalEncoder.Solver != heuristicEncoder.Solver)
             {
-                throw new System.Exception("Solver mismatch....");
+                throw new System.Exception("[ERROR] Solver mismatch....");
             }
 
             if (startGap <= 0.001)
             {
-                throw new System.Exception("Starting Gap too small...");
+                throw new System.Exception("[ERROR] Starting Gap too small...");
             }
             var solver = optimalEncoder.Solver;
             solver.CleanAll();
 
             CreateDemandVariables(solver, innerEncoding, demandList);
-            var optimalEncoding = optimalEncoder.Encoding(this.DemandVariables);
-            var heuristicEncoding = heuristicEncoder.Encoding(this.DemandVariables);
+            var optimalEncoding = optimalEncoder.Encoding(this.Topology, this.DemandVariables);
+            var heuristicEncoding = heuristicEncoder.Encoding(this.Topology, this.DemandVariables);
 
             // ensures that demand in both problems is the same and lower than demand upper bound constraint.
             EnsureDemandUB(solver, demandUB);
+
             // setting demand as objective
             var objective = new Polynomial<TVar>(
                         new Term<TVar>(1, optimalEncoding.GlobalObjective),
@@ -317,13 +446,13 @@ namespace MetaOptimize
         {
             // solving the hueristic for the demand
             heuristicEncoder.Solver.CleanAll();
-            var encodingHeuristic = heuristicEncoder.Encoding(demandEqualityConstraints: demands, noAdditionalConstraints: true);
+            var encodingHeuristic = heuristicEncoder.Encoding(this.Topology, demandEqualityConstraints: demands, noAdditionalConstraints: true);
             var solverSolutionHeuristic = heuristicEncoder.Solver.Maximize(encodingHeuristic.MaximizationObjective);
             var optimizationSolutionHeuristic = heuristicEncoder.GetSolution(solverSolutionHeuristic);
 
             // solving the optimal for the demand
             optimalEncoder.Solver.CleanAll();
-            var encodingOptimal = optimalEncoder.Encoding(demandEqualityConstraints: demands, noAdditionalConstraints: true);
+            var encodingOptimal = optimalEncoder.Encoding(this.Topology, demandEqualityConstraints: demands, noAdditionalConstraints: true);
             var solverSolutionOptimal = optimalEncoder.Solver.Maximize(encodingOptimal.MaximizationObjective);
             var optimizationSolutionOptimal = optimalEncoder.GetSolution(solverSolutionOptimal);
             double currGap = optimizationSolutionOptimal.TotalDemandMet - optimizationSolutionHeuristic.TotalDemandMet;

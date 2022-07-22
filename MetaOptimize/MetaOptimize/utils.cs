@@ -108,6 +108,48 @@ namespace MetaOptimize {
         }
 
         /// <summary>
+        /// log state.
+        /// </summary>
+        public enum LogState
+        {
+            /// <summary>
+            /// info.
+            /// </summary>
+            INFO,
+            /// <summary>
+            /// warning.
+            /// </summary>
+            WARNING,
+            /// <summary>
+            /// error.
+            /// </summary>
+            ERROR,
+        }
+        /// <summary>
+        /// logger for storing output.
+        /// </summary>
+        public static void logger(string line, bool verbose, LogState state = LogState.INFO)
+        {
+            string output = "";
+            switch (state)
+            {
+                case LogState.INFO:
+                    output += "[INFO]";
+                    break;
+                case LogState.WARNING:
+                    output += "[WARNING]";
+                    break;
+                case LogState.ERROR:
+                    output += "[ERROR]";
+                    break;
+                default:
+                    throw new Exception("state value is not valid");
+            }
+            output += " " + line;
+            WriteToConsole(output, verbose);
+        }
+
+        /// <summary>
         /// store progress if store progress is true.
         /// </summary>
         public static void StoreProgress(string path, string line, bool storeProgress) {

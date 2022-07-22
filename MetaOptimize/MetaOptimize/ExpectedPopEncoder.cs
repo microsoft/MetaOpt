@@ -62,7 +62,7 @@ namespace MetaOptimize
         /// <summary>
         /// Create a new instance of the <see cref="ExpectedPopEncoder{TVar, TSolution}"/> class.
         /// </summary>
-        public ExpectedPopEncoder(ISolver<TVar, TSolution> solver, Topology topology, int k, int numSamples, int numPartitionsPerSample,
+        public ExpectedPopEncoder(ISolver<TVar, TSolution> solver, int k, int numSamples, int numPartitionsPerSample,
                 IList<IDictionary<(string, string), int>> demandPartitionsList)
         {
             if (numSamples <= 0) {
@@ -75,7 +75,6 @@ namespace MetaOptimize
                 throw new Exception("number of samples does not match the available partitionings in demandPartitionsList");
             }
             this.Solver = solver;
-            this.Topology = topology;
             this.K = k;
             this.NumSamples = numSamples;
             this.numPartitionsPerSample = numPartitionsPerSample;
@@ -83,8 +82,7 @@ namespace MetaOptimize
             this.PoPEncoders = new PopEncoder<TVar, TSolution>[this.NumSamples];
 
             for (int i = 0; i < this.NumSamples; i++) {
-                this.PoPEncoders[i] = new PopEncoder<TVar, TSolution>(solver, topology, k, this.numPartitionsPerSample,
-                        this.DemandParitionsList[i]);
+                this.PoPEncoders[i] = new PopEncoder<TVar, TSolution>(solver, k, this.numPartitionsPerSample, this.DemandParitionsList[i]);
             }
         }
 
@@ -107,15 +105,24 @@ namespace MetaOptimize
         /// Encode the problem.
         /// </summary>
         /// <returns>The constraints and maximization objective.</returns>
-        public OptimizationEncoding<TVar, TSolution> Encoding(Dictionary<(string, string), Polynomial<TVar>> preDemandVariables = null,
+        public OptimizationEncoding<TVar, TSolution> Encoding(Topology topology, Dictionary<(string, string), Polynomial<TVar>> preDemandVariables = null,
             Dictionary<(string, string), double> demandEqualityConstraints = null, bool noAdditionalConstraints = false,
-            InnerEncodingMethodChoice innerEncoding = InnerEncodingMethodChoice.KKT)
+            InnerEncodingMethodChoice innerEncoding = InnerEncodingMethodChoice.KKT, bool verbose = false)
         {
+            this.Topology = topology;
             InitializeVariables(preDemandVariables, demandEqualityConstraints);
+
+            // Enforcing demands to be zero
+            // List<string> validSources = new List<string>() { "0", "1" };
+            // foreach (var pair in this.Topology.GetNodePairs()) {
+            //     if (!validSources.Contains(pair.Item1)) {
+            //         this.Solver.AddEqZeroConstraint(this.DemandVariables[pair]);
+            //     }
+            // }
             // Encoding each of the PoP samples
             var encodings = new OptimizationEncoding<TVar, TSolution>[this.NumSamples];
             for (int i = 0; i < this.NumSamples; i++) {
-                encodings[i] = this.PoPEncoders[i].Encoding(this.DemandVariables, demandEqualityConstraints, noAdditionalConstraints, innerEncoding);
+                encodings[i] = this.PoPEncoders[i].Encoding(this.Topology, this.DemandVariables, demandEqualityConstraints, noAdditionalConstraints, innerEncoding);
             }
             // computing the objective value
             var objectiveVariable = this.Solver.CreateVariable("average_objective_pop");

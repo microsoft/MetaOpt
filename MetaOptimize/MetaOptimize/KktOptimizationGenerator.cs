@@ -103,21 +103,17 @@ namespace MetaOptimize
         /// <summary>
         /// Get the KKT constraints for maximal solution.
         /// </summary>
-        /// <param name="objective">The objective.</param>
-        /// <param name="noKKT"> To not solve through KKT.</param>
         /// <returns>The result as a Zen boolean expression.</returns>
-        public void AddMaximizationConstraints(Polynomial<TVar> objective, bool noKKT = false)
+        public void AddMaximizationConstraints(Polynomial<TVar> objective, bool noKKT = false, bool verbose = false)
         {
-            this.AddMinimizationConstraints(objective.Negate(), noKKT);
+            this.AddMinimizationConstraints(objective.Negate(), noKKT, verbose);
         }
 
         /// <summary>
         /// Get the KKT constraints for minimal solution.
         /// </summary>
-        /// <param name="objective">The objective.</param>
-        /// <param name="noKKT"> To not solve through KKT.</param>
         /// <returns>The result as a Zen boolean expression.</returns>
-        public virtual void AddMinimizationConstraints(Polynomial<TVar> objective, bool noKKT)
+        public virtual void AddMinimizationConstraints(Polynomial<TVar> objective, bool noKKT, bool verbose = false)
         {
             foreach (var leqZeroConstraint in this.leqZeroConstraints)
             {

@@ -71,12 +71,10 @@ namespace MetaOptimize
         /// Create a new instance of the <see cref="OptimalEncoder{TVar, TSolution}"/> class.
         /// </summary>
         /// <param name="solver">The solver.</param>
-        /// <param name="topology">The network topology.</param>
         /// <param name="k">The max number of paths between nodes.</param>
-        public OptimalEncoder(ISolver<TVar, TSolution>  solver, Topology topology, int k)
+        public OptimalEncoder(ISolver<TVar, TSolution>  solver, int k)
         {
             this.Solver = solver;
-            this.Topology = topology;
             this.K = k;
         }
 
@@ -165,11 +163,13 @@ namespace MetaOptimize
         /// Encode the problem.
         /// </summary>
         /// <returns>The constraints and maximization objective.</returns>
-        public OptimizationEncoding<TVar, TSolution> Encoding(Dictionary<(string, string), Polynomial<TVar>> preDemandVariables = null,
+        public OptimizationEncoding<TVar, TSolution> Encoding(Topology topology, Dictionary<(string, string), Polynomial<TVar>> preDemandVariables = null,
             Dictionary<(string, string), double> demandEqualityConstraints = null, bool noAdditionalConstraints = false,
-            InnerEncodingMethodChoice innerEncoding = InnerEncodingMethodChoice.KKT)
+            InnerEncodingMethodChoice innerEncoding = InnerEncodingMethodChoice.KKT, bool verbose = false)
         {
             // Initialize Variables for the encoding
+            Utils.logger("initializing variables", verbose);
+            this.Topology = topology;
             InitializeVariables(preDemandVariables, demandEqualityConstraints, innerEncoding);
             // Compute the maximum demand M.
             // Since we don't know the demands we have to be very conservative.
@@ -177,6 +177,7 @@ namespace MetaOptimize
             // var maxDemand = this.Topology.MaxCapacity() * this.K * 2;
 
             // Ensure that sum_k f_k = total_demand.
+            Utils.logger("ensuring sum_k f_k = total demand", verbose);
             var polynomial = new Polynomial<TVar>();
             foreach (var pair in this.Topology.GetNodePairs())
             {
@@ -197,6 +198,7 @@ namespace MetaOptimize
             // }
 
             // Ensure that the demand constraints are respected
+            Utils.logger("ensuring demand constraints are respected", verbose);
             foreach (var (pair, constant) in this.DemandConstraints)
             {
                 if (constant <= 0) {
@@ -209,6 +211,7 @@ namespace MetaOptimize
 
             // Ensure that f_k geq 0.
             // Ensure that f_k leq d_k.
+            Utils.logger("ensuring flows are within a correct range.", verbose);
             foreach (var (pair, variable) in this.FlowVariables)
             {
                 // this.kktEncoder.AddLeqZeroConstraint(new Polynomial<TVar>(new Term<TVar>(-1, variable)));
@@ -218,6 +221,7 @@ namespace MetaOptimize
             }
 
             // Ensure that f_k^p geq 0.
+            Utils.logger("ensuring sum_k f_k^p geq 0", verbose);
             foreach (var (pair, paths) in this.Paths)
             {
                 foreach (var path in paths)
@@ -228,6 +232,7 @@ namespace MetaOptimize
 
             // Ensure that nodes that are not connected have no flow or demand.
             // This is needed for not fully connected topologies.
+            Utils.logger("ensuring disconnected nodes do not have any flow", verbose);
             foreach (var (pair, paths) in this.Paths)
             {
                 if (paths.Length == 0)
@@ -238,6 +243,7 @@ namespace MetaOptimize
             }
 
             // Ensure that the flow f_k = sum_p f_k^p.
+            Utils.logger("ensuring f_k = sum_p f_k^p", verbose);
             foreach (var (pair, paths) in this.Paths)
             {
                 var poly = new Polynomial<TVar>(new Term<TVar>(0));
@@ -258,6 +264,7 @@ namespace MetaOptimize
             //     sumPerEdge[edge] = new Polynomial<TVar>(new Term<TVar>(0));
             // }
 
+            Utils.logger("ensuring capacity constraints", verbose);
             foreach (var (pair, paths) in this.Paths)
             {
                 foreach (var path in paths)
@@ -282,9 +289,11 @@ namespace MetaOptimize
                 this.innerProblemEncoder.AddLeqZeroConstraint(total);
             }
 
+            Utils.logger("generating full constraints", verbose);
             // Generate the full constraints.
             var objective = new Polynomial<TVar>(new Term<TVar>(1, this.TotalDemandMetVariable));
-            this.innerProblemEncoder.AddMaximizationConstraints(objective, noAdditionalConstraints);
+            Utils.logger("calling inner encoder", verbose);
+            this.innerProblemEncoder.AddMaximizationConstraints(objective, noAdditionalConstraints, verbose);
 
             // Optimization objective is the total demand met.
             // Return the encoding, including the feasibility constraints, objective, and KKT conditions.

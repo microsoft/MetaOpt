@@ -35,8 +35,8 @@ namespace MetaOptimize.Test
             var partition = new Dictionary<(string, string), int>();
             partition.Add(("a", "b"), 0);
             partition.Add(("b", "a"), 1);
-            var popEncoder = new PopEncoder<TVar, TSol>(CreateSolver(), topology, k: 1, numPartitions: 2, demandPartitions: partition);
-            var encoding = popEncoder.Encoding();
+            var popEncoder = new PopEncoder<TVar, TSol>(CreateSolver(), k: 1, numPartitions: 2, demandPartitions: partition);
+            var encoding = popEncoder.Encoding(topology);
             var solverSolution = popEncoder.Solver.Maximize(encoding.GlobalObjective);
             var optimizationSolution = popEncoder.GetSolution(solverSolution);
 
@@ -69,9 +69,9 @@ namespace MetaOptimize.Test
             var partition = topology.RandomPartition(2);
             // create the optimal encoder.
             var solver = CreateSolver();
-            var optimalEncoder = new OptimalEncoder<TVar, TSol>(solver, topology, k: 1);
+            var optimalEncoder = new OptimalEncoder<TVar, TSol>(solver, k: 1);
 
-            var popEncoderG = new PopEncoder<TVar, TSol>(solver, topology, k: 1, numPartitions: 2, demandPartitions: partition);
+            var popEncoderG = new PopEncoder<TVar, TSol>(solver, k: 1, numPartitions: 2, demandPartitions: partition);
             var adversarialInputGenerator = new AdversarialInputGenerator<TVar, TSol>(topology, k: 1);
 
             var (optimalSolutionG, popSolutionG) = adversarialInputGenerator.MaximizeOptimalityGap(optimalEncoder, popEncoderG);

@@ -68,12 +68,11 @@ namespace MetaOptimize
         /// Create a new instance of the <see cref="PopEncoder{TVar, TSolution}"/> class.
         /// </summary>
         /// <param name="solver">The solver to use.</param>
-        /// <param name="topology">The network topology.</param>
         /// <param name="k">The max number of paths between nodes.</param>
         /// <param name="numPartitions">The number of partitions.</param>
         /// <param name="demandPartitions">The demand partitions.</param>
         /// <param name="partitionSensitivity">how different total demands can be in each partition.</param>
-        public PopEncoder(ISolver<TVar, TSolution> solver, Topology topology, int k, int numPartitions, IDictionary<(string, string), int> demandPartitions,
+        public PopEncoder(ISolver<TVar, TSolution> solver, int k, int numPartitions, IDictionary<(string, string), int> demandPartitions,
             double partitionSensitivity = -1)
         {
             if (numPartitions <= 0)
@@ -90,9 +89,7 @@ namespace MetaOptimize
             }
 
             this.Solver = solver;
-            this.Topology = topology;
             this.K = k;
-            this.ReducedTopology = topology.SplitCapacity(numPartitions);
             this.NumPartitions = numPartitions;
             this.DemandPartitions = demandPartitions;
             this.PartitionSensitivity = partitionSensitivity;
@@ -101,7 +98,7 @@ namespace MetaOptimize
 
             for (int i = 0; i < this.NumPartitions; i++)
             {
-                this.PartitionEncoders[i] = new OptimalEncoder<TVar, TSolution>(solver, this.ReducedTopology, this.K);
+                this.PartitionEncoders[i] = new OptimalEncoder<TVar, TSolution>(solver, this.K);
             }
         }
 
@@ -136,10 +133,12 @@ namespace MetaOptimize
         /// Encode the problem.
         /// </summary>
         /// <returns>The constraints and maximization objective.</returns>
-        public OptimizationEncoding<TVar, TSolution> Encoding(Dictionary<(string, string), Polynomial<TVar>> preDemandVariables = null,
+        public OptimizationEncoding<TVar, TSolution> Encoding(Topology topology, Dictionary<(string, string), Polynomial<TVar>> preDemandVariables = null,
             Dictionary<(string, string), double> demandEqualityConstraints = null, bool noAdditionalConstraints = false,
-            InnerEncodingMethodChoice innerEncoding = InnerEncodingMethodChoice.KKT)
+            InnerEncodingMethodChoice innerEncoding = InnerEncodingMethodChoice.KKT, bool verbose = false)
         {
+            this.Topology = topology;
+            this.ReducedTopology = topology.SplitCapacity(this.NumPartitions);
             InitializeVariables(preDemandVariables, demandEqualityConstraints);
             var encodings = new OptimizationEncoding<TVar, TSolution>[NumPartitions];
 
@@ -149,11 +148,11 @@ namespace MetaOptimize
                 Dictionary<(string, string), Polynomial<TVar>> partitionPreDemandVariables = null;
                 partitionPreDemandVariables = new Dictionary<(string, string), Polynomial<TVar>>();
                 foreach (var (pair, partitionID) in this.DemandPartitions) {
-                    if (partitionID == i) {
+                    if (partitionID == i & this.Topology.GetAllNodes().Contains(pair.Item1) & this.Topology.GetAllNodes().Contains(pair.Item2)) {
                         partitionPreDemandVariables[pair] = this.DemandVariables[pair];
                     }
                 }
-                encodings[i] = this.PartitionEncoders[i].Encoding(partitionPreDemandVariables, this.perPartitionDemandConstraints[i], noAdditionalConstraints: noAdditionalConstraints,
+                encodings[i] = this.PartitionEncoders[i].Encoding(this.ReducedTopology, partitionPreDemandVariables, this.perPartitionDemandConstraints[i], noAdditionalConstraints: noAdditionalConstraints,
                                                                 innerEncoding: innerEncoding);
             }
 

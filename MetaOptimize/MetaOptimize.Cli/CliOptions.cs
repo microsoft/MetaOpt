@@ -35,6 +35,18 @@ namespace MetaOptimize.Cli
         public SolverChoice SolverChoice { get; set; }
 
         /// <summary>
+        /// inner encoding (KKT or PrimalDual).
+        /// </summary>
+        [Option('e', "innerencoding", Default = InnerEncodingMethodChoice.KKT, HelpText = "Method to use for inner encoding.")]
+        public InnerEncodingMethodChoice InnerEncoding { get; set; }
+
+        /// <summary>
+        /// demand list (only applies for PrimalDual).
+        /// </summary>
+        [Option('d', "demandlist", Default = "0", HelpText = "quantized list of demands (only applies to PrimalDual -- should separate value with ',' no space).")]
+        public String DemandList { get; set; }
+
+        /// <summary>
         /// whether to simplify the final solution or not.
         /// </summary>
         [Option('s', "simplify", Default = false, HelpText = "Whether to simplify the final solution or not")]
@@ -123,6 +135,24 @@ namespace MetaOptimize.Cli
         /// </summary>
         [Option('l', "lambda", Default = 1, HelpText = "temperature decrease factor for simulated annealing.")]
         public double TmpDecreaseFactor { get; set; }
+
+        /// <summary>
+        /// enable clustering breakdown.
+        /// </summary>
+        [Option('c', "enableclustering", Default = false, HelpText = "enabling clustering for scale.")]
+        public bool EnableClustering { get; set; }
+
+        /// <summary>
+        /// cluster directory.
+        /// </summary>
+        [Option('j', "clusterdir", Default = null, HelpText = "cluster lvl topo directory")]
+        public string ClusterDir { get; set; }
+
+        /// <summary>
+        /// num clusters.
+        /// </summary>
+        [Option('j', "numclusters", Default = null, HelpText = "number of clusters")]
+        public int NumClusters { get; set; }
 
         /// <summary>
         /// seed.

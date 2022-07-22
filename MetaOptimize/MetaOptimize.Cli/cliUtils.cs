@@ -24,19 +24,20 @@ namespace MetaOptimize.Cli {
                     }
                     Console.WriteLine("Exploring pop heuristic");
                     if (DirectEncoder) {
-                        heuristicEncoder = new OptimalEncoder<TVar, TSolution>(solver, topology.SplitCapacity(numSlices), numPaths);
+                        heuristicEncoder = new OptimalEncoder<TVar, TSolution>(solver, numPaths);
+                        throw new Exception("should verify the above implementation...");
                     } else {
-                        heuristicEncoder = new PopEncoder<TVar, TSolution>(solver, topology, numPaths, numSlices, partition, partitionSensitivity: partitionSensitivity);
+                        heuristicEncoder = new PopEncoder<TVar, TSolution>(solver, numPaths, numSlices, partition, partitionSensitivity: partitionSensitivity);
                     }
                     break;
                 case Heuristic.DemandPinning:
                     Console.WriteLine("Exploring demand pinning heuristic");
                     if (DirectEncoder) {
                         Console.WriteLine("Direct DP");
-                        heuristicEncoder = new DirectDemandPinningEncoder<TVar, TSolution>(solver, topology, numPaths, demandPinningThreshold);
+                        heuristicEncoder = new DirectDemandPinningEncoder<TVar, TSolution>(solver, numPaths, demandPinningThreshold);
                     } else {
                         Console.WriteLine("Indirect DP");
-                        heuristicEncoder = new DemandPinningEncoder<TVar, TSolution>(solver, topology, numPaths, demandPinningThreshold);
+                        heuristicEncoder = new DemandPinningEncoder<TVar, TSolution>(solver, numPaths, demandPinningThreshold);
                     }
                     break;
                 case Heuristic.ExpectedPop:
@@ -47,7 +48,7 @@ namespace MetaOptimize.Cli {
                         }
                     }
                     Console.WriteLine("Exploring the expected pop heuristic");
-                    heuristicEncoder = new ExpectedPopEncoder<TVar, TSolution>(solver, topology, numPaths, numSamples, numSlices, partitionsList);
+                    heuristicEncoder = new ExpectedPopEncoder<TVar, TSolution>(solver, numPaths, numSamples, numSlices, partitionsList);
                     break;
                 default:
                     throw new Exception("No heuristic selected.");
@@ -65,7 +66,7 @@ namespace MetaOptimize.Cli {
             solver.CleanAll();
             var (heuristicEncoder, _, _) = getHeuristic<TVar, TSolution>(solver, topology, Heuristic.DemandPinning,
                 numPaths, demandPinningThreshold: threshold);
-            var optimalEncoder = new OptimalEncoder<TVar, TSolution>(solver, topology, numPaths);
+            var optimalEncoder = new OptimalEncoder<TVar, TSolution>(solver, numPaths);
             var adversarialInputGenerator = new AdversarialInputGenerator<TVar, TSolution>(topology, numPaths);
             (OptimizationSolution, OptimizationSolution) result =
                 adversarialInputGenerator.MaximizeOptimalityGap(optimalEncoder, heuristicEncoder);
@@ -84,14 +85,14 @@ namespace MetaOptimize.Cli {
             solver.CleanAll();
             var (heuristicEncoder, _, _) = getHeuristic<TVar, TSolution>(solver, topology, Heuristic.DemandPinning,
                 numPaths, demandPinningThreshold: threshold);
-            var heuristicEncoding = heuristicEncoder.Encoding(demandEqualityConstraints: demands, noAdditionalConstraints: true);
+            var heuristicEncoding = heuristicEncoder.Encoding(topology, demandEqualityConstraints: demands, noAdditionalConstraints: true);
             var solverSolutionHeuristic = heuristicEncoder.Solver.Maximize(heuristicEncoding.MaximizationObjective);
             var optimizationSolutionHeuristic = heuristicEncoder.GetSolution(solverSolutionHeuristic);
             var heuristicDemandMet = optimizationSolutionHeuristic.TotalDemandMet;
-            var optimalEncoder = new OptimalEncoder<TVar, TSolution>(solver, topology, numPaths);
-            var optimalEncoding = optimalEncoder.Encoding(demandEqualityConstraints: demands, noAdditionalConstraints: true);
+            var optimalEncoder = new OptimalEncoder<TVar, TSolution>(solver, numPaths);
+            var optimalEncoding = optimalEncoder.Encoding(topology, demandEqualityConstraints: demands, noAdditionalConstraints: true);
             var solverSolutionOptimal = optimalEncoder.Solver.Maximize(optimalEncoding.MaximizationObjective);
-            var optimizationSolutionOptimal = optimalEncoder.GetSolution(solverSolutionHeuristic);
+            var optimizationSolutionOptimal = optimalEncoder.GetSolution(solverSolutionOptimal);
             var optimalDemandMet = optimizationSolutionOptimal.TotalDemandMet;
             return (optimalDemandMet, heuristicDemandMet);
         }
