@@ -110,6 +110,7 @@ namespace MetaOptimize
             InnerEncodingMethodChoice innerEncoding = InnerEncodingMethodChoice.KKT, bool verbose = false)
         {
             this.Topology = topology;
+            Utils.logger("initializing variables for pop encoder.", verbose);
             InitializeVariables(preDemandVariables, demandEqualityConstraints);
 
             // Enforcing demands to be zero
@@ -122,7 +123,9 @@ namespace MetaOptimize
             // Encoding each of the PoP samples
             var encodings = new OptimizationEncoding<TVar, TSolution>[this.NumSamples];
             for (int i = 0; i < this.NumSamples; i++) {
-                encodings[i] = this.PoPEncoders[i].Encoding(this.Topology, this.DemandVariables, demandEqualityConstraints, noAdditionalConstraints, innerEncoding);
+                Utils.logger(string.Format("generating pop encoding for sample {0}.", i), verbose);
+                encodings[i] = this.PoPEncoders[i].Encoding(this.Topology, this.DemandVariables, demandEqualityConstraints, noAdditionalConstraints, innerEncoding,
+                                                            verbose: verbose);
             }
             // computing the objective value
             var objectiveVariable = this.Solver.CreateVariable("average_objective_pop");

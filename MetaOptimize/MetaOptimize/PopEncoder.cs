@@ -145,6 +145,7 @@ namespace MetaOptimize
             // get all the separate encodings.
             for (int i = 0; i < this.NumPartitions; i++)
             {
+                Utils.logger(string.Format("generating pop encoding for partition {0}.", i), verbose);
                 Dictionary<(string, string), Polynomial<TVar>> partitionPreDemandVariables = null;
                 partitionPreDemandVariables = new Dictionary<(string, string), Polynomial<TVar>>();
                 foreach (var (pair, partitionID) in this.DemandPartitions) {
@@ -153,7 +154,7 @@ namespace MetaOptimize
                     }
                 }
                 encodings[i] = this.PartitionEncoders[i].Encoding(this.ReducedTopology, partitionPreDemandVariables, this.perPartitionDemandConstraints[i], noAdditionalConstraints: noAdditionalConstraints,
-                                                                innerEncoding: innerEncoding);
+                                                                innerEncoding: innerEncoding, verbose: verbose);
             }
 
             // create new demand variables as the sum of the individual partitions.
@@ -162,7 +163,12 @@ namespace MetaOptimize
             foreach (var pair in this.Topology.GetNodePairs())
             {
                 int partitionID = this.DemandPartitions[pair];
-                demandVariables[pair] = this.PartitionEncoders[partitionID].DemandVariables[pair];
+                if (this.PartitionEncoders[partitionID].DemandVariables.ContainsKey(pair)) {
+                    demandVariables[pair] = this.PartitionEncoders[partitionID].DemandVariables[pair];
+                } else {
+                    demandVariables[pair] = new Polynomial<TVar>();
+                }
+
                 if (!partitionToTotalDemand.ContainsKey(partitionID)) {
                     partitionToTotalDemand[partitionID] = new Polynomial<TVar>();
                 }

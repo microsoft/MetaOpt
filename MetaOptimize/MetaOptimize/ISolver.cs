@@ -148,5 +148,10 @@ namespace MetaOptimize
         /// </summary>
         /// <returns>A solution.</returns>
         public TSolution CheckFeasibility(double objectiveValue);
+
+        /// <summary>
+        /// Call the model update to apply new constraints and objectives.
+        /// </summary>
+        public void ModelUpdate();
     }
 }

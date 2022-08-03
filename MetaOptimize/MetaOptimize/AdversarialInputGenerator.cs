@@ -8,6 +8,7 @@ namespace MetaOptimize
     using System.Collections.Generic;
     using System.Diagnostics;
     using System.Linq;
+    using System.Threading;
     using Gurobi;
 
     /// <summary>
@@ -64,7 +65,9 @@ namespace MetaOptimize
             ISet<double> demandList = null,
             IDictionary<(string, string), double> constrainedDemands = null,
             bool simplify = false,
-            bool verbose = false)
+            bool verbose = false,
+            bool cleanUpSolver = true,
+            IDictionary<(string, string), double> perDemandUB = null)
         {
             if (optimalEncoder.Solver != heuristicEncoder.Solver)
             {
@@ -74,9 +77,14 @@ namespace MetaOptimize
             {
                 throw new Exception("should provide the demand list if inner encoding method is primal dual.");
             }
+            if (demandUB != -1 & perDemandUB != null) {
+                throw new Exception("if global demand ub is enabled, then perDemandUB should be null");
+            }
 
             var solver = optimalEncoder.Solver;
-            solver.CleanAll();
+            if (cleanUpSolver) {
+                solver.CleanAll();
+            }
 
             Utils.logger("creating demand variables.", verbose);
             CreateDemandVariables(solver, innerEncoding, demandList);
@@ -87,7 +95,11 @@ namespace MetaOptimize
 
             // ensures that demand in both problems is the same and lower than demand upper bound constraint.
             Utils.logger("adding constraints for upper bound on demands.", verbose);
-            EnsureDemandUB(solver, demandUB);
+            if (perDemandUB != null) {
+                EnsureDemandUB(solver, perDemandUB);
+            } else {
+                EnsureDemandUB(solver, demandUB);
+            }
             Utils.logger("adding equality constraints for specified demands.", verbose);
             EnsureDemandEquality(solver, constrainedDemands);
 
@@ -170,13 +182,175 @@ namespace MetaOptimize
         /// <summary>
         /// Maximize optimality gap with clustering method used for scale up.
         /// </summary>
-        public (OptimizationSolution, OptimizationSolution) MaximizeOptimalityGapWithClustering(
+        public (OptimizationSolution, OptimizationSolution) MaximizeOptimalityGapWithClusteringV2(
             List<Topology> clusters,
             IEncoder<TVar, TSolution> optimalEncoder,
             IEncoder<TVar, TSolution> heuristicEncoder,
             double demandUB = -1,
+            int numInterClusterSamples = 0,
+            int numNodePerCluster = 0,
             InnerEncodingMethodChoice innerEncoding = InnerEncodingMethodChoice.KKT,
             ISet<double> demandList = null,
+            IDictionary<(string, string), double> constrainedDemands = null,
+            bool simplify = false,
+            bool verbose = false)
+        {
+            var seenNode = new HashSet<string>();
+            foreach (var cluster in clusters) {
+                foreach (var node in cluster.GetAllNodes()) {
+                    if (seenNode.Contains(node)) {
+                        throw new Exception("duplicate nodes over two clusters");
+                    }
+                    seenNode.Add(node);
+                }
+            }
+            if (seenNode.Count() != this.Topology.GetAllNodes().Count()) {
+                throw new Exception("missmatch between number of nodes in original problem and clustered version");
+            }
+            if (constrainedDemands == null) {
+                constrainedDemands = new Dictionary<(string, string), double>();
+            }
+
+            var solver = optimalEncoder.Solver;
+            solver.CleanAll();
+            Utils.logger("creating demand variables.", verbose);
+            CreateDemandVariables(solver, innerEncoding, demandList);
+            Utils.logger("generating optimal encoding.", verbose);
+            var optimalEncoding = optimalEncoder.Encoding(this.Topology, preDemandVariables: this.DemandVariables, innerEncoding: innerEncoding, verbose: verbose);
+            Utils.logger("generating heuristic encoding.", verbose);
+            var heuristicEncoding = heuristicEncoder.Encoding(this.Topology, preDemandVariables: this.DemandVariables, innerEncoding: innerEncoding, verbose: verbose);
+
+            // ensures that demand in both problems is the same and lower than demand upper bound constraint.
+            Utils.logger("adding constraints for upper bound on demands.", verbose);
+            EnsureDemandUB(solver, demandUB);
+            Utils.logger("adding equality constraints for specified demands.", verbose);
+            EnsureDemandEquality(solver, constrainedDemands);
+
+            var pairNameToConstraintMapping = new Dictionary<(string, string), string>();
+            foreach (var (pair, demandVar) in this.DemandVariables) {
+                if (constrainedDemands.ContainsKey(pair)) {
+                    continue;
+                }
+                var constrName = solver.AddLeqZeroConstraint(demandVar);
+                pairNameToConstraintMapping[pair] = constrName;
+            }
+            solver.ModelUpdate();
+
+            if (demandUB < 0) {
+                demandUB = this.K * this.Topology.MaxCapacity();
+            }
+
+            var demandMatrix = new Dictionary<(string, string), double>();
+            // find gap for all the clusters
+            foreach (var cluster in clusters) {
+                Utils.logger(
+                    string.Format("finding adversarial demand for cluster with {0} nodes and {1} edges", cluster.GetAllNodes().Count(), cluster.GetAllEdges().Count()),
+                    verbose);
+                foreach (var pair in cluster.GetNodePairs()) {
+                    if (constrainedDemands.ContainsKey(pair)) {
+                        continue;
+                    }
+                    solver.ChangeConstraintRHS(pairNameToConstraintMapping[pair], demandUB);
+                }
+                Utils.logger("setting the objective.", verbose);
+                var objective = new Polynomial<TVar>(
+                            new Term<TVar>(1, optimalEncoding.GlobalObjective),
+                            new Term<TVar>(-1, heuristicEncoding.GlobalObjective));
+                var solution = solver.Maximize(objective, reset: true);
+                var optimalSolution = optimalEncoder.GetSolution(solution);
+                foreach (var pair in cluster.GetNodePairs()) {
+                    if (demandMatrix.ContainsKey(pair)) {
+                        throw new Exception("clusters are not independent...");
+                    }
+                    demandMatrix[pair] = optimalSolution.Demands[pair];
+                    // AddSingleDemandEquality(solver, pair, demandMatrix[pair]);
+                    AddSingleDemandUB(solver, pair, demandMatrix[pair]);
+                }
+
+                if (verbose) {
+                    var numPairs = 0.0;
+                    var numNonZeroDemands = 0.0;
+                    foreach (var pair in cluster.GetNodePairs()) {
+                        var demand = demandMatrix[pair];
+                        if (demand > 0) {
+                            numNonZeroDemands += 1;
+                        }
+                        numPairs += 1;
+                    }
+                    Utils.logger(
+                        string.Format("fraction of non zero demands {0}", numNonZeroDemands / numPairs),
+                        verbose);
+                }
+            }
+
+            for (int cid1 = 0; cid1 < clusters.Count(); cid1++) {
+                for (int cid2 = cid1 + 1; cid2 < clusters.Count(); cid2++) {
+                    Utils.logger(
+                        string.Format("inter-cluster adversarial demand between cluster {0} and cluster {1}", cid1, cid2),
+                        verbose);
+                    var cluster1Nodes = clusters[cid1].GetAllNodes().ToList();
+                    var cluster2Nodes = clusters[cid2].GetAllNodes().ToList();
+                    foreach (var node1 in cluster1Nodes) {
+                        foreach (var node2 in cluster2Nodes) {
+                            if (constrainedDemands.ContainsKey((node1, node2))) {
+                                continue;
+                            }
+                            solver.ChangeConstraintRHS(pairNameToConstraintMapping[(node1, node2)], demandUB);
+
+                            if (constrainedDemands.ContainsKey((node2, node1))) {
+                                continue;
+                            }
+                            solver.ChangeConstraintRHS(pairNameToConstraintMapping[(node2, node1)], demandUB);
+                        }
+                    }
+                    Utils.logger("setting the objective.", verbose);
+                    var objective = new Polynomial<TVar>(
+                                new Term<TVar>(1, optimalEncoding.GlobalObjective),
+                                new Term<TVar>(-1, heuristicEncoding.GlobalObjective));
+                    var solution = solver.Maximize(objective, reset: true);
+                    var optimalSolution = optimalEncoder.GetSolution(solution);
+                    foreach (var node1 in cluster1Nodes) {
+                        foreach (var node2 in cluster2Nodes) {
+                            if (demandMatrix.ContainsKey((node1, node2)) || demandMatrix.ContainsKey((node2, node1))) {
+                                throw new Exception("duplicate inter-cluster pairs in demand matrix.");
+                            }
+                            demandMatrix[(node1, node2)] = optimalSolution.Demands[(node1, node2)];
+                            demandMatrix[(node2, node1)] = optimalSolution.Demands[(node2, node1)];
+
+                            // AddSingleDemandEquality(solver, (node1, node2), demandMatrix[(node1, node2)]);
+                            // AddSingleDemandEquality(solver, (node2, node1), demandMatrix[(node2, node1)]);
+                            AddSingleDemandUB(solver, (node1, node2), demandMatrix[(node1, node2)]);
+                            AddSingleDemandUB(solver, (node2, node1), demandMatrix[(node2, node1)]);
+                        }
+                    }
+                }
+            }
+
+            foreach (var pair in this.Topology.GetNodePairs()) {
+                if (!demandMatrix.ContainsKey(pair)) {
+                    demandMatrix[pair] = 0;
+                }
+            }
+            var output = GetGap(optimalEncoder, heuristicEncoder, demandMatrix);
+            Utils.logger("Final gap: " + output.Item1, verbose);
+            return output.Item2;
+        }
+
+        /// <summary>
+        /// Maximize optimality gap with clustering method used for scale up.
+        /// First Optimizes all the clusters. Then, uses random sampling for.
+        /// inter-cluster traffic.
+        /// </summary>
+        public (OptimizationSolution, OptimizationSolution) MaximizeOptimalityGapWithClusteringV1(
+            List<Topology> clusters,
+            IEncoder<TVar, TSolution> optimalEncoder,
+            IEncoder<TVar, TSolution> heuristicEncoder,
+            double demandUB = -1,
+            int numInterClusterSamples = 0,
+            int numNodePerCluster = 0,
+            InnerEncodingMethodChoice innerEncoding = InnerEncodingMethodChoice.KKT,
+            ISet<double> demandList = null,
+            IDictionary<(string, string), double> constrainedDemands = null,
             bool simplify = false,
             bool verbose = false)
         {
@@ -193,6 +367,10 @@ namespace MetaOptimize
                 throw new Exception("missmatch between number of nodes in original problem and clustered version");
             }
 
+            if (constrainedDemands != null) {
+                throw new Exception("the constrained demand option is not implemented yet!!!");
+            }
+
             var demandMatrix = new Dictionary<(string, string), double>();
             foreach (var cluster in clusters) {
                 optimalEncoder.Solver.CleanAll();
@@ -205,6 +383,301 @@ namespace MetaOptimize
                         throw new Exception("cluster are not independepnt");
                     }
                     demandMatrix[pair] = clusterResult.Item1.Demands[pair];
+                }
+            }
+
+            if (numInterClusterSamples > 0) {
+                Debug.Assert(numNodePerCluster > 0);
+                if (verbose) {
+                    var preDemandMatrix = new Dictionary<(string, string), double>();
+                    foreach (var pair in this.Topology.GetNodePairs()) {
+                        if (demandMatrix.ContainsKey(pair)) {
+                            preDemandMatrix[pair] = demandMatrix[pair];
+                        } else {
+                            preDemandMatrix[pair] = 0;
+                        }
+                    }
+                    var preInterCluster = GetGap(optimalEncoder, heuristicEncoder, preDemandMatrix);
+                    Utils.logger("pre inter-cluster gap: " + preInterCluster.Item1, verbose);
+                }
+                var solver = optimalEncoder.Solver;
+                solver.CleanAll();
+                Utils.logger("creating demand variables.", verbose);
+                CreateDemandVariables(solver, innerEncoding, demandList);
+                Utils.logger("generating optimal encoding.", verbose);
+                var optimalEncoding = optimalEncoder.Encoding(this.Topology, preDemandVariables: this.DemandVariables, demandEqualityConstraints: demandMatrix,
+                                        innerEncoding: innerEncoding, verbose: verbose);
+                Utils.logger("generating heuristic encoding.", verbose);
+                var heuristicEncoding = heuristicEncoder.Encoding(this.Topology, preDemandVariables: this.DemandVariables, demandEqualityConstraints: demandMatrix,
+                                        innerEncoding: innerEncoding, verbose: verbose);
+
+                // ensures that demand in both problems is the same and lower than demand upper bound constraint.
+                Utils.logger("adding constraints for upper bound on demands.", verbose);
+                EnsureDemandUB(solver, demandUB);
+                Utils.logger("adding equality constraints for specified demands.", verbose);
+                EnsureDemandEquality(solver, constrainedDemands);
+
+                var pairNameToConstraintMapping = new Dictionary<(string, string), string>();
+                foreach (var (pair, demandVar) in this.DemandVariables) {
+                    if (demandMatrix.ContainsKey(pair)) {
+                        continue;
+                    }
+                    var constrName = solver.AddLeqZeroConstraint(demandVar);
+                    pairNameToConstraintMapping[pair] = constrName;
+                }
+
+                // Console.WriteLine("adding eq = 0 for {0}", string.Join(",", pairNameToConstraintMapping.Keys));
+                // var objectiveVariable = solver.CreateVariable("objective");
+                var rng = new Random();
+                for (int l = 0; l < numInterClusterSamples; l++) {
+                    Utils.logger(
+                        string.Format("trying the {0}-th set of inter-cluster nodes each of size {1}", l, numNodePerCluster), verbose);
+                    solver.ModelUpdate();
+                    var interClusterNodes = new List<List<string>>();
+                    foreach (var cluster in clusters) {
+                        var nodeNames = cluster.GetAllNodes().ToList();
+                        var repNodes = new List<string>();
+                        for (int i = 0; i < numNodePerCluster; i++) {
+                            var idx = rng.Next(nodeNames.Count());
+                            repNodes.Add(nodeNames[idx]);
+                        }
+                        Console.WriteLine(String.Format("cluster rep nodes; {0}", string.Join("_", repNodes)));
+                        interClusterNodes.Add(repNodes);
+                    }
+
+                    if (demandUB < 0) {
+                        demandUB = this.K * this.Topology.MaxCapacity();
+                    }
+
+                    var currPairs = new HashSet<(string, string)>();
+                    for (int cid1 = 0; cid1 < clusters.Count(); cid1++) {
+                        for (int cid2 = cid1 + 1; cid2 < clusters.Count(); cid2++) {
+                            var cluster1Nodes = interClusterNodes[cid1];
+                            var cluster2Nodes = interClusterNodes[cid2];
+                            foreach (var node1 in cluster1Nodes) {
+                                foreach (var node2 in cluster2Nodes) {
+                                    // Console.WriteLine(string.Format("node 1 {0} cluster {1} node 2 {2} cluster {3}",
+                                    //         node1, cid1, node2, cid2));
+                                    solver.ChangeConstraintRHS(pairNameToConstraintMapping[(node1, node2)], demandUB);
+                                    solver.ChangeConstraintRHS(pairNameToConstraintMapping[(node2, node1)], demandUB);
+                                    currPairs.Add((node1, node2));
+                                    currPairs.Add((node2, node1));
+                                }
+                            }
+                        }
+                    }
+
+                    Utils.logger("setting the objective.", verbose);
+                    var objective = new Polynomial<TVar>(
+                                new Term<TVar>(1, optimalEncoding.GlobalObjective),
+                                new Term<TVar>(-1, heuristicEncoding.GlobalObjective));
+                    var solution = solver.Maximize(objective, reset: true);
+                    var optimalSolution = optimalEncoder.GetSolution(solution);
+                    foreach (var pair in this.Topology.GetNodePairs()) {
+                        if (demandMatrix.ContainsKey(pair)) {
+                            // Console.WriteLine(demandMatrix[pair].ToString() + " " + optimalSolution.Demands[pair].ToString());
+                            if (optimalSolution.Demands.ContainsKey(pair)) {
+                                Debug.Assert(Math.Abs(demandMatrix[pair] - optimalSolution.Demands[pair]) <= 0.001);
+                            } else {
+                                Debug.Assert(demandMatrix[pair] <= 0.001);
+                            }
+                        } else if (currPairs.Contains(pair)) {
+                            demandMatrix[pair] = optimalSolution.Demands[pair];
+                            var ratePoly = this.DemandVariables[pair].Copy();
+                            ratePoly.Add(new Term<TVar>(-1 * demandMatrix[pair]));
+                            solver.AddEqZeroConstraint(ratePoly);
+                            // Utils.logger(
+                            //     string.Format("demand from {0} to {1} is: {2}", pair.Item1, pair.Item2, demandMatrix[pair]),
+                            //     verbose);
+                        }
+                    }
+                }
+            }
+
+            foreach (var pair in this.Topology.GetNodePairs()) {
+                if (!demandMatrix.ContainsKey(pair)) {
+                    demandMatrix[pair] = 0;
+                }
+            }
+            var output = GetGap(optimalEncoder, heuristicEncoder, demandMatrix);
+            Utils.logger("Final gap: " + output.Item1, verbose);
+            return output.Item2;
+        }
+
+        /// <summary>
+        /// Maximize optimality gap with clustering method used for scale up.
+        /// First optimizes each cluster. Then, finds the optimal input for the
+        /// inter-cluster traffic on abstracted topology and randomly assings the
+        /// flows to each cluster.
+        /// </summary>
+        public (OptimizationSolution, OptimizationSolution) MaximizeOptimalityGapWithClusteringV3(
+            List<Topology> clusters,
+            IEncoder<TVar, TSolution> optimalEncoder,
+            IEncoder<TVar, TSolution> heuristicEncoder,
+            double demandUB = -1,
+            int numInterClusterSamples = 0,
+            int numNodePerCluster = 0,
+            InnerEncodingMethodChoice innerEncoding = InnerEncodingMethodChoice.KKT,
+            ISet<double> demandList = null,
+            IDictionary<(string, string), double> constrainedDemands = null,
+            bool simplify = false,
+            bool verbose = false)
+        {
+            var seenNode = new HashSet<string>();
+            foreach (var cluster in clusters) {
+                foreach (var node in cluster.GetAllNodes()) {
+                    if (seenNode.Contains(node)) {
+                        throw new Exception("duplicate nodes over two clusters");
+                    }
+                    seenNode.Add(node);
+                }
+            }
+            if (seenNode.Count() != this.Topology.GetAllNodes().Count()) {
+                throw new Exception("missmatch between number of nodes in original problem and clustered version");
+            }
+
+            if (constrainedDemands != null) {
+                throw new Exception("the constrained demand option is not implemented yet!!!");
+            }
+
+            var demandMatrix = new Dictionary<(string, string), double>();
+            foreach (var cluster in clusters) {
+                optimalEncoder.Solver.CleanAll();
+                Utils.logger("Cluster with " + cluster.GetAllNodes().Count() + " nodes and " + cluster.GetAllEdges().Count() + " edges", verbose);
+                var clusterAdversarialInputGenerator = new AdversarialInputGenerator<TVar, TSolution>(cluster, this.K);
+                var clusterResult = clusterAdversarialInputGenerator.MaximizeOptimalityGap(optimalEncoder, heuristicEncoder, demandUB, innerEncoding, demandList: demandList,
+                        simplify: simplify, verbose: verbose);
+                foreach (var pair in cluster.GetNodePairs()) {
+                    if (demandMatrix.ContainsKey(pair)) {
+                        throw new Exception("cluster are not independepnt");
+                    }
+                    demandMatrix[pair] = clusterResult.Item1.Demands[pair];
+                }
+            }
+
+            if (verbose) {
+                var preDemandMatrix = new Dictionary<(string, string), double>();
+                foreach (var pair in this.Topology.GetNodePairs()) {
+                    if (demandMatrix.ContainsKey(pair)) {
+                        preDemandMatrix[pair] = demandMatrix[pair];
+                    } else {
+                        preDemandMatrix[pair] = 0;
+                    }
+                }
+                var preInterCluster = GetGap(optimalEncoder, heuristicEncoder, preDemandMatrix);
+                Utils.logger("pre inter-cluster gap: " + preInterCluster.Item1, verbose);
+            }
+
+            Utils.logger("starting to model abstracted topology", verbose);
+            var abstractTopology = new Topology();
+            var clusterToNoteID = new Dictionary<Topology, string>();
+            var clusterIDToCluster = new Dictionary<string, Topology>();
+            var nodeID = 0;
+            var clusterNumNodeList = new List<int>();
+            Utils.logger("creating abstracted topology", verbose);
+            foreach (var cluster in clusters) {
+                abstractTopology.AddNode(nodeID.ToString());
+                clusterToNoteID[cluster] = nodeID.ToString();
+                clusterIDToCluster[nodeID.ToString()] = cluster;
+                clusterNumNodeList.Add(cluster.GetAllNodes().Count());
+                nodeID++;
+            }
+
+            var edgeToCapacity = new Dictionary<(string, string), double>();
+            foreach (var edge in this.Topology.GetAllEdges()) {
+                edgeToCapacity[(edge.Source, edge.Target)] = edge.Capacity;
+            }
+
+            var pairToDemandUB = new Dictionary<(string, string), double>();
+            for (var cid1 = 0; cid1 < clusters.Count() - 1; cid1++) {
+                for (var cid2 = cid1 + 1; cid2 < clusters.Count(); cid2++) {
+                    var cluster1 = clusters[cid1];
+                    var cluster2 = clusters[cid2];
+                    var cluster1Nodes = cluster1.GetAllNodes();
+                    var cluster2Nodes = cluster2.GetAllNodes();
+                    var nodeID1 = clusterToNoteID[cluster1];
+                    var nodeID2 = clusterToNoteID[cluster2];
+                    var cap1To2 = 0.0;
+                    var cap2To1 = 0.0;
+                    foreach (var node1 in cluster1Nodes) {
+                        foreach (var node2 in cluster2Nodes) {
+                            if (edgeToCapacity.ContainsKey((node1, node2))) {
+                                cap1To2 += edgeToCapacity[(node1, node2)];
+                            }
+                            if (edgeToCapacity.ContainsKey((node2, node1))) {
+                                cap2To1 += edgeToCapacity[(node2, node1)];
+                            }
+                        }
+                    }
+                    if (cap1To2 > 0) {
+                        abstractTopology.AddEdge(nodeID1, nodeID2, cap1To2);
+                        pairToDemandUB[(nodeID1, nodeID2)] = cluster1Nodes.Count() * cluster2Nodes.Count();
+                        Utils.logger(
+                            string.Format("abstract topology edge from {0} to {1} with cap {2}", nodeID1, nodeID2, cap1To2),
+                            verbose);
+                    }
+                    if (cap2To1 > 0) {
+                        abstractTopology.AddEdge(nodeID2, nodeID1, cap2To1);
+                        pairToDemandUB[(nodeID2, nodeID1)] = cluster1Nodes.Count() * cluster2Nodes.Count();
+                        Utils.logger(
+                            string.Format("abstract topology edge from {1} to {0} with cap {2}", nodeID1, nodeID2, cap2To1),
+                            verbose);
+                    }
+                }
+            }
+
+            Utils.logger("computing updated demand list", verbose);
+            demandList.Add(0);
+            var abstractDemandList = new HashSet<double>(demandList);
+            var numLargestCluster = Math.Pow(clusterNumNodeList.Max(), 2);
+            for (int num1 = 1; num1 < numLargestCluster; num1++) {
+                var newDemandsToAdd = new HashSet<double>();
+                foreach (var demand1 in demandList) {
+                    foreach (var demand2 in abstractDemandList) {
+                        newDemandsToAdd.Add(demand1 + demand2);
+                    }
+                }
+                abstractDemandList = abstractDemandList.Union(newDemandsToAdd).ToHashSet();
+            }
+            Utils.logger(
+                string.Format("new demand list {0} max num cluster nodes {1}", string.Join("_", abstractDemandList), numLargestCluster),
+                verbose);
+
+            Utils.logger("Abstract topology with " + abstractTopology.GetAllNodes().Count() +
+                    " nodes and " + abstractTopology.GetAllEdges().Count() + " edges", verbose);
+            optimalEncoder.Solver.CleanAll();
+            var adversarialInputGenerator = new AdversarialInputGenerator<TVar, TSolution>(abstractTopology, this.K);
+            var abstractResult = adversarialInputGenerator.MaximizeOptimalityGap(optimalEncoder, heuristicEncoder,
+                    innerEncoding: innerEncoding, demandList: abstractDemandList, simplify: simplify, verbose: verbose, cleanUpSolver: false,
+                    perDemandUB: pairToDemandUB);
+
+            Utils.logger("Assigning Demands randomly...", verbose);
+            if (demandUB < 0) {
+                demandUB = this.K * this.Topology.MaxCapacity();
+            }
+
+            var rng = new Random();
+            foreach (var pair in abstractTopology.GetNodePairs()) {
+                var demandlvls = new HashSet<double>(demandList);
+                demandlvls.Remove(0);
+                var nodeCluster1 = clusterIDToCluster[pair.Item1].GetAllNodes().ToList();
+                var nodeCluster2 = clusterIDToCluster[pair.Item2].GetAllNodes().ToList();
+                var remDemand = abstractResult.Item1.Demands[pair];
+                Utils.logger(
+                    string.Format("demand from {0} to {1} in abstract topo = {2}", pair.Item1, pair.Item2, remDemand),
+                    verbose);
+                while (remDemand > 0.001) {
+                    var demand = demandlvls.ToList()[rng.Next(demandlvls.Count())];
+                    var node1 = nodeCluster1[rng.Next(nodeCluster1.Count())];
+                    var node2 = nodeCluster2[rng.Next(nodeCluster2.Count())];
+                    if (demandMatrix.ContainsKey((node1, node2)) || remDemand < demand) {
+                        continue;
+                    }
+                    demandMatrix[(node1, node2)] = demand;
+                    Utils.logger(
+                        string.Format("adding demand from {0} to {1} = {2}", node1, node2, demand),
+                        verbose);
+                    remDemand -= demand;
                 }
             }
 
@@ -287,7 +760,7 @@ namespace MetaOptimize
 
         private void EnsureDemandUB(
             ISolver<TVar, TSolution> solver,
-            double demandUB = -1)
+            double demandUB)
         {
             if (demandUB < 0) {
                 demandUB = double.PositiveInfinity;
@@ -304,6 +777,42 @@ namespace MetaOptimize
             }
         }
 
+        private void EnsureDemandUB(
+            ISolver<TVar, TSolution> solver,
+            IDictionary<(string, string), double> demandUB)
+        {
+            foreach (var (pair, perDemandUb) in demandUB) {
+                var ub = perDemandUb;
+                if (ub < 0) {
+                    ub = double.PositiveInfinity;
+                }
+                ub = Math.Min(this.Topology.MaxCapacity() * this.K, ub);
+                var poly = DemandVariables[pair].Copy();
+                poly.Add(new Term<TVar>(-1 * ub));
+                solver.AddLeqZeroConstraint(poly);
+            }
+        }
+
+        private void AddSingleDemandEquality(
+            ISolver<TVar, TSolution> solver,
+            (string, string) pair,
+            double demand)
+        {
+            var poly = this.DemandVariables[pair].Copy();
+            poly.Add(new Term<TVar>(-1 * demand));
+            solver.AddEqZeroConstraint(poly);
+        }
+
+        private void AddSingleDemandUB(
+            ISolver<TVar, TSolution> solver,
+            (string, string) pair,
+            double demand)
+        {
+            var poly = this.DemandVariables[pair].Copy();
+            poly.Add(new Term<TVar>(-1 * demand));
+            solver.AddLeqZeroConstraint(poly);
+        }
+
         private void EnsureDemandEquality(
             ISolver<TVar, TSolution> solver,
             IDictionary<(string, string), double> constrainedDemands)
@@ -312,10 +821,7 @@ namespace MetaOptimize
                 return;
             }
             foreach (var (pair, demand) in constrainedDemands) {
-                var demandVar = this.DemandVariables[pair];
-                var poly = demandVar.Copy();
-                poly.Add(new Term<TVar>(-1 * demand));
-                solver.AddEqZeroConstraint(poly);
+                AddSingleDemandEquality(solver, pair, demand);
             }
         }
 

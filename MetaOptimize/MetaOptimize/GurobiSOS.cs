@@ -281,13 +281,22 @@ namespace MetaOptimize
         }
 
         /// <summary>
+        /// Call the model update to apply new constraints and objectives.
+        /// </summary>
+        public void ModelUpdate()
+        {
+            this._model.Update();
+        }
+
+        /// <summary>
         /// wrapper that does type conversions then calls the original function.
         /// </summary>
         /// <param name="polynomial"></param>
         public string AddLeqZeroConstraint(Polynomial<GRBVar> polynomial)
         {
-            string name = "ineq_index_" + this._constraintIneqCount++;
-            this._model.AddConstr(this.Convert(polynomial), GRB.LESS_EQUAL, 0.0, name);
+            this._constraintIneqCount++;
+            string name = "ineq_index_" + this._constraintIneqCount;
+            var constr = this._model.AddConstr(this.Convert(polynomial), GRB.LESS_EQUAL, 0.0, name);
             return name;
         }
 

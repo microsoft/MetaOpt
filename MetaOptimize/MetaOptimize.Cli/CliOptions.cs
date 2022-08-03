@@ -155,6 +155,18 @@ namespace MetaOptimize.Cli
         public int NumClusters { get; set; }
 
         /// <summary>
+        /// num inter-cluster samples.
+        /// </summary>
+        [Option('j', "interclustersamples", Default = 0, HelpText = "number of inter cluster samples")]
+        public int NumInterClusterSamples { get; set; }
+
+        /// <summary>
+        /// num nodes per cluster for inter-cluster edges.
+        /// </summary>
+        [Option('j', "nodespercluster", Default = 0, HelpText = "number of nodes per cluster for inter-cluster edges")]
+        public int NumNodesPerCluster { get; set; }
+
+        /// <summary>
         /// seed.
         /// </summary>
         [Option('s', "seed", Default = 1, HelpText = "seed for random generator.")]

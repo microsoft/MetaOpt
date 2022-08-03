@@ -389,6 +389,15 @@ namespace MetaOptimize
         {
             // removed support for this. Check earlier git commits if you need it.
         }
+
+        /// <summary>
+        /// Call the model update to apply new constraints and objectives.
+        /// </summary>
+        public void ModelUpdate()
+        {
+            this._model.Update();
+        }
+
         /// <summary>
         /// Maximize the objective.
         /// </summary>

@@ -25,9 +25,21 @@ def write_graph_json(G: nx.Graph, fname):
         json.dump(json_graph.node_link_data(G), w)
 
 
+def read_graph_json(fname):
+    assert fname.endswith('json')
+    with open(fname, "r") as fp:
+        node_link_data = json.load(fp)
+    G = json_graph.node_link_graph(node_link_data)
+    return G
 
-print("Hi")
-topo_name_list = ["GtsCe", "Cogentco"]
+
+
+# print("Hi")
+topo_name_list = [
+    # "GtsCe", 
+    # "Cogentco",
+    "Kdl"
+]
 for topo_name in topo_name_list:
     fname = f'../../../ncflow/topologies/topology-zoo/{topo_name}.graphml'
     G = read_graph_graphml(fname)

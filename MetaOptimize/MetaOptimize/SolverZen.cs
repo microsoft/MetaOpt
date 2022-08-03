@@ -202,6 +202,14 @@ namespace MetaOptimize
         }
 
         /// <summary>
+        /// Call the model update to apply new constraints and objectives.
+        /// </summary>
+        public void ModelUpdate()
+        {
+            throw new Exception("not implemented!");
+        }
+
+        /// <summary>
         /// Get the resulting value assigned to a variable.
         /// </summary>
         /// <param name="objective">The solver solution.</param>

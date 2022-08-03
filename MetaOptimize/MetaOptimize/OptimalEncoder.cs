@@ -93,10 +93,10 @@ namespace MetaOptimize
             this.Paths = new Dictionary<(string, string), string[][]>();
             // establish the demand variables.
             this.DemandConstraints = demandEqualityConstraints ?? new Dictionary<(string, string), double>();
-            this.DemandVariables = preDemandVariables;
+            this.DemandVariables = new Dictionary<(string, string), Polynomial<TVar>>();
             var demandVariables = new HashSet<TVar>();
 
-            if (this.DemandVariables == null) {
+            if (preDemandVariables == null) {
                 this.DemandVariables = new Dictionary<(string, string), Polynomial<TVar>>();
                 foreach (var pair in this.Topology.GetNodePairs())
                 {
@@ -109,10 +109,11 @@ namespace MetaOptimize
                     demandVariables.Add(variable);
                 }
             } else {
-                foreach (var (pair, variable) in this.DemandVariables) {
+                foreach (var (pair, variable) in preDemandVariables) {
                     if (!IsDemandValid(pair)) {
                         continue;
                     }
+                    this.DemandVariables[pair] = variable;
                     foreach (var term in variable.Terms) {
                         this.variables.Add(term.Variable.Value);
                         demandVariables.Add(term.Variable.Value);
