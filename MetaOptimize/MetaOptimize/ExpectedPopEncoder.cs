@@ -86,7 +86,8 @@ namespace MetaOptimize
             }
         }
 
-        private void InitializeVariables(Dictionary<(string, string), Polynomial<TVar>> preDemandVariables, Dictionary<(string, string), double> demandEnforcements)
+        private void InitializeVariables(Dictionary<(string, string), Polynomial<TVar>> preDemandVariables,
+                Dictionary<(string, string), double> demandEnforcements)
         {
             // establish the demand variables.
             this.DemandVariables = preDemandVariables;
@@ -107,7 +108,7 @@ namespace MetaOptimize
         /// <returns>The constraints and maximization objective.</returns>
         public OptimizationEncoding<TVar, TSolution> Encoding(Topology topology, Dictionary<(string, string), Polynomial<TVar>> preDemandVariables = null,
             Dictionary<(string, string), double> demandEqualityConstraints = null, bool noAdditionalConstraints = false,
-            InnerEncodingMethodChoice innerEncoding = InnerEncodingMethodChoice.KKT, bool verbose = false)
+            InnerEncodingMethodChoice innerEncoding = InnerEncodingMethodChoice.KKT, int numProcesses = -1, bool verbose = false)
         {
             this.Topology = topology;
             Utils.logger("initializing variables for pop encoder.", verbose);
@@ -124,8 +125,9 @@ namespace MetaOptimize
             var encodings = new OptimizationEncoding<TVar, TSolution>[this.NumSamples];
             for (int i = 0; i < this.NumSamples; i++) {
                 Utils.logger(string.Format("generating pop encoding for sample {0}.", i), verbose);
-                encodings[i] = this.PoPEncoders[i].Encoding(this.Topology, this.DemandVariables, demandEqualityConstraints, noAdditionalConstraints, innerEncoding,
-                                                            verbose: verbose);
+                encodings[i] = this.PoPEncoders[i].Encoding(this.Topology, this.DemandVariables,
+                                                            demandEqualityConstraints, noAdditionalConstraints, innerEncoding,
+                                                            numProcesses: numProcesses, verbose: verbose);
             }
             // computing the objective value
             var objectiveVariable = this.Solver.CreateVariable("average_objective_pop");

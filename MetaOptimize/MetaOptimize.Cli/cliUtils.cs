@@ -61,13 +61,13 @@ namespace MetaOptimize.Cli {
         /// with specified parameters.
         /// </summary>
         public static (double, double, IDictionary<(string, string), double>) maximizeOptimalityGapDemandPinning<TVar, TSolution>(ISolver<TVar, TSolution> solver,
-            Topology topology, int numPaths, double threshold)
+            Topology topology, int numPaths, double threshold, int numProcessors)
         {
             solver.CleanAll();
             var (heuristicEncoder, _, _) = getHeuristic<TVar, TSolution>(solver, topology, Heuristic.DemandPinning,
                 numPaths, demandPinningThreshold: threshold);
             var optimalEncoder = new OptimalEncoder<TVar, TSolution>(solver, numPaths);
-            var adversarialInputGenerator = new AdversarialInputGenerator<TVar, TSolution>(topology, numPaths);
+            var adversarialInputGenerator = new AdversarialInputGenerator<TVar, TSolution>(topology, numPaths, numProcessors);
             (OptimizationSolution, OptimizationSolution) result =
                 adversarialInputGenerator.MaximizeOptimalityGap(optimalEncoder, heuristicEncoder);
             double optimal = result.Item1.TotalDemandMet;

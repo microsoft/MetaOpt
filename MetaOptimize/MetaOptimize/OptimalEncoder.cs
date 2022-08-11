@@ -88,7 +88,7 @@ namespace MetaOptimize
         }
 
         private void InitializeVariables(Dictionary<(string, string), Polynomial<TVar>> preDemandVariables, Dictionary<(string, string), double> demandEqualityConstraints,
-                InnerEncodingMethodChoice encodingMethod) {
+                InnerEncodingMethodChoice encodingMethod, int numProcesses, bool verbose) {
             this.variables = new HashSet<TVar>();
             this.Paths = new Dictionary<(string, string), string[][]>();
             // establish the demand variables.
@@ -127,6 +127,7 @@ namespace MetaOptimize
 
             this.FlowVariables = new Dictionary<(string, string), TVar>();
             this.FlowPathVariables = new Dictionary<string[], TVar>(new PathComparer());
+            this.Paths = this.Topology.AllPairsKShortestPathMultiProcessing(this.K, numProcesses: numProcesses, verbose: verbose);
             foreach (var pair in this.Topology.GetNodePairs())
             {
                 if (!IsDemandValid(pair)) {
@@ -136,10 +137,7 @@ namespace MetaOptimize
                 this.FlowVariables[pair] = this.Solver.CreateVariable("flow_" + pair.Item1 + "_" + pair.Item2);
                 this.variables.Add(this.FlowVariables[pair]);
 
-                var paths = this.Topology.ShortestKPaths(this.K, pair.Item1, pair.Item2);
-                this.Paths[pair] = paths;
-
-                foreach (var simplePath in paths)
+                foreach (var simplePath in this.Paths[pair])
                 {
                     // establish the flow path variables.
                     this.FlowPathVariables[simplePath] = this.Solver.CreateVariable("flowpath_" + string.Join("_", simplePath));
@@ -166,12 +164,12 @@ namespace MetaOptimize
         /// <returns>The constraints and maximization objective.</returns>
         public OptimizationEncoding<TVar, TSolution> Encoding(Topology topology, Dictionary<(string, string), Polynomial<TVar>> preDemandVariables = null,
             Dictionary<(string, string), double> demandEqualityConstraints = null, bool noAdditionalConstraints = false,
-            InnerEncodingMethodChoice innerEncoding = InnerEncodingMethodChoice.KKT, bool verbose = false)
+            InnerEncodingMethodChoice innerEncoding = InnerEncodingMethodChoice.KKT, int numProcesses = -1, bool verbose = false)
         {
             // Initialize Variables for the encoding
             Utils.logger("initializing variables", verbose);
             this.Topology = topology;
-            InitializeVariables(preDemandVariables, demandEqualityConstraints, innerEncoding);
+            InitializeVariables(preDemandVariables, demandEqualityConstraints, innerEncoding, numProcesses, verbose);
             // Compute the maximum demand M.
             // Since we don't know the demands we have to be very conservative.
             // var maxDemand = this.Topology.TotalCapacity() * 10;
@@ -225,6 +223,9 @@ namespace MetaOptimize
             Utils.logger("ensuring sum_k f_k^p geq 0", verbose);
             foreach (var (pair, paths) in this.Paths)
             {
+                if (!IsDemandValid(pair)) {
+                    continue;
+                }
                 foreach (var path in paths)
                 {
                     this.innerProblemEncoder.AddLeqZeroConstraint(new Polynomial<TVar>(new Term<TVar>(-1, this.FlowPathVariables[path])));
@@ -247,6 +248,9 @@ namespace MetaOptimize
             Utils.logger("ensuring f_k = sum_p f_k^p", verbose);
             foreach (var (pair, paths) in this.Paths)
             {
+                if (!IsDemandValid(pair)) {
+                    continue;
+                }
                 var poly = new Polynomial<TVar>(new Term<TVar>(0));
                 foreach (var path in paths)
                 {
@@ -268,6 +272,9 @@ namespace MetaOptimize
             Utils.logger("ensuring capacity constraints", verbose);
             foreach (var (pair, paths) in this.Paths)
             {
+                if (!IsDemandValid(pair)) {
+                    continue;
+                }
                 foreach (var path in paths)
                 {
                     for (int i = 0; i < path.Length - 1; i++)

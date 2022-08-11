@@ -155,6 +155,12 @@ namespace MetaOptimize.Cli
         public int NumClusters { get; set; }
 
         /// <summary>
+        /// inter-cluster method version.
+        /// </summary>
+        [Option('j', "clusterversion", Default = 1, HelpText = "version of clustering for inter-cluster demands")]
+        public int ClusterVersion { get; set; }
+
+        /// <summary>
         /// num inter-cluster samples.
         /// </summary>
         [Option('j', "interclustersamples", Default = 0, HelpText = "number of inter cluster samples")]
@@ -165,6 +171,18 @@ namespace MetaOptimize.Cli
         /// </summary>
         [Option('j', "nodespercluster", Default = 0, HelpText = "number of nodes per cluster for inter-cluster edges")]
         public int NumNodesPerCluster { get; set; }
+
+        /// <summary>
+        /// inter-cluster quantization lvls.
+        /// </summary>
+        [Option('j', "numinterclusterquantization", Default = -1, HelpText = "inter-cluster demands number of quantizations [only works for v3].")]
+        public int NumInterClusterQuantizations { get; set; }
+
+        /// <summary>
+        /// num processes.
+        /// </summary>
+        [Option('s', "numProcesses", Default = -1, HelpText = "num processes to use for.")]
+        public int NumProcesses { get; set; }
 
         /// <summary>
         /// seed.

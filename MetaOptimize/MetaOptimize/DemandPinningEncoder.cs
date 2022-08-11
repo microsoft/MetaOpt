@@ -120,7 +120,7 @@ namespace MetaOptimize
         }
 
         private void InitializeVariables(Dictionary<(string, string), Polynomial<TVar>> preDemandVariables, Dictionary<(string, string), double> demandConstraints,
-                InnerEncodingMethodChoice innerEncoding = InnerEncodingMethodChoice.KKT) {
+                InnerEncodingMethodChoice innerEncoding = InnerEncodingMethodChoice.KKT, int numProcesses = -1, bool verbose = false) {
             this.variables = new HashSet<TVar>();
             this.Paths = new Dictionary<(string, string), string[][]>();
             // establish the demand variables.
@@ -156,10 +156,9 @@ namespace MetaOptimize
             this.sumNonShortest = new Dictionary<(string, string), Polynomial<TVar>>();
             this.shortestFlowVariables = new Dictionary<(string, string), TVar>();
 
+            this.Paths = this.Topology.AllPairsKShortestPathMultiProcessing(this.K, numProcesses, verbose);
             foreach (var pair in this.Topology.GetNodePairs())
             {
-                var paths = this.Topology.ShortestKPaths(this.K, pair.Item1, pair.Item2);
-                this.Paths[pair] = paths;
                 if (!IsDemandValid(pair)) {
                     continue;
                 }
@@ -171,7 +170,7 @@ namespace MetaOptimize
                 this.sumNonShortest[pair] = new Polynomial<TVar>(new Term<TVar>(0));
 
                 var shortestPaths = this.Topology.ShortestKPaths(1, pair.Item1, pair.Item2);
-                foreach (var simplePath in paths)
+                foreach (var simplePath in this.Paths[pair])
                 {
                     // establish the flow path variables.
                     this.FlowPathVariables[simplePath] = this.Solver.CreateVariable("flowpath_" + string.Join("_", simplePath));
@@ -215,10 +214,10 @@ namespace MetaOptimize
         /// <returns>The constraints and maximization objective.</returns>
         public OptimizationEncoding<TVar, TSolution> Encoding(Topology topology, Dictionary<(string, string), Polynomial<TVar>> preDemandVariables = null,
             Dictionary<(string, string), double> demandConstraints = null, bool noAdditionalConstraints = false,
-            InnerEncodingMethodChoice innerEncoding = InnerEncodingMethodChoice.KKT, bool verbose = false)
+            InnerEncodingMethodChoice innerEncoding = InnerEncodingMethodChoice.KKT, int numProcesses = -1, bool verbose = false)
         {
             this.Topology = topology;
-            InitializeVariables(preDemandVariables, demandConstraints, innerEncoding);
+            InitializeVariables(preDemandVariables, demandConstraints, innerEncoding, numProcesses, verbose);
             // Compute the maximum demand M.
             // Since we don't know the demands we have to be very conservative.
             // var maxDemand = this.Topology.TotalCapacity() * 10;

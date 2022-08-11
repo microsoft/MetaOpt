@@ -5,9 +5,11 @@
 namespace MetaOptimize
 {
     using System;
+    using System.Collections.Concurrent;
     using System.Collections.Generic;
     using System.Collections.Immutable;
     using System.Linq;
+    using System.Threading;
     using QuikGraph;
     using QuikGraph.Algorithms.ShortestPath;
     using ZenLib;
@@ -65,6 +67,19 @@ namespace MetaOptimize
         public bool ContaintsEdge(string source, string target, double capacity)
         {
             return this.Graph.ContainsEdge(new EquatableTaggedEdge<string, double>(source, target, capacity));
+        }
+
+        /// <summary>
+        /// whether the graph contains the specified edge without knowing the capacity.
+        /// </summary>
+        public bool ContaintsEdge(string source, string target)
+        {
+            foreach (var edge in this.GetAllEdges()) {
+                if (edge.Source == source || edge.Target == target) {
+                    return true;
+                }
+            }
+            return false;
         }
 
         /// <summary>
@@ -186,7 +201,6 @@ namespace MetaOptimize
                 {
                     return Enumerable.Concat(Enumerable.Repeat(source, 1), p.Select(e => e.Target)).ToArray();
                 });
-
                 return paths.ToArray();
             }
             catch (QuikGraph.NoPathFoundException)
@@ -194,6 +208,78 @@ namespace MetaOptimize
                 return new string[0][];
             }
         }
+
+        /// <summary>
+        /// Compute the shortest k paths for a list of src-dst pairs.
+        /// </summary>
+        /// <param name="k">The maximum number of paths.</param>
+        /// <param name="pairList">list of src-dst pairs.</param>
+        /// <param name="output">to store output.</param>
+        /// <param name="pid">processor id for logging.</param>
+        /// <param name="verbose">enables detailed logging.</param>
+        public void ShortestKPathsForListPairs(int k, IEnumerable<(string, string)> pairList,
+                IDictionary<(string, string), string[][]> output, int pid = -1, bool verbose = false)
+        {
+            var path_dict = new Dictionary<(string, string), string[][]>();
+            Utils.logger("processor with pid " + pid + " starting to compute paths...", verbose);
+            foreach (var pair in pairList) {
+                Utils.logger("pid=" + pid + ": finding the paths between " + pair.Item1 + " and " + pair.Item2, verbose);
+                var paths = this.ShortestKPaths(k, pair.Item1, pair.Item2);
+                path_dict[pair] = paths;
+            }
+            path_dict.ToList().ForEach(pair => output[pair.Key] = pair.Value);
+            Utils.logger("processor with pid " + pid + " done with paths...", verbose);
+        }
+
+        /// <summary>
+        /// Compute the shortest k paths for all the pairs (multiprocessing).
+        /// </summary>
+        /// <param name="k">The maximum number of paths.</param>
+        /// <param name="numProcesses">The number of processors to use.</param>
+        /// <param name="verbose">To show detailed logs.</param>
+        public Dictionary<(string, string), string[][]> AllPairsKShortestPathMultiProcessing(int k,
+                int numProcesses = -1, bool verbose = false)
+        {
+            var output = new ConcurrentDictionary<(string, string), string[][]>();
+            if (numProcesses < 1) {
+                this.ShortestKPathsForListPairs(k, this.GetNodePairs(), output, verbose: verbose);
+                return output.ToDictionary(entry => entry.Key,
+                                           entry => entry.Value);
+            }
+            // dividing pairs among processes
+            Utils.logger("dividing pairs among processes", verbose);
+            var processToPairList = new Dictionary<int, List<(string, string)>>();
+            int pid = 0;
+            foreach (var pair in this.GetNodePairs()) {
+                if (!processToPairList.ContainsKey(pid)) {
+                    processToPairList[pid] = new List<(string, string)>();
+                }
+                processToPairList[pid].Add(pair);
+                pid = (pid + 1) % numProcesses;
+            }
+            // starting the processes;
+            var threadlist = new List<Thread>();
+            for (pid = 0; pid < numProcesses; pid++) {
+                Utils.logger(
+                    string.Format("creating process {0} with {1} pairs", pid, processToPairList[pid].Count()),
+                    verbose);
+                threadlist.Add(new Thread(() => ShortestKPathsForListPairs(k, processToPairList[pid], output, pid: pid, verbose: verbose)));
+                Utils.logger(
+                    string.Format("starting process {0} with {1} pairs", pid, processToPairList[pid].Count()),
+                    verbose);
+                threadlist[pid].Start();
+                Thread.Sleep(1000);
+            }
+            for (pid = 0; pid < numProcesses; pid++) {
+                Utils.logger(
+                    string.Format("waiting for process {0}", pid),
+                    verbose);
+                threadlist[pid].Join();
+            }
+            return output.ToDictionary(entry => entry.Key,
+                                        entry => entry.Value);
+        }
+
         /// <summary>
         /// Computes the average shortest path length.
         /// </summary>
