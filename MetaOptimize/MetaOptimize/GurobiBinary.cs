@@ -21,7 +21,7 @@ namespace MetaOptimize
         /// <param name="poly"></param>
         public Polynomial<GRBVar> scale(Polynomial<GRBVar> poly)
         {
-            foreach (var term in poly.Terms)
+            foreach (var term in poly.GetTerms())
             {
                 term.Coefficient *= this._scale;
             }

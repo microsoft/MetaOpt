@@ -207,7 +207,7 @@ namespace MetaOptimize
             var objective = new Polynomial<TVar>(new Term<TVar>(-1, objectiveVariable));
             foreach (var encoding in encodings)
             {
-                objective.Terms.Add(new Term<TVar>(1, encoding.GlobalObjective));
+                objective.Add(new Term<TVar>(1, encoding.GlobalObjective));
             }
 
             this.Solver.AddEqZeroConstraint(objective);
@@ -252,7 +252,7 @@ namespace MetaOptimize
             foreach (var (pair, poly) in this.DemandVariables)
             {
                 demands[pair] = 0;
-                foreach (var term in poly.Terms) {
+                foreach (var term in poly.GetTerms()) {
                     demands[pair] += this.Solver.GetVariable(solution, term.Variable.Value) * term.Coefficient;
                 }
             }

@@ -5,23 +5,26 @@
 namespace MetaOptimize
 {
     using System.Collections.Generic;
-    using System.Linq;
-    using ZenLib;
+    using System.Diagnostics;
+    using System.Threading;
 
     /// <summary>
     /// An optimization encoder that automatically adds the primal-dual conditions.
     /// </summary>
     public class PrimalDualOptimizationGenerator<TVar, TSolution> : KktOptimizationGenerator<TVar, TSolution>
     {
+        private int NumProcesses = -1;
         /// <summary>
         /// Creates a new instance of the <see cref="KktOptimizationGenerator{TVar, TSolution}"/> class.
         /// </summary>
         /// <param name="variables">The encoding variables.</param>
         /// <param name="constVariables">The variables to consider constant for the optimization.</param>
         /// <param name="solver">The solver.</param>
-        public PrimalDualOptimizationGenerator(ISolver<TVar, TSolution> solver, ISet<TVar> variables, ISet<TVar> constVariables)
+        /// <param name="numProcesses">number of processors to use for PrimalDual constraint computation.</param>
+        public PrimalDualOptimizationGenerator(ISolver<TVar, TSolution> solver, ISet<TVar> variables, ISet<TVar> constVariables, int numProcesses)
             : base(solver, variables, constVariables)
         {
+            this.NumProcesses = numProcesses;
         }
 
         /// <summary>
@@ -77,45 +80,15 @@ namespace MetaOptimize
                 // adding dual constraints
                 Utils.logger("adding dual constraints.", verbose);
                 var variableToDualConstraint = new Dictionary<TVar, Polynomial<TVar>>();
-                foreach (var variable in this.Variables) {
-                    if (this.constantVariables.Contains(variable)) {
-                        continue;
-                    }
-                    var objCoeff = objective.Derivative(variable);
-                    variableToDualConstraint[variable] = new Polynomial<TVar>(new Term<TVar>(-1 * objCoeff));
-                }
+                this.computeDualConstraints(objective, leqDualVariables, eqDualVariables, variableToDualConstraint, verbose);
 
-                for (int i = 0; i < leqZeroConstraints.Count; i++) {
-                    var leqConstraint = leqZeroConstraints[i];
-                    foreach (Term<TVar> term in leqConstraint.Terms) {
-                        if (term.isInSetOrConst(this.constantVariables)) {
-                            continue;
-                        }
-                        TVar variable = term.Variable.Value;
-                        var deriv = leqConstraint.Derivative(variable);
-                        if (deriv != 0) {
-                            variableToDualConstraint[variable].Add(new Term<TVar>(deriv, leqDualVariables[i]));
-                        }
-                    }
-                }
-
-                for (int i = 0; i < eqZeroConstraints.Count; i++) {
-                    var eqConstraint = eqZeroConstraints[i];
-                    foreach (Term<TVar> term in eqConstraint.Terms) {
-                        if (term.isInSetOrConst(this.constantVariables)) {
-                            continue;
-                        }
-                        TVar variable = term.Variable.Value;
-                        var deriv = eqConstraint.Derivative(variable);
-                        if (deriv != 0) {
-                            variableToDualConstraint[variable].Add(new Term<TVar>(deriv, eqDualVariables[i]));
-                        }
-                    }
-                }
-
+                Utils.logger(
+                    string.Format("Reading the output {0} entries.", variableToDualConstraint.Count),
+                    verbose);
                 foreach (var (variable, dualConstr) in variableToDualConstraint) {
                     if (dualConstr.isallInSetOrConst(new HashSet<TVar>())) {
-                        throw new System.Exception("should not be consant!!!");
+                        // throw new System.Exception("should not be consant!!!");
+                        continue;
                     }
                     this.solver.AddEqZeroConstraint(dualConstr);
                 }
@@ -143,6 +116,138 @@ namespace MetaOptimize
                 //     dualConstraint.Add(new Term<TVar>(-1 * objCoeff));
                 //     this.solver.AddEqZeroConstraint(dualConstraint);
                 // }
+            }
+        }
+
+        private void computeDualConstraints(Polynomial<TVar> objective, IDictionary<int, TVar> leqDualVariables,
+                IDictionary<int, TVar> eqDualVariables, IDictionary<TVar, Polynomial<TVar>> variableToDualConstraint,
+                bool verbose)
+        {
+            foreach (var variable in this.Variables) {
+                if (this.constantVariables.Contains(variable)) {
+                    continue;
+                }
+                var objCoeff = objective.Derivative(variable);
+                if (objCoeff == 0) {
+                    continue;
+                }
+                variableToDualConstraint[variable] = new Polynomial<TVar>(new Term<TVar>(-1 * objCoeff));
+            }
+
+            if (this.NumProcesses <= 1) {
+                computeDualConstraints(this.leqZeroConstraints, this.eqZeroConstraints, leqDualVariables,
+                    eqDualVariables, variableToDualConstraint, verbose: verbose);
+                return;
+            }
+            var perProcessVariableToDualConstrintMapping = new Dictionary<int, Dictionary<TVar, Polynomial<TVar>>>();
+            var perProcessLeqZeroConstraints = new Dictionary<int, List<Polynomial<TVar>>>();
+            var perProcessLeqDualVariables = new Dictionary<int, Dictionary<int, TVar>>();
+            var perProcessEqZeroConstraints = new Dictionary<int, List<Polynomial<TVar>>>();
+            var perProcessEqDualVariables = new Dictionary<int, Dictionary<int, TVar>>();
+            int pid = 0;
+            for (pid = 0; pid < this.NumProcesses; pid++) {
+                perProcessVariableToDualConstrintMapping[pid] = new Dictionary<TVar, Polynomial<TVar>>();
+                perProcessLeqZeroConstraints[pid] = new List<Polynomial<TVar>>();
+                perProcessEqZeroConstraints[pid] = new List<Polynomial<TVar>>();
+                perProcessLeqDualVariables[pid] = new Dictionary<int, TVar>();
+                perProcessEqDualVariables[pid] = new Dictionary<int, TVar>();
+            }
+            pid = 0;
+            for (int i = 0; i < this.leqZeroConstraints.Count; i++) {
+                perProcessLeqZeroConstraints[pid].Add(this.leqZeroConstraints[i]);
+                perProcessLeqDualVariables[pid][(i - pid) / NumProcesses] = leqDualVariables[i];
+                pid = (pid + 1) % NumProcesses;
+            }
+            pid = 0;
+            for (int i = 0; i < this.eqZeroConstraints.Count; i++) {
+                perProcessEqZeroConstraints[pid].Add(this.eqZeroConstraints[i]);
+                perProcessEqDualVariables[pid][(i - pid) / NumProcesses] = eqDualVariables[i];
+                pid = (pid + 1) % NumProcesses;
+            }
+
+            Utils.logger(
+                string.Format("{0} eq constraints and {1} leq constraints in total.", eqZeroConstraints.Count, leqZeroConstraints.Count),
+                verbose);
+            var threadList = new List<Thread>();
+            for (pid = 0; pid < this.NumProcesses; pid++) {
+                Utils.logger(
+                    string.Format("creating process with pid {0}.", pid),
+                    verbose);
+                threadList.Add(new Thread(() => computeDualConstraints(perProcessLeqZeroConstraints[pid],
+                                                                       perProcessEqZeroConstraints[pid],
+                                                                       perProcessLeqDualVariables[pid],
+                                                                       perProcessEqDualVariables[pid],
+                                                                       perProcessVariableToDualConstrintMapping[pid],
+                                                                       pid, verbose)));
+                Utils.logger(
+                    string.Format("starting process with pid {0}.", pid),
+                    verbose);
+                threadList[pid].Start();
+                Thread.Sleep(1000);
+            }
+            pid = 0;
+            foreach (var thread in threadList) {
+                Utils.logger(
+                    string.Format("waiting for process with pid {0}.", pid),
+                    verbose);
+                thread.Join();
+                pid++;
+            }
+            foreach (var (id, output) in perProcessVariableToDualConstrintMapping) {
+                Utils.logger(
+                    string.Format("Reading the output of pid = {0} with {1} entries.", pid, output.Count),
+                    verbose);
+                foreach (var (variable, polyTerm) in output) {
+                    if (!variableToDualConstraint.ContainsKey(variable)) {
+                        variableToDualConstraint[variable] = new Polynomial<TVar>();
+                    }
+                    variableToDualConstraint[variable].Add(polyTerm);
+                }
+            }
+        }
+        private void computeDualConstraints(IList<Polynomial<TVar>> leqZeroConstraints,
+                IList<Polynomial<TVar>> eqZeroConstraints, IDictionary<int, TVar> leqDualVariables,
+                IDictionary<int, TVar> eqDualVariables, IDictionary<TVar, Polynomial<TVar>> variableToDualConstraint,
+                int pid = -1, bool verbose = false)
+        {
+            Utils.logger(
+                string.Format("pid = {0}: computing dual constraints for {1} leqZero Constraints in primal.", pid, leqZeroConstraints.Count),
+                verbose);
+            for (int i = 0; i < leqZeroConstraints.Count; i++) {
+                var leqConstraint = leqZeroConstraints[i];
+                foreach (Term<TVar> term in leqConstraint.GetTerms()) {
+                    if (term.isInSetOrConst(this.constantVariables)) {
+                        continue;
+                    }
+                    TVar variable = term.Variable.Value;
+                    var deriv = leqConstraint.Derivative(variable);
+                    if (deriv != 0) {
+                        if (!variableToDualConstraint.ContainsKey(variable)) {
+                            variableToDualConstraint[variable] = new Polynomial<TVar>();
+                        }
+                        variableToDualConstraint[variable].Add(new Term<TVar>(deriv, leqDualVariables[i]));
+                    }
+                }
+            }
+
+            Utils.logger(
+                string.Format("pid = {0}: computing dual constraints for {1} eqZero Constraints in primal.", pid, eqZeroConstraints.Count),
+                verbose);
+            for (int i = 0; i < eqZeroConstraints.Count; i++) {
+                var eqConstraint = eqZeroConstraints[i];
+                foreach (Term<TVar> term in eqConstraint.GetTerms()) {
+                    if (term.isInSetOrConst(this.constantVariables)) {
+                        continue;
+                    }
+                    TVar variable = term.Variable.Value;
+                    var deriv = eqConstraint.Derivative(variable);
+                    if (deriv != 0) {
+                        if (!variableToDualConstraint.ContainsKey(variable)) {
+                            variableToDualConstraint[variable] = new Polynomial<TVar>();
+                        }
+                        variableToDualConstraint[variable].Add(new Term<TVar>(deriv, eqDualVariables[i]));
+                    }
+                }
             }
         }
     }

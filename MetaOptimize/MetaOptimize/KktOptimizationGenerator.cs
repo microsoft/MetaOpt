@@ -168,7 +168,7 @@ namespace MetaOptimize
                         if (!haveLambda.ContainsKey(i))
                             continue;
                         var derivative = this.leqZeroConstraints[i].Derivative(variable);
-                        total.Terms.Add(new Term<TVar>(derivative, this.lambdaVariables[haveLambda[i]]));
+                        total.Add(new Term<TVar>(derivative, this.lambdaVariables[haveLambda[i]]));
                     }
 
                     for (int i = 0; i < this.eqZeroConstraints.Count; i++)
@@ -176,7 +176,7 @@ namespace MetaOptimize
                         if (!haveNu.ContainsKey(i))
                             continue;
                         var derivative = this.eqZeroConstraints[i].Derivative(variable);
-                        total.Terms.Add(new Term<TVar>(derivative, this.nuVariables[haveNu[i]]));
+                        total.Add(new Term<TVar>(derivative, this.nuVariables[haveNu[i]]));
                     }
                     this.solver.AddEqZeroConstraint(total);
                 }

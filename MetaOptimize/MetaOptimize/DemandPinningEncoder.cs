@@ -139,7 +139,7 @@ namespace MetaOptimize
                 }
             } else {
                 foreach (var (pair, variable) in this.DemandVariables) {
-                    foreach (var term in variable.Terms) {
+                    foreach (var term in variable.GetTerms()) {
                         this.variables.Add(term.Variable.Value);
                         demandVariables.Add(term.Variable.Value);
                     }
@@ -178,7 +178,7 @@ namespace MetaOptimize
                     if (shortestPaths[0].SequenceEqual(simplePath)) {
                         this.shortestFlowVariables[pair] = this.FlowPathVariables[simplePath];
                     } else {
-                        this.sumNonShortest[pair].Terms.Add(new Term<TVar>(1, this.FlowPathVariables[simplePath]));
+                        this.sumNonShortest[pair].Add(new Term<TVar>(1, this.FlowPathVariables[simplePath]));
                     }
                 }
             }
@@ -189,7 +189,10 @@ namespace MetaOptimize
                     this.innerProblemEncoder = new KktOptimizationGenerator<TVar, TSolution>(this.Solver, this.variables, demandVariables);
                     break;
                 case InnerEncodingMethodChoice.PrimalDual:
-                    this.innerProblemEncoder = new PrimalDualOptimizationGenerator<TVar, TSolution>(this.Solver, this.variables, demandVariables);
+                    this.innerProblemEncoder = new PrimalDualOptimizationGenerator<TVar, TSolution>(this.Solver,
+                                                                                                    this.variables,
+                                                                                                    demandVariables,
+                                                                                                    numProcesses);
                     break;
                 default:
                     throw new Exception("invalid method for encoding the inner problem");
@@ -231,10 +234,10 @@ namespace MetaOptimize
                 if (!IsDemandValid(pair)) {
                     continue;
                 }
-                polynomial.Terms.Add(new Term<TVar>(1, this.FlowVariables[pair]));
+                polynomial.Add(new Term<TVar>(1, this.FlowVariables[pair]));
             }
 
-            polynomial.Terms.Add(new Term<TVar>(-1, this.TotalDemandMetVariable));
+            polynomial.Add(new Term<TVar>(-1, this.TotalDemandMetVariable));
             this.innerProblemEncoder.AddEqZeroConstraint(polynomial);
 
             // Ensure that the demands are finite.
@@ -286,10 +289,10 @@ namespace MetaOptimize
                 var poly = new Polynomial<TVar>(new Term<TVar>(0));
                 foreach (var path in paths)
                 {
-                    poly.Terms.Add(new Term<TVar>(1, this.FlowPathVariables[path]));
+                    poly.Add(new Term<TVar>(1, this.FlowPathVariables[path]));
                 }
 
-                poly.Terms.Add(new Term<TVar>(-1, this.FlowVariables[pair]));
+                poly.Add(new Term<TVar>(-1, this.FlowVariables[pair]));
                 this.innerProblemEncoder.AddEqZeroConstraint(poly);
             }
 
@@ -317,32 +320,32 @@ namespace MetaOptimize
                         if (!sumPerEdge.ContainsKey(edge)) {
                             sumPerEdge[edge] = new Polynomial<TVar>(new Term<TVar>(0));
                         }
-                        sumPerEdge[edge].Terms.Add(term);
+                        sumPerEdge[edge].Add(term);
                     }
                 }
             }
 
             foreach (var (edge, total) in sumPerEdge)
             {
-                total.Terms.Add(new Term<TVar>(-1 * edge.Capacity));
+                total.Add(new Term<TVar>(-1 * edge.Capacity));
                 this.innerProblemEncoder.AddLeqZeroConstraint(total);
             }
             // generating the max constraints that achieve pinning.
             foreach (var (pair, polyTerm) in sumNonShortest) {
                 // sum non shortest flows \leq MaxAuxVariables
-                polyTerm.Terms.Add(new Term<TVar>(-1, MaxAuxVariables[pair]));
+                polyTerm.Add(new Term<TVar>(-1, MaxAuxVariables[pair]));
                 this.innerProblemEncoder.AddLeqZeroConstraint(polyTerm);
                 // MaxAuxVariables \geq 0
                 this.innerProblemEncoder.AddLeqZeroConstraint(new Polynomial<TVar>(new Term<TVar>(-1, MaxAuxVariables[pair])));
                 // maxNontPinned \geq M(d_k - T_d)
                 var maxNonPinnedLB = this.DemandVariables[pair].Multiply(this._bigM);
-                maxNonPinnedLB.Terms.Add(new Term<TVar>(-1 * this._bigM * Threshold));
-                maxNonPinnedLB.Terms.Add(new Term<TVar>(-1, MaxAuxVariables[pair]));
+                maxNonPinnedLB.Add(new Term<TVar>(-1 * this._bigM * Threshold));
+                maxNonPinnedLB.Add(new Term<TVar>(-1, MaxAuxVariables[pair]));
                 this.innerProblemEncoder.AddLeqZeroConstraint(maxNonPinnedLB);
                 // demand - shortest path flows \leq MaxAuxVariables
                 var shortestPathUB = this.DemandVariables[pair].Copy();
-                shortestPathUB.Terms.Add(new Term<TVar>(-1, shortestFlowVariables[pair]));
-                shortestPathUB.Terms.Add(new Term<TVar>(-1, MaxAuxVariables[pair]));
+                shortestPathUB.Add(new Term<TVar>(-1, shortestFlowVariables[pair]));
+                shortestPathUB.Add(new Term<TVar>(-1, MaxAuxVariables[pair]));
                 this.innerProblemEncoder.AddLeqZeroConstraint(shortestPathUB);
             }
 
@@ -350,7 +353,7 @@ namespace MetaOptimize
             double alpha = this.Topology.TotalCapacity() * 1.1;
             Console.WriteLine("$$$$$$ alpha value for demand pinning objective = " + alpha);
             foreach (var (pair, maxVar) in MaxAuxVariables) {
-                objectiveFunction.Terms.Add(new Term<TVar>(-1 * alpha, maxVar));
+                objectiveFunction.Add(new Term<TVar>(-1 * alpha, maxVar));
             }
 
             // Generate the full constraints.
@@ -379,7 +382,7 @@ namespace MetaOptimize
             foreach (var (pair, poly) in this.DemandVariables)
             {
                 demands[pair] = 0;
-                foreach (var term in poly.Terms) {
+                foreach (var term in poly.GetTerms()) {
                     demands[pair] += this.Solver.GetVariable(solution, term.Variable.Value) * term.Coefficient;
                 }
             }

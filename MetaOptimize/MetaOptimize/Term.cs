@@ -124,7 +124,7 @@ namespace MetaOptimize
             {
                 return true;
             }
-            return true;
+            return false;
         }
         /// <summary>
         /// Negate this polynomial term.
@@ -188,5 +188,20 @@ namespace MetaOptimize
                 return $"{prefix}{this.Variable}";
             }
         }
+        // /// <summary>
+        // /// Returns True if the input polynomial is equal to the current one.
+        // /// </summary>
+        // public bool Equals(Term<TVar> term2) {
+        //     if (term2.Variable.Equals(this.Variable)) {
+        //         return false;
+        //     }
+        //     if (term2.Exponent != this.Exponent) {
+        //         return false;
+        //     }
+        //     if (term2.Coefficient != this.Coefficient) {
+        //         return false;
+        //     }
+        //     return true;
+        // }
     }
 }

@@ -263,7 +263,7 @@ namespace MetaOptimize
         protected internal GRBLinExpr Convert(Polynomial<GRBVar> poly)
         {
             GRBLinExpr obj = 0;
-            foreach (var term in poly.Terms)
+            foreach (var term in poly.GetTerms())
             {
                 switch (term.Exponent)
                 {
@@ -307,7 +307,7 @@ namespace MetaOptimize
         private GRBLinExpr ConvertQE(IList<Polynomial<GRBVar>> coeffPolyList, IList<GRBVar> variableList, Polynomial<GRBVar> linearPoly)
         {
             GRBLinExpr obj = 0;
-            foreach (var term in linearPoly.Terms) {
+            foreach (var term in linearPoly.GetTerms()) {
                 switch (term.Exponent)
                 {
                     case 1:
@@ -324,7 +324,7 @@ namespace MetaOptimize
             for (int i = 0; i < coeffPolyList.Count; i++) {
                 Polynomial<GRBVar> coeffPoly = coeffPolyList[i];
                 GRBVar variable = variableList[i];
-                foreach (var term in coeffPoly.Terms) {
+                foreach (var term in coeffPoly.GetTerms()) {
                     switch (term.Exponent) {
                         case 1:
                             GRBVar binary_variable = term.Variable.Value;

@@ -114,7 +114,7 @@ namespace MetaOptimize
                         continue;
                     }
                     this.DemandVariables[pair] = variable;
-                    foreach (var term in variable.Terms) {
+                    foreach (var term in variable.GetTerms()) {
                         this.variables.Add(term.Variable.Value);
                         demandVariables.Add(term.Variable.Value);
                     }
@@ -151,7 +151,10 @@ namespace MetaOptimize
                     this.innerProblemEncoder = new KktOptimizationGenerator<TVar, TSolution>(this.Solver, this.variables, demandVariables);
                     break;
                 case InnerEncodingMethodChoice.PrimalDual:
-                    this.innerProblemEncoder = new PrimalDualOptimizationGenerator<TVar, TSolution>(this.Solver, this.variables, demandVariables);
+                    this.innerProblemEncoder = new PrimalDualOptimizationGenerator<TVar, TSolution>(this.Solver,
+                                                                                                    this.variables,
+                                                                                                    demandVariables,
+                                                                                                    numProcesses);
                     break;
                 default:
                     throw new Exception("invalid method for encoding the inner problem");
@@ -183,10 +186,10 @@ namespace MetaOptimize
                 if (!IsDemandValid(pair)) {
                     continue;
                 }
-                polynomial.Terms.Add(new Term<TVar>(1, this.FlowVariables[pair]));
+                polynomial.Add(new Term<TVar>(1, this.FlowVariables[pair]));
             }
 
-            polynomial.Terms.Add(new Term<TVar>(-1, this.TotalDemandMetVariable));
+            polynomial.Add(new Term<TVar>(-1, this.TotalDemandMetVariable));
             this.innerProblemEncoder.AddEqZeroConstraint(polynomial);
 
             // Ensure that the demands are finite.
@@ -237,6 +240,9 @@ namespace MetaOptimize
             Utils.logger("ensuring disconnected nodes do not have any flow", verbose);
             foreach (var (pair, paths) in this.Paths)
             {
+                if (!IsDemandValid(pair)) {
+                    continue;
+                }
                 if (paths.Length == 0)
                 {
                     this.innerProblemEncoder.AddEqZeroConstraint(this.DemandVariables[pair].Copy());
@@ -254,10 +260,10 @@ namespace MetaOptimize
                 var poly = new Polynomial<TVar>(new Term<TVar>(0));
                 foreach (var path in paths)
                 {
-                    poly.Terms.Add(new Term<TVar>(1, this.FlowPathVariables[path]));
+                    poly.Add(new Term<TVar>(1, this.FlowPathVariables[path]));
                 }
 
-                poly.Terms.Add(new Term<TVar>(-1, this.FlowVariables[pair]));
+                poly.Add(new Term<TVar>(-1, this.FlowVariables[pair]));
                 this.innerProblemEncoder.AddEqZeroConstraint(poly);
             }
 
@@ -286,14 +292,14 @@ namespace MetaOptimize
                         if (!sumPerEdge.ContainsKey(edge)) {
                             sumPerEdge[edge] = new Polynomial<TVar>(new Term<TVar>(0));
                         }
-                        sumPerEdge[edge].Terms.Add(term);
+                        sumPerEdge[edge].Add(term);
                     }
                 }
             }
 
             foreach (var (edge, total) in sumPerEdge)
             {
-                total.Terms.Add(new Term<TVar>(-1 * edge.Capacity));
+                total.Add(new Term<TVar>(-1 * edge.Capacity));
                 this.innerProblemEncoder.AddLeqZeroConstraint(total);
             }
 
@@ -326,7 +332,7 @@ namespace MetaOptimize
             foreach (var (pair, poly) in this.DemandVariables)
             {
                 demands[pair] = 0;
-                foreach (var term in poly.Terms) {
+                foreach (var term in poly.GetTerms()) {
                     demands[pair] += this.Solver.GetVariable(solution, term.Variable.Value) * term.Coefficient;
                 }
             }

@@ -223,7 +223,7 @@ namespace MetaOptimize
             // bounds on X : -M < x < M ==> -c < x < c
             // My prior change: a / c * x + b / c <= 0
             GRBLinExpr obj = 0;
-            foreach (var term in poly.Terms)
+            foreach (var term in poly.GetTerms())
             {
                 if (term.Exponent == 1)
                 {

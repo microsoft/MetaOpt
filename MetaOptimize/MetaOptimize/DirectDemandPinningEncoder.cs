@@ -154,7 +154,7 @@ namespace MetaOptimize
                     // establish the flow path variables.
                     this.FlowPathVariables[simplePath] = this.Solver.CreateVariable("flowpath_" + string.Join("_", simplePath));
                     this.variables.Add(this.FlowPathVariables[simplePath]);
-                    this.sumPaths[pair].Terms.Add(new Term<TVar>(1, this.FlowPathVariables[simplePath]));
+                    this.sumPaths[pair].Add(new Term<TVar>(1, this.FlowPathVariables[simplePath]));
                 }
             }
         }
@@ -193,11 +193,11 @@ namespace MetaOptimize
                 if (!IsDemandValid(pair)) {
                     continue;
                 }
-                polynomial.Terms.Add(new Term<TVar>(1, this.FlowVariables[pair]));
+                polynomial.Add(new Term<TVar>(1, this.FlowVariables[pair]));
             }
 
             // setting objective
-            polynomial.Terms.Add(new Term<TVar>(-1, this.TotalDemandMetVariable));
+            polynomial.Add(new Term<TVar>(-1, this.TotalDemandMetVariable));
             this.Solver.AddEqZeroConstraint(polynomial);
 
             // Ensure that f_k geq 0.
@@ -231,10 +231,10 @@ namespace MetaOptimize
                 var poly = new Polynomial<TVar>(new Term<TVar>(0));
                 foreach (var path in paths)
                 {
-                    poly.Terms.Add(new Term<TVar>(1, this.FlowPathVariables[path]));
+                    poly.Add(new Term<TVar>(1, this.FlowPathVariables[path]));
                 }
 
-                poly.Terms.Add(new Term<TVar>(-1, this.FlowVariables[pair]));
+                poly.Add(new Term<TVar>(-1, this.FlowVariables[pair]));
                 this.Solver.AddEqZeroConstraint(poly);
             }
 
@@ -262,7 +262,7 @@ namespace MetaOptimize
                         if (!sumPerEdge.ContainsKey(edge)) {
                             sumPerEdge[edge] = new Polynomial<TVar>(new Term<TVar>(0));
                         }
-                        sumPerEdge[edge].Terms.Add(term);
+                        sumPerEdge[edge].Add(term);
                     }
                 }
             }
@@ -270,7 +270,7 @@ namespace MetaOptimize
             foreach (var (edge, total) in sumPerEdge)
             {
                 // Console.WriteLine("cap " + edge + " " + this.link_to_cap_mapping[(edge.Source, edge.Target)]);
-                total.Terms.Add(new Term<TVar>(-1 * this.link_to_cap_mapping[(edge.Source, edge.Target)]));
+                total.Add(new Term<TVar>(-1 * this.link_to_cap_mapping[(edge.Source, edge.Target)]));
                 this.Solver.AddLeqZeroConstraint(total);
             }
 
