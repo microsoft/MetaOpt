@@ -5,6 +5,8 @@
 namespace MetaOptimize
 {
     using System.Collections.Generic;
+    using System.Collections.ObjectModel;
+    using System.Diagnostics;
     using System.Linq;
     using ZenLib;
 
@@ -16,7 +18,29 @@ namespace MetaOptimize
         /// <summary>
         /// The polynomial terms.
         /// </summary>
-        public List<Term<TVar>> Terms { get; set; }
+        protected List<Term<TVar>> Terms { get; set; }
+
+        /// <summary>
+        /// variable to derivative mapping.
+        /// </summary>
+        private Dictionary<TVar, double> variableToDerivativeMapping = new Dictionary<TVar, double>();
+
+        private void addNewTermsToDerivativeDict(List<Term<TVar>> polynomialTerms) {
+            foreach (var term in polynomialTerms) {
+                addNewTermsToDerivativeDict(term);
+            }
+        }
+
+        private void addNewTermsToDerivativeDict(Term<TVar> term) {
+            if (term.isConstant()) {
+                return;
+            }
+            if (!variableToDerivativeMapping.ContainsKey(term.Variable.Value)) {
+                variableToDerivativeMapping[term.Variable.Value] = 0;
+            }
+            Debug.Assert(term.Exponent <= 1);
+            variableToDerivativeMapping[term.Variable.Value] += term.Coefficient;
+        }
 
         /// <summary>
         /// Creates a new instance of the <see cref="Polynomial{TVar}"/> class.
@@ -33,6 +57,7 @@ namespace MetaOptimize
         public Polynomial(List<Term<TVar>> polynomialTerms)
         {
             Terms = polynomialTerms;
+            addNewTermsToDerivativeDict(polynomialTerms);
         }
 
         /// <summary>
@@ -42,6 +67,7 @@ namespace MetaOptimize
         public Polynomial(params Term<TVar>[] polynomialTerms)
         {
             Terms = new List<Term<TVar>>(polynomialTerms);
+            addNewTermsToDerivativeDict(new List<Term<TVar>>(polynomialTerms));
         }
 
         /// <summary>
@@ -66,7 +92,12 @@ namespace MetaOptimize
         /// <returns>The result as a polynomial.</returns>
         public double Derivative(TVar variable)
         {
-            return this.Terms.Select(x => x.Derivative(variable)).Aggregate((a, b) => a + b);
+            if (this.variableToDerivativeMapping.ContainsKey(variable)) {
+                return this.variableToDerivativeMapping[variable];
+            } else {
+                return 0;
+            }
+            // return this.Terms.Select(x => x.Derivative(variable)).Aggregate((a, b) => a + b);
         }
 
         /// <summary>
@@ -76,6 +107,7 @@ namespace MetaOptimize
         public void Add(Term<TVar> newTerm)
         {
             this.Terms.Add(newTerm);
+            addNewTermsToDerivativeDict(newTerm);
         }
 
         /// <summary>
@@ -86,6 +118,7 @@ namespace MetaOptimize
         {
             foreach (var newTerm in newPolynomial.Terms) {
                 this.Add(newTerm);
+                addNewTermsToDerivativeDict(newTerm);
             }
         }
 
@@ -168,5 +201,29 @@ namespace MetaOptimize
             }
             return (vars.Count() == 1);
         }
+
+        /// <summary>
+        /// Returns Readonly version of terms.
+        /// </summary>
+        public ReadOnlyCollection<Term<TVar>> GetTerms() {
+            return Terms.AsReadOnly();
+        }
+        // /// <summary>
+        // /// Returns True if the input polynomial is equal to the current one.
+        // /// </summary>
+        // public bool Equals(Polynomial<TVar> poly) {
+        //     foreach (var term1 in poly.Terms) {
+        //         bool found = false;
+        //         foreach (var term2 in poly.Terms) {
+        //             if (term1.Equals(term2)) {
+        //                 found = true;
+        //             }
+        //         }
+        //         if (!found) {
+        //             return false;
+        //         }
+        //     }
+        //     return true;
+        // }
     }
 }
