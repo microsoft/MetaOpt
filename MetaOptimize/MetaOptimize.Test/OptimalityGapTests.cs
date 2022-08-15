@@ -36,7 +36,7 @@ namespace MetaOptimize.Test
 
             // create the optimal encoder.
             var solver = CreateSolver();
-            var optimalEncoder = new OptimalEncoder<TVar, TSol>(solver, k: 1);
+            var optimalEncoder = new TEOptimalEncoder<TVar, TSol>(solver, k: 1);
 
             // create the pop encoder.
             var partition = topology.RandomPartition(2);

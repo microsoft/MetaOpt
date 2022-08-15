@@ -52,7 +52,7 @@ namespace MetaOptimize
         /// <summary>
         /// The individual encoders for each partition.
         /// </summary>
-        public OptimalEncoder<TVar, TSolution>[] PartitionEncoders { get; set; }
+        public TEOptimalEncoder<TVar, TSolution>[] PartitionEncoders { get; set; }
 
         /// <summary>
         /// The demand variables for the network (d_k).
@@ -94,11 +94,11 @@ namespace MetaOptimize
             this.DemandPartitions = demandPartitions;
             this.PartitionSensitivity = partitionSensitivity;
 
-            this.PartitionEncoders = new OptimalEncoder<TVar, TSolution>[this.NumPartitions];
+            this.PartitionEncoders = new TEOptimalEncoder<TVar, TSolution>[this.NumPartitions];
 
             for (int i = 0; i < this.NumPartitions; i++)
             {
-                this.PartitionEncoders[i] = new OptimalEncoder<TVar, TSolution>(solver, this.K);
+                this.PartitionEncoders[i] = new TEOptimalEncoder<TVar, TSolution>(solver, this.K);
             }
         }
 

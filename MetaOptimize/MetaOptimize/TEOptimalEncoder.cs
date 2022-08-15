@@ -1,19 +1,16 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿// <copyright file="OptimalEncoder.cs" company="Microsoft">
+// Copyright (c) Microsoft. All rights reserved.
+// </copyright>
 
 namespace MetaOptimize
 {
     using System;
     using System.Collections.Generic;
-    using System.Linq;
-    using ZenLib;
+
     /// <summary>
-    /// Encodes demand pinning solution.
+    /// A class for the optimal encoding.
     /// </summary>
-    public class DirectDemandPinningEncoder<TVar, TSolution> : IEncoder<TVar, TSolution>
+    public class TEOptimalEncoder<TVar, TSolution> : IEncoder<TVar, TSolution>
     {
         /// <summary>
         /// The solver being used.
@@ -31,19 +28,9 @@ namespace MetaOptimize
         public int K { get; set; }
 
         /// <summary>
-        /// The threshold for the demand pinning problem.
-        /// </summary>
-        public double Threshold { get; set; }
-
-        /// <summary>
         /// The enumeration of paths between all pairs of nodes.
         /// </summary>
         public Dictionary<(string, string), string[][]> Paths { get; set; }
-
-        /// <summary>
-        /// Absolute shortest paths.
-        /// </summary>
-        public Dictionary<(string, string), string[][]> absShortestPaths { get; set; }
 
         /// <summary>
         /// The demand constraints in terms of constant values.
@@ -60,13 +47,6 @@ namespace MetaOptimize
         /// </summary>
         public Dictionary<(string, string), TVar> FlowVariables { get; set; }
 
-        // /// <summary>
-        // /// max for pinned flow.
-        // /// </summary>
-        // public Dictionary<(string, string), TVar> maxPinned { get; set; }
-
-        private double _bigM = Math.Pow(10, 6);
-
         /// <summary>
         /// The flow variables for a given path in the network (f_k^p).
         /// </summary>
@@ -77,42 +57,69 @@ namespace MetaOptimize
         /// </summary>
         public TVar TotalDemandMetVariable { get; set; }
 
-        // /// <summary>
-        // /// Those flows that are pinned.
-        // /// </summary>
-        // public Dictionary<(string, string), TVar> pinnedFlowVariables { get; set; }
-
-        /// <summary>
-        /// Sum non shortest path flows.
-        /// </summary>
-        public Dictionary<(string, string), Polynomial<TVar>> sumPaths { get; set; }
-
         /// <summary>
         /// The set of variables used in the encoding.
         /// </summary>
         private ISet<TVar> variables;
 
-        private Dictionary<(string, string), double> link_to_cap_mapping;
-        private double totalDemandPinned;
+        /// <summary>
+        /// The kkt encoder used to construct the encoding.
+        /// </summary>
+        private KktOptimizationGenerator<TVar, TSolution> innerProblemEncoder;
 
         /// <summary>
-        /// Create a new instance of the <see cref="DirectDemandPinningEncoder{TVar, TSolution}"/> class.
+        /// Create a new instance of the <see cref="TEOptimalEncoder{TVar, TSolution}"/> class.
         /// </summary>
         /// <param name="solver">The solver.</param>
         /// <param name="k">The max number of paths between nodes.</param>
-        /// <param name="threshold"> The threshold to use for demand pinning.</param>
-        public DirectDemandPinningEncoder(ISolver<TVar, TSolution> solver, int k, double threshold = 0)
+        public TEOptimalEncoder(ISolver<TVar, TSolution>  solver, int k)
         {
             this.Solver = solver;
             this.K = k;
-            this.Threshold = threshold;
         }
 
-        private void InitializeVariables(Dictionary<(string, string), double> demandConstraints, int numProcesses, bool verbose) {
+        private bool IsDemandValid((string, string) pair) {
+            if (this.DemandConstraints.ContainsKey(pair)) {
+                if (this.DemandConstraints[pair] <= 0) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        private void InitializeVariables(Dictionary<(string, string), Polynomial<TVar>> preDemandVariables, Dictionary<(string, string), double> demandEqualityConstraints,
+                InnerEncodingMethodChoice encodingMethod, int numProcesses, bool verbose) {
             this.variables = new HashSet<TVar>();
             this.Paths = new Dictionary<(string, string), string[][]>();
             // establish the demand variables.
-            this.DemandConstraints = demandConstraints;
+            this.DemandConstraints = demandEqualityConstraints ?? new Dictionary<(string, string), double>();
+            this.DemandVariables = new Dictionary<(string, string), Polynomial<TVar>>();
+            var demandVariables = new HashSet<TVar>();
+
+            if (preDemandVariables == null) {
+                this.DemandVariables = new Dictionary<(string, string), Polynomial<TVar>>();
+                foreach (var pair in this.Topology.GetNodePairs())
+                {
+                    if (!IsDemandValid(pair)) {
+                        continue;
+                    }
+                    var variable = this.Solver.CreateVariable("demand_" + pair.Item1 + "_" + pair.Item2);
+                    this.DemandVariables[pair] = new Polynomial<TVar>(new Term<TVar>(1, variable));
+                    this.variables.Add(variable);
+                    demandVariables.Add(variable);
+                }
+            } else {
+                foreach (var (pair, variable) in preDemandVariables) {
+                    if (!IsDemandValid(pair)) {
+                        continue;
+                    }
+                    this.DemandVariables[pair] = variable;
+                    foreach (var term in variable.GetTerms()) {
+                        this.variables.Add(term.Variable.Value);
+                        demandVariables.Add(term.Variable.Value);
+                    }
+                }
+            }
 
             // establish the total demand met variable.
             this.TotalDemandMetVariable = this.Solver.CreateVariable("total_demand_met");
@@ -120,24 +127,6 @@ namespace MetaOptimize
 
             this.FlowVariables = new Dictionary<(string, string), TVar>();
             this.FlowPathVariables = new Dictionary<string[], TVar>(new PathComparer());
-            this.sumPaths = new Dictionary<(string, string), Polynomial<TVar>>();
-
-            this.link_to_cap_mapping = new Dictionary<(string, string), double>();
-            foreach (var pair in this.Topology.GetAllEdges()) {
-                this.link_to_cap_mapping[(pair.Source, pair.Target)] = pair.Capacity;
-            }
-            this.totalDemandPinned = 0.0;
-            foreach (var (pair, demand) in this.DemandConstraints) {
-                if (demand <= Threshold) {
-                    var shortestPaths = this.Topology.ShortestKPaths(1, pair.Item1, pair.Item2)[0];
-                    for (int i = 0; i < shortestPaths.Count() - 1; i++) {
-                        this.link_to_cap_mapping[(shortestPaths[i], shortestPaths[i + 1])] -= demand;
-                    }
-                    this.totalDemandPinned += demand;
-                    this.DemandConstraints[pair] = 0;
-                }
-            }
-
             this.Paths = this.Topology.AllPairsKShortestPathMultiProcessing(this.K, numProcesses: numProcesses, verbose: verbose);
             foreach (var pair in this.Topology.GetNodePairs())
             {
@@ -147,29 +136,31 @@ namespace MetaOptimize
                 // establish the flow variable.
                 this.FlowVariables[pair] = this.Solver.CreateVariable("flow_" + pair.Item1 + "_" + pair.Item2);
                 this.variables.Add(this.FlowVariables[pair]);
-                this.sumPaths[pair] = new Polynomial<TVar>(new Term<TVar>(0));
 
                 foreach (var simplePath in this.Paths[pair])
                 {
                     // establish the flow path variables.
                     this.FlowPathVariables[simplePath] = this.Solver.CreateVariable("flowpath_" + string.Join("_", simplePath));
                     this.variables.Add(this.FlowPathVariables[simplePath]);
-                    this.sumPaths[pair].Add(new Term<TVar>(1, this.FlowPathVariables[simplePath]));
                 }
+            }
+
+            switch (encodingMethod)
+            {
+                case InnerEncodingMethodChoice.KKT:
+                    this.innerProblemEncoder = new KktOptimizationGenerator<TVar, TSolution>(this.Solver, this.variables, demandVariables);
+                    break;
+                case InnerEncodingMethodChoice.PrimalDual:
+                    this.innerProblemEncoder = new PrimalDualOptimizationGenerator<TVar, TSolution>(this.Solver,
+                                                                                                    this.variables,
+                                                                                                    demandVariables,
+                                                                                                    numProcesses);
+                    break;
+                default:
+                    throw new Exception("invalid method for encoding the inner problem");
             }
         }
 
-        private bool IsDemandValid((string, string) pair) {
-            if (this.DemandConstraints.ContainsKey(pair)) {
-                if (this.DemandConstraints[pair] < 0) {
-                    throw new System.Exception("demands should be non-negative.");
-                } else if (this.DemandConstraints[pair] == 0) {
-                    return false;
-                }
-                return true;
-            }
-            throw new System.Exception("demand dict should contain all the pairs.");
-        }
         /// <summary>
         /// Encode the problem.
         /// </summary>
@@ -178,15 +169,17 @@ namespace MetaOptimize
             Dictionary<(string, string), double> demandEqualityConstraints = null, bool noAdditionalConstraints = false,
             InnerEncodingMethodChoice innerEncoding = InnerEncodingMethodChoice.KKT, int numProcesses = -1, bool verbose = false)
         {
+            // Initialize Variables for the encoding
+            Utils.logger("initializing variables", verbose);
             this.Topology = topology;
-            InitializeVariables(demandEqualityConstraints, numProcesses, verbose);
+            InitializeVariables(preDemandVariables, demandEqualityConstraints, innerEncoding, numProcesses, verbose);
             // Compute the maximum demand M.
             // Since we don't know the demands we have to be very conservative.
             // var maxDemand = this.Topology.TotalCapacity() * 10;
+            // var maxDemand = this.Topology.MaxCapacity() * this.K * 2;
 
             // Ensure that sum_k f_k = total_demand.
-            // This includes both the ones that are pinned and
-            // those that are not.
+            Utils.logger("ensuring sum_k f_k = total demand", verbose);
             var polynomial = new Polynomial<TVar>();
             foreach (var pair in this.Topology.GetNodePairs())
             {
@@ -196,21 +189,41 @@ namespace MetaOptimize
                 polynomial.Add(new Term<TVar>(1, this.FlowVariables[pair]));
             }
 
-            // setting objective
             polynomial.Add(new Term<TVar>(-1, this.TotalDemandMetVariable));
-            this.Solver.AddEqZeroConstraint(polynomial);
+            this.innerProblemEncoder.AddEqZeroConstraint(polynomial);
+
+            // Ensure that the demands are finite.
+            // This is needed because Z3 can return any value if demands can be infinite.
+            // foreach (var (_, variable) in this.DemandVariables)
+            // {
+            //     this.kktEncoder.AddLeqZeroConstraint(new Polynomial<TVar>(new Term<TVar>(1, variable), new Term<TVar>(-1 * maxDemand)));
+            // }
+
+            // Ensure that the demand constraints are respected
+            Utils.logger("ensuring demand constraints are respected", verbose);
+            foreach (var (pair, constant) in this.DemandConstraints)
+            {
+                if (constant <= 0) {
+                    continue;
+                }
+                var poly = this.DemandVariables[pair].Copy();
+                poly.Add(new Term<TVar>(-1 * constant));
+                this.innerProblemEncoder.AddEqZeroConstraint(poly);
+            }
 
             // Ensure that f_k geq 0.
             // Ensure that f_k leq d_k.
+            Utils.logger("ensuring flows are within a correct range.", verbose);
             foreach (var (pair, variable) in this.FlowVariables)
             {
                 // this.kktEncoder.AddLeqZeroConstraint(new Polynomial<TVar>(new Term<TVar>(-1, variable)));
-                var poly = new Polynomial<TVar>(new Term<TVar>(-1 * this.DemandConstraints[pair]));
+                var poly = this.DemandVariables[pair].Negate();
                 poly.Add(new Term<TVar>(1, variable));
-                this.Solver.AddLeqZeroConstraint(poly);
+                this.innerProblemEncoder.AddLeqZeroConstraint(poly);
             }
 
             // Ensure that f_k^p geq 0.
+            Utils.logger("ensuring sum_k f_k^p geq 0", verbose);
             foreach (var (pair, paths) in this.Paths)
             {
                 if (!IsDemandValid(pair)) {
@@ -218,11 +231,27 @@ namespace MetaOptimize
                 }
                 foreach (var path in paths)
                 {
-                    this.Solver.AddLeqZeroConstraint(new Polynomial<TVar>(new Term<TVar>(-1, this.FlowPathVariables[path])));
+                    this.innerProblemEncoder.AddLeqZeroConstraint(new Polynomial<TVar>(new Term<TVar>(-1, this.FlowPathVariables[path])));
+                }
+            }
+
+            // Ensure that nodes that are not connected have no flow or demand.
+            // This is needed for not fully connected topologies.
+            Utils.logger("ensuring disconnected nodes do not have any flow", verbose);
+            foreach (var (pair, paths) in this.Paths)
+            {
+                if (!IsDemandValid(pair)) {
+                    continue;
+                }
+                if (paths.Length == 0)
+                {
+                    this.innerProblemEncoder.AddEqZeroConstraint(this.DemandVariables[pair].Copy());
+                    this.innerProblemEncoder.AddEqZeroConstraint(new Polynomial<TVar>(new Term<TVar>(1, this.FlowVariables[pair])));
                 }
             }
 
             // Ensure that the flow f_k = sum_p f_k^p.
+            Utils.logger("ensuring f_k = sum_p f_k^p", verbose);
             foreach (var (pair, paths) in this.Paths)
             {
                 if (!IsDemandValid(pair)) {
@@ -235,7 +264,7 @@ namespace MetaOptimize
                 }
 
                 poly.Add(new Term<TVar>(-1, this.FlowVariables[pair]));
-                this.Solver.AddEqZeroConstraint(poly);
+                this.innerProblemEncoder.AddEqZeroConstraint(poly);
             }
 
             // Ensure the capacity constraints hold.
@@ -246,6 +275,7 @@ namespace MetaOptimize
             //     sumPerEdge[edge] = new Polynomial<TVar>(new Term<TVar>(0));
             // }
 
+            Utils.logger("ensuring capacity constraints", verbose);
             foreach (var (pair, paths) in this.Paths)
             {
                 if (!IsDemandValid(pair)) {
@@ -269,43 +299,43 @@ namespace MetaOptimize
 
             foreach (var (edge, total) in sumPerEdge)
             {
-                // Console.WriteLine("cap " + edge + " " + this.link_to_cap_mapping[(edge.Source, edge.Target)]);
-                total.Add(new Term<TVar>(-1 * this.link_to_cap_mapping[(edge.Source, edge.Target)]));
-                this.Solver.AddLeqZeroConstraint(total);
+                total.Add(new Term<TVar>(-1 * edge.Capacity));
+                this.innerProblemEncoder.AddLeqZeroConstraint(total);
             }
 
-            var objectiveFunction = new Polynomial<TVar>(new Term<TVar>(1, this.TotalDemandMetVariable), new Term<TVar>(this.totalDemandPinned));
-
+            Utils.logger("generating full constraints", verbose);
             // Generate the full constraints.
-            this.Solver.SetObjective(objectiveFunction);
+            var objective = new Polynomial<TVar>(new Term<TVar>(1, this.TotalDemandMetVariable));
+            Utils.logger("calling inner encoder", verbose);
+            this.innerProblemEncoder.AddMaximizationConstraints(objective, noAdditionalConstraints, verbose);
 
             // Optimization objective is the total demand met.
             // Return the encoding, including the feasibility constraints, objective, and KKT conditions.
             return new OptimizationEncoding<TVar, TSolution>
             {
                 GlobalObjective = this.TotalDemandMetVariable,
-                MaximizationObjective = objectiveFunction,
+                MaximizationObjective = objective,
                 DemandVariables = this.DemandVariables,
             };
         }
+
         /// <summary>
-        /// placeholder for getsolution.
+        /// Get the optimization solution from the solver solution.
         /// </summary>
-        /// <param name="solution"></param>
-        /// <returns></returns>
+        /// <param name="solution">The solution.</param>
         public OptimizationSolution GetSolution(TSolution solution)
         {
             var demands = new Dictionary<(string, string), double>();
             var flows = new Dictionary<(string, string), double>();
             var flowPaths = new Dictionary<string[], double>(new PathComparer());
 
-            // foreach (var (pair, poly) in this.DemandVariables)
-            // {
-            //     demands[pair] = 0;
-            //     foreach (var term in poly.Terms) {
-            //         demands[pair] += this.Solver.GetVariable(solution, term.Variable.Value) * term.Coefficient;
-            //     }
-            // }
+            foreach (var (pair, poly) in this.DemandVariables)
+            {
+                demands[pair] = 0;
+                foreach (var term in poly.GetTerms()) {
+                    demands[pair] += this.Solver.GetVariable(solution, term.Variable.Value) * term.Coefficient;
+                }
+            }
 
             foreach (var (pair, variable) in this.FlowVariables)
             {
@@ -319,7 +349,7 @@ namespace MetaOptimize
 
             return new OptimizationSolution
             {
-                TotalDemandMet = this.Solver.GetVariable(solution, this.TotalDemandMetVariable) + this.totalDemandPinned,
+                TotalDemandMet = this.Solver.GetVariable(solution, this.TotalDemandMetVariable),
                 Demands = demands,
                 Flows = flows,
                 FlowsPaths = flowPaths,

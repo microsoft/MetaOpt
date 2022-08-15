@@ -272,7 +272,7 @@ namespace MetaOptimize
         /// </summary>
         public ZenSolution CheckFeasibility(double objectiveValue)
         {
-            throw new Exception("have not implemented this yet....");
+            return Zen.Solve(Zen.And(this.ConstraintExprs.ToArray()));
         }
     }
 }

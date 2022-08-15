@@ -37,7 +37,7 @@
 
             // create the optimal encoder.
             var solver = CreateSolver();
-            var optimalEncoder = new OptimalEncoder<TVar, TSol>(solver, k: k);
+            var optimalEncoder = new TEOptimalEncoder<TVar, TSol>(solver, k: k);
             var heuristicEncoder = new DemandPinningEncoder<TVar, TSol>(solver, k: k, threshold: threshold);
             var adversarialInputGenerator = new AdversarialInputGenerator<TVar, TSol>(topology, k: k);
             var (optimalSolution, demandPinningSolution) = adversarialInputGenerator.MaximizeOptimalityGap(optimalEncoder, heuristicEncoder);

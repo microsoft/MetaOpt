@@ -24,7 +24,7 @@ namespace MetaOptimize.Cli {
                     }
                     Console.WriteLine("Exploring pop heuristic");
                     if (DirectEncoder) {
-                        heuristicEncoder = new OptimalEncoder<TVar, TSolution>(solver, numPaths);
+                        heuristicEncoder = new TEOptimalEncoder<TVar, TSolution>(solver, numPaths);
                         throw new Exception("should verify the above implementation...");
                     } else {
                         heuristicEncoder = new PopEncoder<TVar, TSolution>(solver, numPaths, numSlices, partition, partitionSensitivity: partitionSensitivity);
@@ -66,7 +66,7 @@ namespace MetaOptimize.Cli {
             solver.CleanAll();
             var (heuristicEncoder, _, _) = getHeuristic<TVar, TSolution>(solver, topology, Heuristic.DemandPinning,
                 numPaths, demandPinningThreshold: threshold);
-            var optimalEncoder = new OptimalEncoder<TVar, TSolution>(solver, numPaths);
+            var optimalEncoder = new TEOptimalEncoder<TVar, TSolution>(solver, numPaths);
             var adversarialInputGenerator = new AdversarialInputGenerator<TVar, TSolution>(topology, numPaths, numProcessors);
             (OptimizationSolution, OptimizationSolution) result =
                 adversarialInputGenerator.MaximizeOptimalityGap(optimalEncoder, heuristicEncoder);
@@ -89,7 +89,7 @@ namespace MetaOptimize.Cli {
             var solverSolutionHeuristic = heuristicEncoder.Solver.Maximize(heuristicEncoding.MaximizationObjective);
             var optimizationSolutionHeuristic = heuristicEncoder.GetSolution(solverSolutionHeuristic);
             var heuristicDemandMet = optimizationSolutionHeuristic.TotalDemandMet;
-            var optimalEncoder = new OptimalEncoder<TVar, TSolution>(solver, numPaths);
+            var optimalEncoder = new TEOptimalEncoder<TVar, TSolution>(solver, numPaths);
             var optimalEncoding = optimalEncoder.Encoding(topology, demandEqualityConstraints: demands, noAdditionalConstraints: true);
             var solverSolutionOptimal = optimalEncoder.Solver.Maximize(optimalEncoding.MaximizationObjective);
             var optimizationSolutionOptimal = optimalEncoder.GetSolution(solverSolutionOptimal);

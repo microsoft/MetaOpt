@@ -107,7 +107,7 @@ namespace MetaOptimize
         private KktOptimizationGenerator<TVar, TSolution> innerProblemEncoder;
 
         /// <summary>
-        /// Create a new instance of the <see cref="OptimalEncoder{TVar, TSolution}"/> class.
+        /// Create a new instance of the <see cref="DemandPinningEncoder{TVar, TSolution}"/> class.
         /// </summary>
         /// <param name="solver">The solver.</param>
         /// <param name="k">The max number of paths between nodes.</param>

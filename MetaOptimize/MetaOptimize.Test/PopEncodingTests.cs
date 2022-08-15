@@ -69,7 +69,7 @@ namespace MetaOptimize.Test
             var partition = topology.RandomPartition(2);
             // create the optimal encoder.
             var solver = CreateSolver();
-            var optimalEncoder = new OptimalEncoder<TVar, TSol>(solver, k: 1);
+            var optimalEncoder = new TEOptimalEncoder<TVar, TSol>(solver, k: 1);
 
             var popEncoderG = new PopEncoder<TVar, TSol>(solver, k: 1, numPartitions: 2, demandPartitions: partition);
             var adversarialInputGenerator = new AdversarialInputGenerator<TVar, TSol>(topology, k: 1);

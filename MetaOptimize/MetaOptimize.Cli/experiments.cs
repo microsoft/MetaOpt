@@ -260,7 +260,7 @@ namespace MetaOptimize
                     solver.SetTimeout(timeout);
                     var (heuristicEncoder, _, _) = CliUtils.getHeuristic<GRBVar, GRBModel>(solver, topology, heuristicName, numPaths, numPartitions, demandPinningThreshold,
                         partition: partition, partitionSensitivity: 0.1);
-                    var optimalEncoder = new OptimalEncoder<GRBVar, GRBModel>(solver, numPaths);
+                    var optimalEncoder = new TEOptimalEncoder<GRBVar, GRBModel>(solver, numPaths);
                     var timer = System.Diagnostics.Stopwatch.StartNew();
                     var adversarialInputGenerator = new AdversarialInputGenerator<GRBVar, GRBModel>(topology, numPaths, numProcessors);
                     (OptimizationSolution, OptimizationSolution) result = adversarialInputGenerator.MaximizeOptimalityGap(optimalEncoder, heuristicEncoder, demandUB);
@@ -297,7 +297,7 @@ namespace MetaOptimize
             string kktFile = @"kkt_" + heuristicName + ".txt";
             ISolver<GRBVar, GRBModel> solver = (ISolver<GRBVar, GRBModel>)new GurobiSOS(timeout, 0, numThreads, recordProgress: true, logPath: Path.Combine(logDir, kktFile));
             var (heuristicEncoder, _, _) = CliUtils.getHeuristic<GRBVar, GRBModel>(solver: solver, topology: topology, h: heuristicName, numPaths: numPaths, demandPinningThreshold: demandPinningThreshold);
-            var optimalEncoder = new OptimalEncoder<GRBVar, GRBModel>(solver, numPaths);
+            var optimalEncoder = new TEOptimalEncoder<GRBVar, GRBModel>(solver, numPaths);
             var adversarialInputGenerator = new AdversarialInputGenerator<GRBVar, GRBModel>(topology, numPaths, numProcessors);
             (OptimizationSolution, OptimizationSolution) result = adversarialInputGenerator.MaximizeOptimalityGap(optimalEncoder, heuristicEncoder);
             double optimal = result.Item1.TotalDemandMet;
@@ -315,7 +315,7 @@ namespace MetaOptimize
                 int numDemands = 1000000;
                 solver.CleanAll();
                 (heuristicEncoder, _, _) = CliUtils.getHeuristic<GRBVar, GRBModel>(solver, topology, heuristicName, numPaths, demandPinningThreshold: demandPinningThreshold);
-                optimalEncoder = new OptimalEncoder<GRBVar, GRBModel>(solver, numPaths);
+                optimalEncoder = new TEOptimalEncoder<GRBVar, GRBModel>(solver, numPaths);
                 adversarialInputGenerator = new AdversarialInputGenerator<GRBVar, GRBModel>(topology, numPaths, numProcessors);
                 result = adversarialInputGenerator.HillClimbingAdversarialGenerator(optimalEncoder, heuristicEncoder, numTrials: numDemands,
                     numNeighbors: numNeighbors, demandUB: demandUB, stddev: stddev, seed: seed, storeProgress: true, logPath: Path.Combine(logDir, hillClimbingFile),
@@ -330,7 +330,7 @@ namespace MetaOptimize
                 int numTmpSteps = 1000000;
                 solver.CleanAll();
                 (heuristicEncoder, _, _) = CliUtils.getHeuristic<GRBVar, GRBModel>(solver, topology, heuristicName, numPaths, demandPinningThreshold: demandPinningThreshold);
-                optimalEncoder = new OptimalEncoder<GRBVar, GRBModel>(solver, numPaths);
+                optimalEncoder = new TEOptimalEncoder<GRBVar, GRBModel>(solver, numPaths);
                 adversarialInputGenerator = new AdversarialInputGenerator<GRBVar, GRBModel>(topology, numPaths, numProcessors);
                 result = adversarialInputGenerator.SimulatedAnnealing(optimalEncoder, heuristicEncoder, numTmpSteps,
                     numNeighbors, demandUB, stddev, initialTmp: 500, tmpDecreaseFactor: 0.1, seed: seed, storeProgress: true, logPath: Path.Combine(logDir, simulatedAnnealingFile),
@@ -343,7 +343,7 @@ namespace MetaOptimize
                 numDemands = 1000000;
                 solver.CleanAll();
                 (heuristicEncoder, _, _) = CliUtils.getHeuristic<GRBVar, GRBModel>(solver, topology, heuristicName, numPaths, demandPinningThreshold: demandPinningThreshold);
-                optimalEncoder = new OptimalEncoder<GRBVar, GRBModel>(solver, numPaths);
+                optimalEncoder = new TEOptimalEncoder<GRBVar, GRBModel>(solver, numPaths);
                 adversarialInputGenerator = new AdversarialInputGenerator<GRBVar, GRBModel>(topology, numPaths, numProcessors);
                 result = adversarialInputGenerator.RandomAdversarialGenerator(optimalEncoder, heuristicEncoder, numDemands,
                     demandUB, seed: seed, storeProgress: true, logPath: Path.Combine(logDir, randomSearchFile), timeout: timeout);
@@ -386,7 +386,7 @@ namespace MetaOptimize
             ISolver<GRBVar, GRBModel> solver = (ISolver<GRBVar, GRBModel>)new GurobiBinary(timeout, 0, numThreads, recordProgress: true, logPath: Path.Combine(logDir, kktFile));
             var (heuristicEncoder, _, _) = CliUtils.getHeuristic<GRBVar, GRBModel>(solver, topology, heuristicName, numPaths, numSlices, demandPinningThreshold,
                 partition: partition);
-            var optimalEncoder = new OptimalEncoder<GRBVar, GRBModel>(solver, numPaths);
+            var optimalEncoder = new TEOptimalEncoder<GRBVar, GRBModel>(solver, numPaths);
             var adversarialInputGenerator = new AdversarialInputGenerator<GRBVar, GRBModel>(topology, numPaths, numProcessors);
             (OptimizationSolution, OptimizationSolution) result = adversarialInputGenerator.MaximizeOptimalityGap(optimalEncoder, heuristicEncoder, demandUB);
             double optimal = result.Item1.TotalDemandMet;
@@ -406,7 +406,7 @@ namespace MetaOptimize
                 solver.CleanAll();
                 (heuristicEncoder, _, _) = CliUtils.getHeuristic<GRBVar, GRBModel>(solver, topology, heuristicName, numPaths, numSlices, demandPinningThreshold,
                     partition: partition);
-                optimalEncoder = new OptimalEncoder<GRBVar, GRBModel>(solver, numPaths);
+                optimalEncoder = new TEOptimalEncoder<GRBVar, GRBModel>(solver, numPaths);
                 adversarialInputGenerator = new AdversarialInputGenerator<GRBVar, GRBModel>(topology, numPaths, numProcessors);
                 result = adversarialInputGenerator.HillClimbingAdversarialGenerator(optimalEncoder, heuristicEncoder, numTrials: numDemands,
                     numNeighbors: numNeighbors, demandUB: demandUB, stddev: stddev, seed: seed, storeProgress: true, logPath: Path.Combine(logDir, hillClimbingFile),
@@ -422,7 +422,7 @@ namespace MetaOptimize
                 solver.CleanAll();
                 (heuristicEncoder, _, _) = CliUtils.getHeuristic<GRBVar, GRBModel>(solver, topology, heuristicName, numPaths, numSlices, demandPinningThreshold,
                     partition: partition);
-                optimalEncoder = new OptimalEncoder<GRBVar, GRBModel>(solver, numPaths);
+                optimalEncoder = new TEOptimalEncoder<GRBVar, GRBModel>(solver, numPaths);
                 adversarialInputGenerator = new AdversarialInputGenerator<GRBVar, GRBModel>(topology, numPaths, numProcessors);
                 result = adversarialInputGenerator.SimulatedAnnealing(optimalEncoder, heuristicEncoder, numTmpSteps,
                     numNeighbors, demandUB, stddev, initialTmp: 500, tmpDecreaseFactor: 0.1, seed: seed, storeProgress: true, logPath: Path.Combine(logDir, simulatedAnnealingFile),
@@ -436,7 +436,7 @@ namespace MetaOptimize
                 solver.CleanAll();
                 (heuristicEncoder, _, _) = CliUtils.getHeuristic<GRBVar, GRBModel>(solver, topology, heuristicName, numPaths, numSlices, demandPinningThreshold,
                     partition: partition);
-                optimalEncoder = new OptimalEncoder<GRBVar, GRBModel>(solver, numPaths);
+                optimalEncoder = new TEOptimalEncoder<GRBVar, GRBModel>(solver, numPaths);
                 adversarialInputGenerator = new AdversarialInputGenerator<GRBVar, GRBModel>(topology, numPaths, numProcessors);
                 result = adversarialInputGenerator.RandomAdversarialGenerator(optimalEncoder, heuristicEncoder, numDemands,
                     demandUB, seed: seed, storeProgress: true, logPath: Path.Combine(logDir, randomSearchFile), timeout: timeout);
@@ -531,7 +531,7 @@ namespace MetaOptimize
 
             solver.CleanAll();
             solver.GetModel().Parameters.LogFile = Path.Combine(logDir, logFile + "_inner_optimal.txt");
-            var optimalEncoder = new OptimalEncoder<GRBVar, GRBModel>(solver, numPaths);
+            var optimalEncoder = new TEOptimalEncoder<GRBVar, GRBModel>(solver, numPaths);
             var optimalEncoding = optimalEncoder.Encoding(topology, demandEqualityConstraints: dic_demands, noAdditionalConstraints: true);
             // gurobi optimal inner
             timer = Stopwatch.StartNew();
