@@ -203,6 +203,12 @@ namespace MetaOptimize.Cli
         public bool StoreProgress { get; set; }
 
         /// <summary>
+        /// file to read paths.
+        /// </summary>
+        [Option('m', "pathfile", Default = null, HelpText = "file to read the paths from.")]
+        public string PathFile { get; set; }
+
+        /// <summary>
         /// log file.
         /// </summary>
         [Option('t', "logfile", Default = null, HelpText = "path to the log file to store the progress.")]

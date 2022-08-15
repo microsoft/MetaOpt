@@ -1,6 +1,8 @@
 namespace MetaOptimize {
     using System;
+    using System.Collections.Generic;
     using System.IO;
+    using Newtonsoft.Json;
     /// <summary>
     /// Implements a utility function with some .
     /// </summary>
@@ -156,6 +158,47 @@ namespace MetaOptimize {
             if (storeProgress) {
                 Utils.AppendToFile(path, line);
             }
+        }
+
+        /// <summary>
+        /// write set of paths to the file.
+        /// </summary>
+        public static void readPathsFromFile(string pathToFile, Dictionary<int, Dictionary<(string, string), string[][]>> output)
+        {
+            if (!File.Exists(pathToFile)) {
+                return;
+            }
+            var readPaths = JsonConvert.DeserializeObject<Dictionary<int, Dictionary<string, string[][]>>>(File.ReadAllText(pathToFile));
+            foreach (var (k, paths) in readPaths) {
+                output[k] = new Dictionary<(string, string), string[][]>();
+                foreach (var (pair, path) in paths) {
+                    var spair = pair.Split("_");
+                    output[k][(spair[0], spair[1])] = path;
+                }
+            }
+        }
+
+        /// <summary>
+        /// write paths to file.
+        /// </summary>
+        public static void writePathsToFile(string pathToWrite, Dictionary<int, Dictionary<(string, string), string[][]>> output)
+        {
+            if (File.Exists(pathToWrite)) {
+                throw new Exception("path to file to store the paths exist!!");
+            }
+            var dirname = Path.GetDirectoryName(pathToWrite);
+            if (!Directory.Exists(dirname)) {
+                Directory.CreateDirectory(dirname);
+            }
+            var storeOutput = new Dictionary<int, Dictionary<string, string[][]>>();
+            foreach (var (key, paths) in output) {
+                storeOutput[key] = new Dictionary<string, string[][]>();
+                foreach (var (pair, path) in output[key]) {
+                    storeOutput[key][pair.Item1 + "_" + pair.Item2] = path;
+                }
+            }
+            string serializedjson = JsonConvert.SerializeObject(storeOutput);
+            File.WriteAllText(pathToWrite, serializedjson);
         }
     }
 }

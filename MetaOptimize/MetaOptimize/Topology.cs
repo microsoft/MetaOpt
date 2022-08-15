@@ -30,12 +30,25 @@ namespace MetaOptimize
         public AdjacencyGraph<string, EquatableTaggedEdge<string, double>> Graph { get; set; }
 
         /// <summary>
+        /// the paths between every pairs.
+        /// </summary>
+        public Dictionary<int, Dictionary<(string, string), string[][]>> paths { get; set; }
+
+        /// <summary>
+        /// the path to the file storing paths.
+        /// </summary>
+        private string pathFile;
+
+        /// <summary>
         /// Creates a new instance of the <see cref="Topology"/> class.
         /// </summary>
-        public Topology()
+        public Topology(string pathFile = null)
         {
             this.random = new Random(0);
             this.Graph = new AdjacencyGraph<string, EquatableTaggedEdge<string, double>>(allowParallelEdges: false);
+            this.paths = new Dictionary<int, Dictionary<(string, string), string[][]>>();
+            this.pathFile = pathFile;
+            Utils.readPathsFromFile(this.pathFile, this.paths);
         }
 
         /// <summary>
@@ -240,6 +253,13 @@ namespace MetaOptimize
         public Dictionary<(string, string), string[][]> AllPairsKShortestPathMultiProcessing(int k,
                 int numProcesses = -1, bool verbose = false)
         {
+            if (this.paths.ContainsKey(k)) {
+                Utils.logger("found paths in " + this.pathFile, verbose);
+                return this.paths[k];
+            } else {
+                Utils.logger("did not found paths in " + this.pathFile, verbose);
+                this.paths[k] = new Dictionary<(string, string), string[][]>();
+            }
             var output = new ConcurrentDictionary<(string, string), string[][]>();
             if (numProcesses < 1) {
                 this.ShortestKPathsForListPairs(k, this.GetNodePairs(), output, verbose: verbose);
@@ -276,8 +296,14 @@ namespace MetaOptimize
                     verbose);
                 threadlist[pid].Join();
             }
+            this.paths[k] = output.ToDictionary(entry => entry.Key,
+                                                entry => entry.Value);
+            if (!String.IsNullOrEmpty(this.pathFile)) {
+                Utils.logger("storing the paths in the file " + this.pathFile, verbose);
+                Utils.writePathsToFile(this.pathFile, this.paths);
+            }
             return output.ToDictionary(entry => entry.Key,
-                                        entry => entry.Value);
+                                       entry => entry.Value);
         }
 
         /// <summary>
@@ -371,7 +397,7 @@ namespace MetaOptimize
         /// <returns>A new toplogy with 1/k capacity for each edge.</returns>
         public Topology SplitCapacity(int k)
         {
-            var t = new Topology();
+            var t = new Topology(this.pathFile);
             foreach (var node in this.GetAllNodes())
             {
                 t.AddNode(node);
