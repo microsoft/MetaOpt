@@ -33,7 +33,7 @@ namespace MetaOptimize.Test
             var optimalEncoder = new TEOptimalEncoder<TVar, TSol>(solver, k: 1);
             var encoding = optimalEncoder.Encoding(topology);
             var solverSolution = optimalEncoder.Solver.Maximize(encoding.GlobalObjective);
-            var optimizationSolution = optimalEncoder.GetSolution(solverSolution);
+            var optimizationSolution = (TEOptimizationSolution) optimalEncoder.GetSolution(solverSolution);
 
             // Debugging information.
             /* foreach (var c in solver.ConstraintExprs)
@@ -65,7 +65,7 @@ namespace MetaOptimize.Test
             var optimalEncoder = new TEOptimalEncoder<TVar, TSol>(solver, k: 1);
             var encoding = optimalEncoder.Encoding(topology, noAdditionalConstraints: true);
             var solverSolution = optimalEncoder.Solver.Maximize(encoding.GlobalObjective);
-            var optimizationSolution = optimalEncoder.GetSolution(solverSolution);
+            var optimizationSolution = (TEOptimizationSolution) optimalEncoder.GetSolution(solverSolution);
 
             Assert.IsTrue(TestHelper.IsApproximately(10, optimizationSolution.TotalDemandMet));
             Assert.IsTrue(10 <= optimizationSolution.Demands[("a", "b")]);
@@ -94,7 +94,7 @@ namespace MetaOptimize.Test
             var optimalEncoder = new TEOptimalEncoder<TVar, TSol>(solver, k: 1);
             var encoding = optimalEncoder.Encoding(topology);
             var solverSolution = optimalEncoder.Solver.Maximize(encoding.GlobalObjective);
-            var optimizationSolution = optimalEncoder.GetSolution(solverSolution);
+            var optimizationSolution = (TEOptimizationSolution) optimalEncoder.GetSolution(solverSolution);
 
             // Debugging information.
             /* foreach (var c in solver.ConstraintExprs)
@@ -133,7 +133,7 @@ namespace MetaOptimize.Test
             var optimalEncoder = new TEOptimalEncoder<TVar, TSol>(solver, k: 1);
             var encoding = optimalEncoder.Encoding(topology, noAdditionalConstraints: true);
             var solverSolution = optimalEncoder.Solver.Maximize(encoding.GlobalObjective);
-            var optimizationSolution = optimalEncoder.GetSolution(solverSolution);
+            var optimizationSolution = (TEOptimizationSolution) optimalEncoder.GetSolution(solverSolution);
 
             // Debugging information.
             /* foreach (var c in solver.ConstraintExprs)

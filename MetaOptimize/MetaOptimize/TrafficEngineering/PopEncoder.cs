@@ -212,7 +212,7 @@ namespace MetaOptimize
 
             this.Solver.AddEqZeroConstraint(objective);
 
-            return new OptimizationEncoding<TVar, TSolution>
+            return new TEOptimizationEncoding<TVar, TSolution>
             {
                 GlobalObjective = objectiveVariable,
                 MaximizationObjective = new Polynomial<TVar>(new Term<TVar>(1, objectiveVariable)),
@@ -230,7 +230,7 @@ namespace MetaOptimize
             var flows = new Dictionary<(string, string), double>();
             var flowPaths = new Dictionary<string[], double>(new PathComparer());
 
-            var solutions = this.PartitionEncoders.Select(e => e.GetSolution(solution)).ToList();
+            var solutions = this.PartitionEncoders.Select(e => (TEOptimizationSolution) e.GetSolution(solution)).ToList();
 
             // foreach (var pair in this.Topology.GetNodePairs())
             // {
@@ -269,7 +269,7 @@ namespace MetaOptimize
                 }
             }
 
-            return new OptimizationSolution
+            return new TEOptimizationSolution
             {
                 TotalDemandMet = solutions.Select(s => s.TotalDemandMet).Aggregate((a, b) => a + b),
                 Demands = demands,

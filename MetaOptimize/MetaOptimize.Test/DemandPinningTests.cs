@@ -39,7 +39,7 @@
             var solver = CreateSolver();
             var optimalEncoder = new TEOptimalEncoder<TVar, TSol>(solver, k: k);
             var heuristicEncoder = new DemandPinningEncoder<TVar, TSol>(solver, k: k, threshold: threshold);
-            var adversarialInputGenerator = new AdversarialInputGenerator<TVar, TSol>(topology, k: k);
+            var adversarialInputGenerator = new TEAdversarialInputGenerator<TVar, TSol>(topology, k: k);
             var (optimalSolution, demandPinningSolution) = adversarialInputGenerator.MaximizeOptimalityGap(optimalEncoder, heuristicEncoder);
             Console.WriteLine("Optimal:");
             Console.WriteLine(Newtonsoft.Json.JsonConvert.SerializeObject(optimalSolution, Newtonsoft.Json.Formatting.Indented));

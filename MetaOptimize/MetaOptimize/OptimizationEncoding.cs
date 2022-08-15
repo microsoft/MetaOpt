@@ -20,10 +20,5 @@ namespace MetaOptimize
         /// The maximization objective.
         /// </summary>
         public Polynomial<TVar> MaximizationObjective { get; set; }
-
-        /// <summary>
-        /// The demand expression for any pair of nodes.
-        /// </summary>
-        public IDictionary<(string, string), Polynomial<TVar>> DemandVariables { get; set; }
     }
 }

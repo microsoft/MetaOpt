@@ -14,7 +14,7 @@ namespace MetaOptimize
     /// <summary>
     /// Meta-optimization utility functions for maximizing optimality gaps.
     /// </summary>
-    public class AdversarialInputGenerator<TVar, TSolution>
+    public class TEAdversarialInputGenerator<TVar, TSolution>
     {
         /// <summary>
         /// The topology for the network.
@@ -39,7 +39,7 @@ namespace MetaOptimize
         /// <summary>
         /// Constructor.
         /// </summary>
-        public AdversarialInputGenerator(Topology topology, int k, int numProcesses = -1) {
+        public TEAdversarialInputGenerator(Topology topology, int k, int numProcesses = -1) {
             this.Topology = topology;
             this.K = k;
             this.NumProcesses = numProcesses;
@@ -52,8 +52,8 @@ namespace MetaOptimize
                 var solver = optimalEncoder.Solver;
                 Console.WriteLine("===== Going to simplify the solution....");
                 var simplifier = new AdversarialInputSimplifier<TVar, TSolution>(Topology, K, DemandVariables);
-                var optimalObj = optimalEncoder.GetSolution(solution).TotalDemandMet;
-                var heuristicObj = heuristicEncoder.GetSolution(solution).TotalDemandMet;
+                var optimalObj = ((TEOptimizationSolution) optimalEncoder.GetSolution(solution)).TotalDemandMet;
+                var heuristicObj = ((TEOptimizationSolution) heuristicEncoder.GetSolution(solution)).TotalDemandMet;
                 var gap = optimalObj - heuristicObj;
                 var simplifyObj = simplifier.AddDirectMinConstraintsAndObjectives(solver, objective, gap);
                 solution = solver.Maximize(simplifyObj, reset: true);
@@ -63,7 +63,7 @@ namespace MetaOptimize
         /// <summary>
         /// Find an adversarial input that maximizes the optimality gap between two optimizations.
         /// </summary>
-        public (OptimizationSolution, OptimizationSolution) MaximizeOptimalityGap(
+        public (TEOptimizationSolution, TEOptimizationSolution) MaximizeOptimalityGap(
             IEncoder<TVar, TSolution> optimalEncoder,
             IEncoder<TVar, TSolution> heuristicEncoder,
             double demandUB = -1,
@@ -172,7 +172,7 @@ namespace MetaOptimize
             // } while (newBstGapFound);
 
             solution = SimplifyAdversarialInputs(simplify, optimalEncoder, heuristicEncoder, solution, objective);
-            return (optimalEncoder.GetSolution(solution), heuristicEncoder.GetSolution(solution));
+            return ((TEOptimizationSolution) optimalEncoder.GetSolution(solution), (TEOptimizationSolution) heuristicEncoder.GetSolution(solution));
 
             /* if (!solution.IsSatisfiable())
             {
@@ -190,7 +190,7 @@ namespace MetaOptimize
         /// <summary>
         /// Maximize optimality gap with clustering method used for scale up.
         /// </summary>
-        public (OptimizationSolution, OptimizationSolution) MaximizeOptimalityGapWithClusteringV2(
+        public (TEOptimizationSolution, TEOptimizationSolution) MaximizeOptimalityGapWithClusteringV2(
             List<Topology> clusters,
             IEncoder<TVar, TSolution> optimalEncoder,
             IEncoder<TVar, TSolution> heuristicEncoder,
@@ -269,7 +269,7 @@ namespace MetaOptimize
                             new Term<TVar>(1, optimalEncoding.GlobalObjective),
                             new Term<TVar>(-1, heuristicEncoding.GlobalObjective));
                 var solution = solver.Maximize(objective, reset: true);
-                var optimalSolution = optimalEncoder.GetSolution(solution);
+                var optimalSolution = (TEOptimizationSolution) optimalEncoder.GetSolution(solution);
                 foreach (var pair in consideredPairs) {
                     demandMatrix[pair] = optimalSolution.Demands[pair];
                     // AddSingleDemandEquality(solver, pair, demandMatrix[pair]);
@@ -335,7 +335,7 @@ namespace MetaOptimize
                                 new Term<TVar>(1, optimalEncoding.GlobalObjective),
                                 new Term<TVar>(-1, heuristicEncoding.GlobalObjective));
                     var solution = solver.Maximize(objective, reset: true);
-                    var optimalSolution = optimalEncoder.GetSolution(solution);
+                    var optimalSolution = (TEOptimizationSolution) optimalEncoder.GetSolution(solution);
                     foreach (var pair in consideredPairs) {
                         demandMatrix[pair] = optimalSolution.Demands[pair];
                         // AddSingleDemandEquality(solver, (node1, node2), demandMatrix[(node1, node2)]);
@@ -359,7 +359,7 @@ namespace MetaOptimize
         /// First Optimizes all the clusters. Then, uses random sampling for.
         /// inter-cluster traffic.
         /// </summary>
-        public (OptimizationSolution, OptimizationSolution) MaximizeOptimalityGapWithClusteringV1(
+        public (TEOptimizationSolution, TEOptimizationSolution) MaximizeOptimalityGapWithClusteringV1(
             List<Topology> clusters,
             IEncoder<TVar, TSolution> optimalEncoder,
             IEncoder<TVar, TSolution> heuristicEncoder,
@@ -393,7 +393,7 @@ namespace MetaOptimize
             foreach (var cluster in clusters) {
                 optimalEncoder.Solver.CleanAll();
                 Utils.logger("Cluster with " + cluster.GetAllNodes().Count() + " nodes and " + cluster.GetAllEdges().Count() + " edges", verbose);
-                var adversarialInputGenerator = new AdversarialInputGenerator<TVar, TSolution>(cluster, this.K, this.NumProcesses);
+                var adversarialInputGenerator = new TEAdversarialInputGenerator<TVar, TSolution>(cluster, this.K, this.NumProcesses);
                 var clusterResult = adversarialInputGenerator.MaximizeOptimalityGap(optimalEncoder, heuristicEncoder, demandUB, innerEncoding, demandList: demandList,
                         simplify: simplify, verbose: verbose);
                 foreach (var pair in cluster.GetNodePairs()) {
@@ -492,7 +492,7 @@ namespace MetaOptimize
                                 new Term<TVar>(1, optimalEncoding.GlobalObjective),
                                 new Term<TVar>(-1, heuristicEncoding.GlobalObjective));
                     var solution = solver.Maximize(objective, reset: true);
-                    var optimalSolution = optimalEncoder.GetSolution(solution);
+                    var optimalSolution = (TEOptimizationSolution) optimalEncoder.GetSolution(solution);
                     foreach (var pair in this.Topology.GetNodePairs()) {
                         if (demandMatrix.ContainsKey(pair)) {
                             // Console.WriteLine(demandMatrix[pair].ToString() + " " + optimalSolution.Demands[pair].ToString());
@@ -530,7 +530,7 @@ namespace MetaOptimize
         /// inter-cluster traffic on abstracted topology and randomly assings the
         /// flows to each cluster.
         /// </summary>
-        public (OptimizationSolution, OptimizationSolution) MaximizeOptimalityGapWithClusteringV3(
+        public (TEOptimizationSolution, TEOptimizationSolution) MaximizeOptimalityGapWithClusteringV3(
             List<Topology> clusters,
             IEncoder<TVar, TSolution> optimalEncoder,
             IEncoder<TVar, TSolution> heuristicEncoder,
@@ -565,7 +565,7 @@ namespace MetaOptimize
             foreach (var cluster in clusters) {
                 optimalEncoder.Solver.CleanAll();
                 Utils.logger("Cluster with " + cluster.GetAllNodes().Count() + " nodes and " + cluster.GetAllEdges().Count() + " edges", verbose);
-                var clusterAdversarialInputGenerator = new AdversarialInputGenerator<TVar, TSolution>(cluster, this.K, this.NumProcesses);
+                var clusterAdversarialInputGenerator = new TEAdversarialInputGenerator<TVar, TSolution>(cluster, this.K, this.NumProcesses);
                 var clusterResult = clusterAdversarialInputGenerator.MaximizeOptimalityGap(optimalEncoder, heuristicEncoder, demandUB, innerEncoding,
                         demandList: demandList, simplify: simplify, verbose: verbose);
                 foreach (var pair in cluster.GetNodePairs()) {
@@ -697,7 +697,7 @@ namespace MetaOptimize
             Utils.logger("Abstract topology with " + abstractTopology.GetAllNodes().Count() +
                     " nodes and " + abstractTopology.GetAllEdges().Count() + " edges", verbose);
             optimalEncoder.Solver.CleanAll();
-            var adversarialInputGenerator = new AdversarialInputGenerator<TVar, TSolution>(abstractTopology, this.K, this.NumProcesses);
+            var adversarialInputGenerator = new TEAdversarialInputGenerator<TVar, TSolution>(abstractTopology, this.K, this.NumProcesses);
             var abstractResult = adversarialInputGenerator.MaximizeOptimalityGap(optimalEncoder, heuristicEncoder,
                     innerEncoding: innerEncoding, demandList: new PairwiseDemandList(abstractDemandList),
                     simplify: simplify, verbose: verbose, cleanUpSolver: false, perDemandUB: pairToDemandUB);
@@ -750,7 +750,7 @@ namespace MetaOptimize
         /// <param name="innerEncoding">The method for encoding the inner problem.</param>
         /// <param name="demandList">the quantized list of demands, will only use if method=PrimalDual.</param>
         /// <param name="simplify">will simplify the final solution if this parameter is true.</param>,
-        public (OptimizationSolution, OptimizationSolution) FindOptimalityGapAtLeast(
+        public (TEOptimizationSolution, TEOptimizationSolution) FindOptimalityGapAtLeast(
             IEncoder<TVar, TSolution> optimalEncoder,
             IEncoder<TVar, TSolution> heuristicEncoder,
             double minDifference,
@@ -793,7 +793,8 @@ namespace MetaOptimize
             // var solution = solver.Maximize(solver.CreateVariable("dummy"));
             var solution = solver.CheckFeasibility(minDifference);
             solution = SimplifyAdversarialInputs(simplify, optimalEncoder, heuristicEncoder, solution, objective);
-            return (optimalEncoder.GetSolution(solution), heuristicEncoder.GetSolution(solution));
+            return ((TEOptimizationSolution) optimalEncoder.GetSolution(solution),
+                    (TEOptimizationSolution) heuristicEncoder.GetSolution(solution));
             /* if (!solution.IsSatisfiable())
             {
                 Console.WriteLine($"No solution found!");
@@ -916,7 +917,7 @@ namespace MetaOptimize
         /// <param name="demandUB">upper bound on all the demands.</param>
         /// <param name="innerEncoding">The method for encoding the inner problem.</param>
         /// <param name="demandList">the quantized list of demands, will only use if method=PrimalDual.</param>
-        public (OptimizationSolution, OptimizationSolution) FindMaximumGapInterval(
+        public (TEOptimizationSolution, TEOptimizationSolution) FindMaximumGapInterval(
             IEncoder<TVar, TSolution> optimalEncoder,
             IEncoder<TVar, TSolution> heuristicEncoder,
             double intervalConf,
@@ -992,10 +993,11 @@ namespace MetaOptimize
             Console.WriteLine("**************************************************");
             // solver.ChangeConstraintRHS(nameLBConst, -1 * lbGap);
             solution = solver.CheckFeasibility(lbGap);
-            return (optimalEncoder.GetSolution(solution), heuristicEncoder.GetSolution(solution));
+            return ((TEOptimizationSolution) optimalEncoder.GetSolution(solution), 
+                    (TEOptimizationSolution) heuristicEncoder.GetSolution(solution));
         }
 
-        private (double, (OptimizationSolution, OptimizationSolution)) GetGap (
+        private (double, (TEOptimizationSolution, TEOptimizationSolution)) GetGap (
             IEncoder<TVar, TSolution> optimalEncoder,
             IEncoder<TVar, TSolution> heuristicEncoder,
             Dictionary<(string, string), double> demands)
@@ -1005,14 +1007,14 @@ namespace MetaOptimize
             var encodingHeuristic = heuristicEncoder.Encoding(this.Topology, demandEqualityConstraints: demands,
                     noAdditionalConstraints: true, numProcesses: this.NumProcesses);
             var solverSolutionHeuristic = heuristicEncoder.Solver.Maximize(encodingHeuristic.MaximizationObjective);
-            var optimizationSolutionHeuristic = heuristicEncoder.GetSolution(solverSolutionHeuristic);
+            var optimizationSolutionHeuristic = (TEOptimizationSolution) heuristicEncoder.GetSolution(solverSolutionHeuristic);
 
             // solving the optimal for the demand
             optimalEncoder.Solver.CleanAll();
             var encodingOptimal = optimalEncoder.Encoding(this.Topology, demandEqualityConstraints: demands,
                     noAdditionalConstraints: true, numProcesses: this.NumProcesses);
             var solverSolutionOptimal = optimalEncoder.Solver.Maximize(encodingOptimal.MaximizationObjective);
-            var optimizationSolutionOptimal = optimalEncoder.GetSolution(solverSolutionOptimal);
+            var optimizationSolutionOptimal = (TEOptimizationSolution) optimalEncoder.GetSolution(solverSolutionOptimal);
             double currGap = optimizationSolutionOptimal.TotalDemandMet - optimizationSolutionHeuristic.TotalDemandMet;
             return (currGap, (optimizationSolutionOptimal, optimizationSolutionHeuristic));
         }
@@ -1020,7 +1022,7 @@ namespace MetaOptimize
         /// <summary>
         /// Generate some random inputs and takes the max gap as the adversary.
         /// </summary>
-        public (OptimizationSolution, OptimizationSolution) RandomAdversarialGenerator(
+        public (TEOptimizationSolution, TEOptimizationSolution) RandomAdversarialGenerator(
             IEncoder<TVar, TSolution> optimalEncoder,
             IEncoder<TVar, TSolution> heuristicEncoder,
             int numTrials,
@@ -1048,13 +1050,13 @@ namespace MetaOptimize
                 }
             }
             double currMaxGap = 0;
-            OptimizationSolution zero_solution = new OptimizationSolution {
+            TEOptimizationSolution zero_solution = new TEOptimizationSolution {
                     TotalDemandMet = 0,
                     Demands = new Dictionary<(string, string), double> { },
                     Flows = new Dictionary<(string, string), double> { },
                     FlowsPaths = new Dictionary<string[], double> { },
                 };
-            (OptimizationSolution, OptimizationSolution) worstResult = (zero_solution, zero_solution);
+            (TEOptimizationSolution, TEOptimizationSolution) worstResult = (zero_solution, zero_solution);
             Random rng = new Random(seed);
             double timeout_ms = timeout * 1000;
             Stopwatch timer = Stopwatch.StartNew();
@@ -1100,7 +1102,7 @@ namespace MetaOptimize
         /// <summary>
         /// Using some hill climbers to generate some adversary inputs.
         /// </summary>
-        public (OptimizationSolution, OptimizationSolution) HillClimbingAdversarialGenerator(
+        public (TEOptimizationSolution, TEOptimizationSolution) HillClimbingAdversarialGenerator(
             IEncoder<TVar, TSolution> optimalEncoder,
             IEncoder<TVar, TSolution> heuristicEncoder,
             int numTrials,
@@ -1128,13 +1130,13 @@ namespace MetaOptimize
             }
 
             double currMaxGap = 0;
-            OptimizationSolution zero_solution = new OptimizationSolution {
+            TEOptimizationSolution zero_solution = new TEOptimizationSolution {
                     TotalDemandMet = 0,
                     Demands = new Dictionary<(string, string), double> { },
                     Flows = new Dictionary<(string, string), double> { },
                     FlowsPaths = new Dictionary<string[], double> { },
                 };
-            (OptimizationSolution, OptimizationSolution) worstResult = (zero_solution, zero_solution);
+            (TEOptimizationSolution, TEOptimizationSolution) worstResult = (zero_solution, zero_solution);
             Random rng = new Random(seed);
             double timeout_ms = timeout * 1000;
             Stopwatch timer = Stopwatch.StartNew();
@@ -1215,7 +1217,7 @@ namespace MetaOptimize
         /// <summary>
         /// Using Simulated Annealing to generate adversarial inputs.
         /// </summary>
-        public (OptimizationSolution, OptimizationSolution) SimulatedAnnealing(
+        public (TEOptimizationSolution, TEOptimizationSolution) SimulatedAnnealing(
             IEncoder<TVar, TSolution> optimalEncoder,
             IEncoder<TVar, TSolution> heuristicEncoder,
             int numTmpSteps,
@@ -1262,7 +1264,7 @@ namespace MetaOptimize
             Stopwatch timer = Stopwatch.StartNew();
             Dictionary<(string, string), double> currDemands = getRandomDemand(rng, demandUB);
             var (currGap, currResult) = GetGap(optimalEncoder, heuristicEncoder, currDemands);
-            (OptimizationSolution, OptimizationSolution) worstResult = currResult;
+            (TEOptimizationSolution, TEOptimizationSolution) worstResult = currResult;
             double currMaxGap = currGap;
             double restartMaxGap = currGap;
             Utils.StoreProgress(logPath, timer.ElapsedMilliseconds + ", " + currMaxGap, storeProgress);

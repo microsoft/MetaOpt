@@ -281,7 +281,7 @@ namespace MetaOptimize
 
             // Optimization objective is the total demand met.
             // Return the encoding, including the feasibility constraints, objective, and KKT conditions.
-            return new OptimizationEncoding<TVar, TSolution>
+            return new TEOptimizationEncoding<TVar, TSolution>
             {
                 GlobalObjective = this.TotalDemandMetVariable,
                 MaximizationObjective = objectiveFunction,
@@ -317,7 +317,7 @@ namespace MetaOptimize
                 flowPaths[path] = this.Solver.GetVariable(solution, variable);
             }
 
-            return new OptimizationSolution
+            return new TEOptimizationSolution
             {
                 TotalDemandMet = this.Solver.GetVariable(solution, this.TotalDemandMetVariable) + this.totalDemandPinned,
                 Demands = demands,
