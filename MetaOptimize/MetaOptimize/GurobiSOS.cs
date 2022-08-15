@@ -301,10 +301,10 @@ namespace MetaOptimize
         }
 
         /// <summary>
-        /// Converts to quadratic form for Gurobi.
+        /// Converts quadratic to linear form for Gurobi.
         /// </summary>
         /// <returns>Linear expression.</returns>
-        private GRBLinExpr ConvertQE(IList<Polynomial<GRBVar>> coeffPolyList, IList<GRBVar> variableList, Polynomial<GRBVar> linearPoly)
+        private GRBLinExpr ConvertQEToLinear(IList<Polynomial<GRBVar>> coeffPolyList, IList<GRBVar> variableList, Polynomial<GRBVar> linearPoly)
         {
             GRBLinExpr obj = 0;
             foreach (var term in linearPoly.GetTerms()) {
@@ -337,6 +337,13 @@ namespace MetaOptimize
                             auxConst.Add(new Term<GRBVar>(-1, auxVar));
                             this.AddLeqZeroConstraint(auxConst.Negate());
                             this.AddLeqZeroConstraint(new Polynomial<GRBVar>(new Term<GRBVar>(1, auxVar)));
+                            // var auxConst1 = new Polynomial<GRBVar>(new Term<GRBVar>(1, auxVar));
+                            // auxConst1.Add(new Term<GRBVar>(-1, variable));
+                            // this.AddLeqZeroConstraint(auxConst1);
+                            // var auxConst2 = new Polynomial<GRBVar>(new Term<GRBVar>(1, auxVar));
+                            // // auxConst2.Add(new Term<GRBVar>(-1 * this._bigM));
+                            // auxConst2.Add(new Term<GRBVar>(-1  * this._bigM, binary_variable));
+                            // this.AddLeqZeroConstraint(auxConst2);
                             auxQVarList.Add(auxVar);
                             // } else {
                             //     throw new Exception("coefficient should be binary but it is not");
@@ -354,14 +361,30 @@ namespace MetaOptimize
         }
 
         /// <summary>
+        /// Converts Quadratic to Quadratic for gurobi.
+        /// </summary>
+        private GRBQuadExpr ConvertQEToQEExp(IList<Polynomial<GRBVar>> coeffPolyList, IList<GRBVar> variableList, Polynomial<GRBVar> linearPoly)
+        {
+            GRBQuadExpr quadConstraint = this.Convert(linearPoly);
+            for (int i = 0; i < coeffPolyList.Count; i++) {
+                var coeffPoly = this.Convert(coeffPolyList[i]);
+                GRBVar variable = variableList[i];
+                quadConstraint += coeffPoly * variable;
+            }
+            return quadConstraint;
+        }
+
+        /// <summary>
         /// Add a less than or equal to zero constraint (Quadratic).
         /// Following constraints; A * B + C \leq 0.
         /// </summary>
         public string AddLeqZeroConstraint(IList<Polynomial<GRBVar>> coeffPolyList, IList<GRBVar> variableList, Polynomial<GRBVar> linearPoly)
         {
             string name = "ineq_index_" + this._constraintIneqCount++;
-            GRBLinExpr quadConstraint = this.ConvertQE(coeffPolyList, variableList, linearPoly);
-            this._model.AddConstr(quadConstraint, GRB.LESS_EQUAL, 0.0, name);
+            // GRBLinExpr quadConstraint = this.ConvertQE(coeffPolyList, variableList, linearPoly);
+            // this._model.AddConstr(quadConstraint, GRB.LESS_EQUAL, 0.0, name);
+            var quadConstraint = this.ConvertQEToQEExp(coeffPolyList, variableList, linearPoly);
+            this._model.AddQConstr(quadConstraint, GRB.EQUAL, 0.0, name);
             return name;
         }
 
@@ -383,8 +406,10 @@ namespace MetaOptimize
         public string AddEqZeroConstraint(IList<Polynomial<GRBVar>> coeffPolyList, IList<GRBVar> variableList, Polynomial<GRBVar> linearPoly)
         {
             string name = "ineq_index_" + this._constraintIneqCount++;
-            GRBLinExpr quadConstraint = this.ConvertQE(coeffPolyList, variableList, linearPoly);
-            this._model.AddConstr(quadConstraint, GRB.EQUAL, 0.0, name);
+            // GRBLinExpr quadConstraint = this.ConvertQE(coeffPolyList, variableList, linearPoly);
+            // this._model.AddConstr(quadConstraint, GRB.EQUAL, 0.0, name);
+            var quadConstraint = this.ConvertQEToQEExp(coeffPolyList, variableList, linearPoly);
+            this._model.AddQConstr(quadConstraint, GRB.EQUAL, 0.0, name);
             return name;
         }
 
