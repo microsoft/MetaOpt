@@ -38,7 +38,7 @@ namespace MetaOptimize.Test
             var popEncoder = new PopEncoder<TVar, TSol>(CreateSolver(), k: 1, numPartitions: 2, demandPartitions: partition);
             var encoding = popEncoder.Encoding(topology);
             var solverSolution = popEncoder.Solver.Maximize(encoding.GlobalObjective);
-            var optimizationSolution = (TEOptimizationSolution) popEncoder.GetSolution(solverSolution);
+            var optimizationSolution = (TEOptimizationSolution)popEncoder.GetSolution(solverSolution);
 
             Console.WriteLine(Newtonsoft.Json.JsonConvert.SerializeObject(optimizationSolution, Newtonsoft.Json.Formatting.Indented));
 

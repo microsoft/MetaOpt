@@ -52,8 +52,8 @@ namespace MetaOptimize
                 var solver = optimalEncoder.Solver;
                 Console.WriteLine("===== Going to simplify the solution....");
                 var simplifier = new AdversarialInputSimplifier<TVar, TSolution>(Topology, K, DemandVariables);
-                var optimalObj = ((TEOptimizationSolution) optimalEncoder.GetSolution(solution)).TotalDemandMet;
-                var heuristicObj = ((TEOptimizationSolution) heuristicEncoder.GetSolution(solution)).TotalDemandMet;
+                var optimalObj = ((TEOptimizationSolution)optimalEncoder.GetSolution(solution)).TotalDemandMet;
+                var heuristicObj = ((TEOptimizationSolution)heuristicEncoder.GetSolution(solution)).TotalDemandMet;
                 var gap = optimalObj - heuristicObj;
                 var simplifyObj = simplifier.AddDirectMinConstraintsAndObjectives(solver, objective, gap);
                 solution = solver.Maximize(simplifyObj, reset: true);
@@ -172,7 +172,7 @@ namespace MetaOptimize
             // } while (newBstGapFound);
 
             solution = SimplifyAdversarialInputs(simplify, optimalEncoder, heuristicEncoder, solution, objective);
-            return ((TEOptimizationSolution) optimalEncoder.GetSolution(solution), (TEOptimizationSolution) heuristicEncoder.GetSolution(solution));
+            return ((TEOptimizationSolution)optimalEncoder.GetSolution(solution), (TEOptimizationSolution)heuristicEncoder.GetSolution(solution));
 
             /* if (!solution.IsSatisfiable())
             {
@@ -269,7 +269,7 @@ namespace MetaOptimize
                             new Term<TVar>(1, optimalEncoding.GlobalObjective),
                             new Term<TVar>(-1, heuristicEncoding.GlobalObjective));
                 var solution = solver.Maximize(objective, reset: true);
-                var optimalSolution = (TEOptimizationSolution) optimalEncoder.GetSolution(solution);
+                var optimalSolution = (TEOptimizationSolution)optimalEncoder.GetSolution(solution);
                 foreach (var pair in consideredPairs) {
                     demandMatrix[pair] = optimalSolution.Demands[pair];
                     // AddSingleDemandEquality(solver, pair, demandMatrix[pair]);
@@ -335,7 +335,7 @@ namespace MetaOptimize
                                 new Term<TVar>(1, optimalEncoding.GlobalObjective),
                                 new Term<TVar>(-1, heuristicEncoding.GlobalObjective));
                     var solution = solver.Maximize(objective, reset: true);
-                    var optimalSolution = (TEOptimizationSolution) optimalEncoder.GetSolution(solution);
+                    var optimalSolution = (TEOptimizationSolution)optimalEncoder.GetSolution(solution);
                     foreach (var pair in consideredPairs) {
                         demandMatrix[pair] = optimalSolution.Demands[pair];
                         // AddSingleDemandEquality(solver, (node1, node2), demandMatrix[(node1, node2)]);
@@ -492,7 +492,7 @@ namespace MetaOptimize
                                 new Term<TVar>(1, optimalEncoding.GlobalObjective),
                                 new Term<TVar>(-1, heuristicEncoding.GlobalObjective));
                     var solution = solver.Maximize(objective, reset: true);
-                    var optimalSolution = (TEOptimizationSolution) optimalEncoder.GetSolution(solution);
+                    var optimalSolution = (TEOptimizationSolution)optimalEncoder.GetSolution(solution);
                     foreach (var pair in this.Topology.GetNodePairs()) {
                         if (demandMatrix.ContainsKey(pair)) {
                             // Console.WriteLine(demandMatrix[pair].ToString() + " " + optimalSolution.Demands[pair].ToString());
@@ -793,8 +793,8 @@ namespace MetaOptimize
             // var solution = solver.Maximize(solver.CreateVariable("dummy"));
             var solution = solver.CheckFeasibility(minDifference);
             solution = SimplifyAdversarialInputs(simplify, optimalEncoder, heuristicEncoder, solution, objective);
-            return ((TEOptimizationSolution) optimalEncoder.GetSolution(solution),
-                    (TEOptimizationSolution) heuristicEncoder.GetSolution(solution));
+            return ((TEOptimizationSolution)optimalEncoder.GetSolution(solution),
+                    (TEOptimizationSolution)heuristicEncoder.GetSolution(solution));
             /* if (!solution.IsSatisfiable())
             {
                 Console.WriteLine($"No solution found!");
@@ -993,8 +993,8 @@ namespace MetaOptimize
             Console.WriteLine("**************************************************");
             // solver.ChangeConstraintRHS(nameLBConst, -1 * lbGap);
             solution = solver.CheckFeasibility(lbGap);
-            return ((TEOptimizationSolution) optimalEncoder.GetSolution(solution), 
-                    (TEOptimizationSolution) heuristicEncoder.GetSolution(solution));
+            return ((TEOptimizationSolution)optimalEncoder.GetSolution(solution),
+                    (TEOptimizationSolution)heuristicEncoder.GetSolution(solution));
         }
 
         private (double, (TEOptimizationSolution, TEOptimizationSolution)) GetGap (
@@ -1007,14 +1007,14 @@ namespace MetaOptimize
             var encodingHeuristic = heuristicEncoder.Encoding(this.Topology, demandEqualityConstraints: demands,
                     noAdditionalConstraints: true, numProcesses: this.NumProcesses);
             var solverSolutionHeuristic = heuristicEncoder.Solver.Maximize(encodingHeuristic.MaximizationObjective);
-            var optimizationSolutionHeuristic = (TEOptimizationSolution) heuristicEncoder.GetSolution(solverSolutionHeuristic);
+            var optimizationSolutionHeuristic = (TEOptimizationSolution)heuristicEncoder.GetSolution(solverSolutionHeuristic);
 
             // solving the optimal for the demand
             optimalEncoder.Solver.CleanAll();
             var encodingOptimal = optimalEncoder.Encoding(this.Topology, demandEqualityConstraints: demands,
                     noAdditionalConstraints: true, numProcesses: this.NumProcesses);
             var solverSolutionOptimal = optimalEncoder.Solver.Maximize(encodingOptimal.MaximizationObjective);
-            var optimizationSolutionOptimal = (TEOptimizationSolution) optimalEncoder.GetSolution(solverSolutionOptimal);
+            var optimizationSolutionOptimal = (TEOptimizationSolution)optimalEncoder.GetSolution(solverSolutionOptimal);
             double currGap = optimizationSolutionOptimal.TotalDemandMet - optimizationSolutionHeuristic.TotalDemandMet;
             return (currGap, (optimizationSolutionOptimal, optimizationSolutionHeuristic));
         }

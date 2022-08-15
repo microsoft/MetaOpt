@@ -230,7 +230,7 @@ namespace MetaOptimize
             var flows = new Dictionary<(string, string), double>();
             var flowPaths = new Dictionary<string[], double>(new PathComparer());
 
-            var solutions = this.PartitionEncoders.Select(e => (TEOptimizationSolution) e.GetSolution(solution)).ToList();
+            var solutions = this.PartitionEncoders.Select(e => (TEOptimizationSolution)e.GetSolution(solution)).ToList();
 
             // foreach (var pair in this.Topology.GetNodePairs())
             // {

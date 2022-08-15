@@ -516,8 +516,8 @@ namespace MetaOptimize
                     var inner_heuristic_time = timer.ElapsedMilliseconds;
                     var inner_heuristic_lin_constraints = solver.GetModel().NumConstrs;
                     var inner_heuristic_vars = solver.GetModel().NumVars;
-                    Console.WriteLine("=====inner heuristic " + i + " " + inner_heuristic_time + " tot demand=" + 
-                                ((TEOptimizationSolution) heuristicEncoder.GetSolution(solverSolutionHeuristic)).TotalDemandMet);
+                    Console.WriteLine("=====inner heuristic " + i + " " + inner_heuristic_time + " tot demand=" +
+                                ((TEOptimizationSolution)heuristicEncoder.GetSolution(solverSolutionHeuristic)).TotalDemandMet);
                 }
             } else {
                 var heuristicEncoding = heuristicEncoder.Encoding(topology, demandEqualityConstraints: dic_demands, noAdditionalConstraints: true);
@@ -528,7 +528,7 @@ namespace MetaOptimize
                 var inner_heuristic_lin_constraints = solver.GetModel().NumConstrs;
                 var inner_heuristic_vars = solver.GetModel().NumVars;
                 Console.WriteLine("=====inner heuristic " + inner_heuristic_time + " tot demand=" +
-                        ((TEOptimizationSolution) heuristicEncoder.GetSolution(solverSolutionHeuristic)).TotalDemandMet);
+                        ((TEOptimizationSolution)heuristicEncoder.GetSolution(solverSolutionHeuristic)).TotalDemandMet);
             }
 
             solver.CleanAll();

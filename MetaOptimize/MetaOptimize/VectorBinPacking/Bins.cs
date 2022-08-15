@@ -58,6 +58,5 @@ namespace MetaOptimize
         {
             return this.binSizeList.Count;
         }
-
     }
 }

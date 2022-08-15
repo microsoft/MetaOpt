@@ -9,7 +9,7 @@ namespace MetaOptimize
     /// <summary>
     /// A solution to an optimization problem.
     /// </summary>
-    public class VBPOptimizationSolution: OptimizationSolution
+    public class VBPOptimizationSolution : OptimizationSolution
     {
         /// <summary>
         /// The number of bins used.

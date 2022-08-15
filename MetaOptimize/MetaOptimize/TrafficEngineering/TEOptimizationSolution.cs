@@ -9,7 +9,7 @@ namespace MetaOptimize
     /// <summary>
     /// A solution to an optimization problem.
     /// </summary>
-    public class TEOptimizationSolution: OptimizationSolution
+    public class TEOptimizationSolution : OptimizationSolution
     {
         /// <summary>
         /// The total demand met by the optimization.

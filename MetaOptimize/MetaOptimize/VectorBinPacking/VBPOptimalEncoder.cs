@@ -33,7 +33,7 @@ namespace MetaOptimize
         /// The demand constraints in terms of constant values.
         /// </summary>
         public Dictionary<int, List<double>> DemandConstraints { get; set; }
-        
+
         /// <summary>
         /// The number of objects.
         /// </summary>
@@ -79,7 +79,7 @@ namespace MetaOptimize
             return false;
         }
 
-        private void InitializeVariables(Dictionary<int, List<Polynomial<TVar>>> preDemandVariables = null, 
+        private void InitializeVariables(Dictionary<int, List<Polynomial<TVar>>> preDemandVariables = null,
             Dictionary<int, List<double>> demandEqualityConstraints = null)
         {
             this.DemandConstraints = demandEqualityConstraints ?? new Dictionary<int, List<double>>();
@@ -163,7 +163,7 @@ namespace MetaOptimize
             this.Solver.AddEqZeroConstraint(objPoly);
 
             var objective = new Polynomial<TVar>(new Term<TVar>(-1, this.TotalNumBinsUsedVariable));
-            
+
             return new VBPptimizationEncoding<TVar, TSolution>
             {
                 GlobalObjective = this.TotalNumBinsUsedVariable,
@@ -184,8 +184,8 @@ namespace MetaOptimize
             foreach (var (id, itemDemand) in this.DemandVariables)
             {
                 demands[id] = new List<double>();
-                for (var dimension = 0; dimension < this.NumDimensions; dimension ++) {
-                    demands[id].Add(0.0); 
+                for (var dimension = 0; dimension < this.NumDimensions; dimension++) {
+                    demands[id].Add(0.0);
                     var perDimensionDemand = itemDemand[dimension];
                     foreach (var term in perDimensionDemand.GetTerms()) {
                         demands[id][dimension] += this.Solver.GetVariable(solution, term.Variable.Value) * term.Coefficient;

@@ -9,7 +9,7 @@ namespace MetaOptimize
     /// <summary>
     /// The encoding of an optimization.
     /// </summary>
-    public class TEOptimizationEncoding<TVar, TSolution>: OptimizationEncoding<TVar, TSolution>
+    public class TEOptimizationEncoding<TVar, TSolution> : OptimizationEncoding<TVar, TSolution>
     {
         /// <summary>
         /// The demand expression for any pair of nodes.
