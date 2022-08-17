@@ -263,6 +263,8 @@ namespace MetaOptimize
             var output = new ConcurrentDictionary<(string, string), string[][]>();
             if (numProcesses < 1) {
                 this.ShortestKPathsForListPairs(k, this.GetNodePairs(), output, verbose: verbose);
+                this.paths[k] = output.ToDictionary(entry => entry.Key,
+                                                entry => entry.Value);
                 return output.ToDictionary(entry => entry.Key,
                                            entry => entry.Value);
             }
@@ -279,22 +281,22 @@ namespace MetaOptimize
             }
             // starting the processes;
             var threadlist = new List<Thread>();
-            for (pid = 0; pid < numProcesses; pid++) {
+            foreach (var pid1 in processToPairList.Keys) {
                 Utils.logger(
-                    string.Format("creating process {0} with {1} pairs", pid, processToPairList[pid].Count()),
+                    string.Format("creating process {0} with {1} pairs", pid1, processToPairList[pid1].Count()),
                     verbose);
-                threadlist.Add(new Thread(() => ShortestKPathsForListPairs(k, processToPairList[pid], output, pid: pid, verbose: verbose)));
+                threadlist.Add(new Thread(() => ShortestKPathsForListPairs(k, processToPairList[pid1], output, pid: pid1, verbose: verbose)));
                 Utils.logger(
-                    string.Format("starting process {0} with {1} pairs", pid, processToPairList[pid].Count()),
+                    string.Format("starting process {0} with {1} pairs", pid1, processToPairList[pid1].Count()),
                     verbose);
-                threadlist[pid].Start();
+                threadlist[pid1].Start();
                 Thread.Sleep(1000);
             }
-            for (pid = 0; pid < numProcesses; pid++) {
+            foreach (var pid1 in processToPairList.Keys) {
                 Utils.logger(
-                    string.Format("waiting for process {0}", pid),
+                    string.Format("waiting for process {0}", pid1),
                     verbose);
-                threadlist[pid].Join();
+                threadlist[pid1].Join();
             }
             this.paths[k] = output.ToDictionary(entry => entry.Key,
                                                 entry => entry.Value);

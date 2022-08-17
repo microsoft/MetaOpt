@@ -177,9 +177,12 @@ namespace MetaOptimize
         /// <summary>
         /// Reset the solver by removing all the variables and constraints.
         /// </summary>
-        public void CleanAll() {
+        public void CleanAll(double timeout = -1) {
             this._model.Dispose();
             this._model = new GRBModel(this._env);
+            if (timeout > 0) {
+                this._timeout = timeout;
+            }
             this._model.Parameters.TimeLimit = this._timeout;
             this._model.Parameters.Presolve = 2;
             this._constraintIneqCount = 0;
@@ -595,6 +598,13 @@ namespace MetaOptimize
                 return variable.Xn;
             }
             return variable.X;
+        }
+
+        /// <summary>
+        /// initialize some of the variables.
+        /// </summary>
+        public void InitializeVariables(GRBVar variable, int value) {
+            variable.Start = value;
         }
     }
 }

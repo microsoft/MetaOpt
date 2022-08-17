@@ -47,7 +47,7 @@ namespace MetaOptimize
         /// <summary>
         /// Reset the solver by removing all the variables and constraints.
         /// </summary>
-        public void CleanAll() {
+        public void CleanAll(double timeout = -1) {
             throw new Exception("need to be implemented");
         }
 
@@ -273,6 +273,14 @@ namespace MetaOptimize
         public ZenSolution CheckFeasibility(double objectiveValue)
         {
             return Zen.Solve(Zen.And(this.ConstraintExprs.ToArray()));
+        }
+
+        /// <summary>
+        /// initialize some of the variables.
+        /// </summary>
+        public void InitializeVariables(Zen<Real> variable, int value)
+        {
+            throw new Exception("Not implemented yet.");
         }
     }
 }
