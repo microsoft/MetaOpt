@@ -178,6 +178,14 @@ def bottleneck_network(cap=10.0, epsilon=1e-3):
     return G
 
 
+def ring_topology(num_nodes, cap=1000):
+    G = nx.DiGraph()
+    for i in range(num_nodes):
+        G.add_node(i, label=str(i))
+    for i in range(num_nodes):
+        add_bi_edge(G, i, (i + 1) % num_nodes, capacity=cap)
+    return G
+
 #################
 # Real Networks #
 #################

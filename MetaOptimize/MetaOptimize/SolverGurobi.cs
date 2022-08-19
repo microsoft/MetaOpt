@@ -110,7 +110,7 @@ namespace MetaOptimize
         /// <summary>
         /// Reset the solver by removing all the variables and constraints.
         /// </summary>
-        public void CleanAll() {
+        public void CleanAll(double timeout = -1) {
             this._model.Dispose();
             this._model = new GRBModel(this._env);
             this._model.Parameters.Presolve = 2;
@@ -487,6 +487,14 @@ namespace MetaOptimize
                 Environment.Exit(1);
             }
             return variable.X;
+        }
+
+        /// <summary>
+        /// initialize some of the variables.
+        /// </summary>
+        public void InitializeVariables(GRBVar variable, int value)
+        {
+            throw new Exception("Not implemented yet.");
         }
     }
 }

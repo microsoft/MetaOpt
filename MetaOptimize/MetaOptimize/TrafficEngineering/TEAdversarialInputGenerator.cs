@@ -73,7 +73,8 @@ namespace MetaOptimize
             bool simplify = false,
             bool verbose = false,
             bool cleanUpSolver = true,
-            IDictionary<(string, string), double> perDemandUB = null)
+            IDictionary<(string, string), double> perDemandUB = null,
+            IDictionary<(string, string), double> demandInits = null)
         {
             if (optimalEncoder.Solver != heuristicEncoder.Solver)
             {
@@ -93,7 +94,7 @@ namespace MetaOptimize
             }
 
             Utils.logger("creating demand variables.", verbose);
-            CreateDemandVariables(solver, innerEncoding, demandList);
+            CreateDemandVariables(solver, innerEncoding, demandList, demandInits);
             Utils.logger("generating optimal encoding.", verbose);
             var optimalEncoding = optimalEncoder.Encoding(this.Topology, preDemandVariables: this.DemandVariables,
                     innerEncoding: innerEncoding, numProcesses: this.NumProcesses, verbose: verbose);
@@ -519,6 +520,11 @@ namespace MetaOptimize
                     demandMatrix[pair] = 0;
                 }
             }
+
+            var completeOpt = new TEAdversarialInputGenerator<TVar, TSolution>(this.Topology, this.K, this.NumProcesses);
+            optimalEncoder.Solver.CleanAll(timeout: double.PositiveInfinity);
+            completeOpt.MaximizeOptimalityGap(optimalEncoder, heuristicEncoder, demandUB, innerEncoding, demandList, constrainedDemands, simplify,
+                    verbose, demandInits: demandMatrix);
             var output = GetGap(optimalEncoder, heuristicEncoder, demandMatrix);
             Utils.logger("Final gap: " + output.Item1, verbose);
             return output.Item2;
@@ -875,7 +881,8 @@ namespace MetaOptimize
             }
         }
 
-        private void CreateDemandVariables(ISolver<TVar, TSolution> solver, InnerEncodingMethodChoice innerEncoding, IDemandList demandList) {
+        private void CreateDemandVariables(ISolver<TVar, TSolution> solver, InnerEncodingMethodChoice innerEncoding, IDemandList demandList,
+                IDictionary<(string, string), double> demandInits = null) {
             this.DemandVariables = new Dictionary<(string, string), Polynomial<TVar>>();
             Console.WriteLine("[INFO] In total " + this.Topology.GetNodePairs().Count() + " pairs");
             // var sumAllAuxVars = new Polynomial<TVar>(new Term<TVar>(-0.01 * this.Topology.GetNodePairs().Count()));
@@ -891,11 +898,23 @@ namespace MetaOptimize
                         demands.Remove(0);
                         var axVariableConstraint = new Polynomial<TVar>(new Term<TVar>(-1));
                         var demandLvlEnforcement = new Polynomial<TVar>();
+                        bool found = false;
                         foreach (double demandlvl in demands) {
                             var demandAuxVar = solver.CreateVariable("aux_demand_" + pair.Item1 + "_" + pair.Item2, type: GRB.BINARY);
                             demandLvlEnforcement.Add(new Term<TVar>(demandlvl, demandAuxVar));
                             axVariableConstraint.Add(new Term<TVar>(1, demandAuxVar));
+                            if (demandInits != null) {
+                                if (Math.Abs(demandInits[pair] - demandlvl) <= 0.0001) {
+                                    solver.InitializeVariables(demandAuxVar, 1);
+                                    found = true;
+                                } else {
+                                    solver.InitializeVariables(demandAuxVar, 0);
+                                }
+                            }
                             // sumAllAuxVars.Add(new Term<TVar>(1, demandAuxVar));
+                        }
+                        if (demandInits != null) {
+                            Debug.Assert(found == true || Math.Abs(demandInits[pair]) <= 0.0001);
                         }
                         solver.AddLeqZeroConstraint(axVariableConstraint);
                         this.DemandVariables[pair] = demandLvlEnforcement;

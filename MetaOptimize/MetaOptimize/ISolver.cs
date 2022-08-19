@@ -14,7 +14,7 @@ namespace MetaOptimize
         /// <summary>
         /// Reset the solver by removing all the variables and constraints.
         /// </summary>
-        public void CleanAll();
+        public void CleanAll(double timeout = -1);
 
         /// <summary>
         /// Create a new variable with a given name.
@@ -153,5 +153,10 @@ namespace MetaOptimize
         /// Call the model update to apply new constraints and objectives.
         /// </summary>
         public void ModelUpdate();
+
+        /// <summary>
+        /// initialize some of the variables.
+        /// </summary>
+        public void InitializeVariables(TVar variable, int value);
     }
 }
