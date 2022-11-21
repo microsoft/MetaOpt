@@ -236,7 +236,7 @@ namespace MetaOptimize
             var path_dict = new Dictionary<(string, string), string[][]>();
             Utils.logger("processor with pid " + pid + " starting to compute paths...", verbose);
             foreach (var pair in pairList) {
-                Utils.logger("pid=" + pid + ": finding the paths between " + pair.Item1 + " and " + pair.Item2, verbose);
+                // Utils.logger("pid=" + pid + ": finding the paths between " + pair.Item1 + " and " + pair.Item2, verbose);
                 var paths = this.ShortestKPaths(k, pair.Item1, pair.Item2);
                 path_dict[pair] = paths;
             }
@@ -408,6 +408,28 @@ namespace MetaOptimize
             foreach (var edge in this.GetAllEdges())
             {
                 t.AddEdge(edge.Source, edge.Target, edge.Capacity / k);
+            }
+
+            return t;
+        }
+
+        /// <summary>
+        /// Scale the capacity of each edge in the topology.
+        /// </summary>
+        /// <param name="scaleFactor">the scale factor.</param>
+        /// <returns>A new toplogy with scaled capacity for each edge.</returns>
+        public Topology ScaleCapacity(double scaleFactor)
+        {
+            var t = new Topology(this.pathFile);
+            foreach (var node in this.GetAllNodes())
+            {
+                t.AddNode(node);
+            }
+
+            foreach (var edge in this.GetAllEdges())
+            {
+                t.AddEdge(edge.Source, edge.Target, edge.Capacity * scaleFactor);
+                Console.WriteLine(t.GetEdge(edge.Source, edge.Target).Capacity);
             }
 
             return t;

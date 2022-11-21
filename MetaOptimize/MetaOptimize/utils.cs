@@ -108,6 +108,14 @@ namespace MetaOptimize {
                 Console.WriteLine(line);
             }
         }
+        /// <summary>
+        /// write line to consule if verbose = true.
+        /// </summary>
+        public static void WriteToConsole(string line, int verbose) {
+            if (verbose > 0) {
+                Console.WriteLine(line);
+            }
+        }
 
         /// <summary>
         /// log state.
@@ -149,6 +157,15 @@ namespace MetaOptimize {
             }
             output += " " + line;
             WriteToConsole(output, verbose);
+        }
+        /// <summary>
+        /// logger for storing output.
+        /// </summary>
+        public static void logger(string line, int verbose, LogState state = LogState.INFO)
+        {
+            if (verbose > 0) {
+                logger(line, true, state);
+            }
         }
 
         /// <summary>

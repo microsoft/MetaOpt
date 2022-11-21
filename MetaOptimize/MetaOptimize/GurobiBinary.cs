@@ -71,8 +71,8 @@ namespace MetaOptimize
         {
             Console.WriteLine("in maximize call");
             GRBLinExpr objective = 0;
-            foreach (var auxVar in this.auxQVarList) {
-                objective += auxVar / this._bigM;
+            foreach (var auxVar in this.auxPolyList) {
+                objective += this.Convert(auxVar) * (1 / this._bigM);
             }
             this._model.SetObjective(objective + this._objective, GRB.MAXIMIZE);
             // this._model.Parameters.DualReductions = 0;

@@ -94,10 +94,10 @@ namespace MetaOptimize
             }
 
             Utils.logger("creating demand variables.", verbose);
-            CreateDemandVariables(solver, innerEncoding, demandList, demandInits);
+            this.DemandVariables = CreateDemandVariables(solver, innerEncoding, demandList, demandInits);
             Utils.logger("generating optimal encoding.", verbose);
             var optimalEncoding = optimalEncoder.Encoding(this.Topology, preDemandVariables: this.DemandVariables,
-                    innerEncoding: innerEncoding, numProcesses: this.NumProcesses, verbose: verbose);
+                    innerEncoding: innerEncoding, numProcesses: this.NumProcesses, verbose: verbose, noAdditionalConstraints: true);
             Utils.logger("generating heuristic encoding.", verbose);
             var heuristicEncoding = heuristicEncoder.Encoding(this.Topology, preDemandVariables: this.DemandVariables,
                     innerEncoding: innerEncoding, numProcesses: this.NumProcesses, verbose: verbose);
@@ -214,7 +214,10 @@ namespace MetaOptimize
                 }
             }
             if (seenNode.Count() != this.Topology.GetAllNodes().Count()) {
-                throw new Exception("missmatch between number of nodes in original problem and clustered version");
+                throw new Exception(
+                    String.Format("missmatch between number of nodes in original problem {0} and clustered version {1}",
+                        this.Topology.GetAllNodes().Count(),
+                        seenNode.Count()));
             }
             if (constrainedDemands == null) {
                 constrainedDemands = new Dictionary<(string, string), double>();
@@ -223,10 +226,10 @@ namespace MetaOptimize
             var solver = optimalEncoder.Solver;
             solver.CleanAll();
             Utils.logger("creating demand variables.", verbose);
-            CreateDemandVariables(solver, innerEncoding, demandList);
+            this.DemandVariables = CreateDemandVariables(solver, innerEncoding, demandList);
             Utils.logger("generating optimal encoding.", verbose);
             var optimalEncoding = optimalEncoder.Encoding(this.Topology, preDemandVariables: this.DemandVariables,
-                    innerEncoding: innerEncoding, numProcesses: this.NumProcesses, verbose: verbose);
+                    innerEncoding: innerEncoding, numProcesses: this.NumProcesses, verbose: verbose, noAdditionalConstraints: true);
             Utils.logger("generating heuristic encoding.", verbose);
             var heuristicEncoding = heuristicEncoder.Encoding(this.Topology, preDemandVariables: this.DemandVariables,
                     innerEncoding: innerEncoding, numProcesses: this.NumProcesses, verbose: verbose);
@@ -273,8 +276,8 @@ namespace MetaOptimize
                 var optimalSolution = (TEOptimizationSolution)optimalEncoder.GetSolution(solution);
                 foreach (var pair in consideredPairs) {
                     demandMatrix[pair] = optimalSolution.Demands[pair];
-                    // AddSingleDemandEquality(solver, pair, demandMatrix[pair]);
-                    AddSingleDemandUB(solver, pair, demandMatrix[pair]);
+                    AddSingleDemandEquality(solver, pair, demandMatrix[pair]);
+                    // AddSingleDemandUB(solver, pair, demandMatrix[pair]);
                 }
 
                 if (verbose) {
@@ -339,8 +342,8 @@ namespace MetaOptimize
                     var optimalSolution = (TEOptimizationSolution)optimalEncoder.GetSolution(solution);
                     foreach (var pair in consideredPairs) {
                         demandMatrix[pair] = optimalSolution.Demands[pair];
-                        // AddSingleDemandEquality(solver, (node1, node2), demandMatrix[(node1, node2)]);
-                        AddSingleDemandUB(solver, pair, demandMatrix[pair]);
+                        AddSingleDemandEquality(solver, pair, demandMatrix[pair]);
+                        // AddSingleDemandUB(solver, pair, demandMatrix[pair]);
                     }
                 }
             }
@@ -350,7 +353,7 @@ namespace MetaOptimize
                     demandMatrix[pair] = 0;
                 }
             }
-            var output = GetGap(optimalEncoder, heuristicEncoder, demandMatrix);
+            var output = GetGap(optimalEncoder, heuristicEncoder, demandMatrix, innerEncoding, demandList);
             Utils.logger("Final gap: " + output.Item1, verbose);
             return output.Item2;
         }
@@ -416,17 +419,17 @@ namespace MetaOptimize
                             preDemandMatrix[pair] = 0;
                         }
                     }
-                    var preInterCluster = GetGap(optimalEncoder, heuristicEncoder, preDemandMatrix);
+                    var preInterCluster = GetGap(optimalEncoder, heuristicEncoder, preDemandMatrix, innerEncoding, demandList);
                     Utils.logger("pre inter-cluster gap: " + preInterCluster.Item1, verbose);
                 }
                 var solver = optimalEncoder.Solver;
                 solver.CleanAll();
                 Utils.logger("creating demand variables.", verbose);
-                CreateDemandVariables(solver, innerEncoding, demandList);
+                this.DemandVariables = CreateDemandVariables(solver, innerEncoding, demandList);
                 Utils.logger("generating optimal encoding.", verbose);
                 var optimalEncoding = optimalEncoder.Encoding(this.Topology, preDemandVariables: this.DemandVariables,
                                         demandEqualityConstraints: demandMatrix, innerEncoding: innerEncoding,
-                                        numProcesses: this.NumProcesses, verbose: verbose);
+                                        numProcesses: this.NumProcesses, verbose: verbose, noAdditionalConstraints: true);
                 Utils.logger("generating heuristic encoding.", verbose);
                 var heuristicEncoding = heuristicEncoder.Encoding(this.Topology, preDemandVariables: this.DemandVariables,
                                         demandEqualityConstraints: demandMatrix, innerEncoding: innerEncoding,
@@ -525,7 +528,7 @@ namespace MetaOptimize
             optimalEncoder.Solver.CleanAll(timeout: double.PositiveInfinity);
             completeOpt.MaximizeOptimalityGap(optimalEncoder, heuristicEncoder, demandUB, innerEncoding, demandList, constrainedDemands, simplify,
                     verbose, demandInits: demandMatrix);
-            var output = GetGap(optimalEncoder, heuristicEncoder, demandMatrix);
+            var output = GetGap(optimalEncoder, heuristicEncoder, demandMatrix, innerEncoding, demandList);
             Utils.logger("Final gap: " + output.Item1, verbose);
             return output.Item2;
         }
@@ -591,7 +594,7 @@ namespace MetaOptimize
                         preDemandMatrix[pair] = 0;
                     }
                 }
-                var preInterCluster = GetGap(optimalEncoder, heuristicEncoder, preDemandMatrix);
+                var preInterCluster = GetGap(optimalEncoder, heuristicEncoder, preDemandMatrix, innerEncoding, demandList);
                 Utils.logger("pre inter-cluster gap: " + preInterCluster.Item1, verbose);
             }
 
@@ -741,7 +744,7 @@ namespace MetaOptimize
                     demandMatrix[pair] = 0;
                 }
             }
-            var output = GetGap(optimalEncoder, heuristicEncoder, demandMatrix);
+            var output = GetGap(optimalEncoder, heuristicEncoder, demandMatrix, innerEncoding, demandList);
             Utils.logger("Final gap: " + output.Item1, verbose);
             return output.Item2;
         }
@@ -776,8 +779,8 @@ namespace MetaOptimize
             var solver = optimalEncoder.Solver;
             solver.CleanAll();
 
-            CreateDemandVariables(solver, innerEncoding, demandList);
-            var optimalEncoding = optimalEncoder.Encoding(this.Topology, this.DemandVariables, numProcesses: this.NumProcesses);
+            this.DemandVariables = CreateDemandVariables(solver, innerEncoding, demandList);
+            var optimalEncoding = optimalEncoder.Encoding(this.Topology, this.DemandVariables, numProcesses: this.NumProcesses, noAdditionalConstraints: true);
             var heuristicEncoding = heuristicEncoder.Encoding(this.Topology, this.DemandVariables, numProcesses: this.NumProcesses);
 
             if (optimalEncoder.Solver != heuristicEncoder.Solver)
@@ -881,9 +884,12 @@ namespace MetaOptimize
             }
         }
 
-        private void CreateDemandVariables(ISolver<TVar, TSolution> solver, InnerEncodingMethodChoice innerEncoding, IDemandList demandList,
+        private Dictionary<(string, string), Polynomial<TVar>> CreateDemandVariables(
+                ISolver<TVar, TSolution> solver,
+                InnerEncodingMethodChoice innerEncoding,
+                IDemandList demandList,
                 IDictionary<(string, string), double> demandInits = null) {
-            this.DemandVariables = new Dictionary<(string, string), Polynomial<TVar>>();
+            var output = new Dictionary<(string, string), Polynomial<TVar>>();
             Console.WriteLine("[INFO] In total " + this.Topology.GetNodePairs().Count() + " pairs");
             // var sumAllAuxVars = new Polynomial<TVar>(new Term<TVar>(-0.01 * this.Topology.GetNodePairs().Count()));
             // var sumAllAuxVars = new Polynomial<TVar>(new Term<TVar>(-5));
@@ -891,7 +897,7 @@ namespace MetaOptimize
             {
                 switch (innerEncoding) {
                     case InnerEncodingMethodChoice.KKT:
-                        this.DemandVariables[pair] = new Polynomial<TVar>(new Term<TVar>(1, solver.CreateVariable("demand_" + pair.Item1 + "_" + pair.Item2)));
+                        output[pair] = new Polynomial<TVar>(new Term<TVar>(1, solver.CreateVariable("demand_" + pair.Item1 + "_" + pair.Item2)));
                         break;
                     case InnerEncodingMethodChoice.PrimalDual:
                         var demands = demandList.GetDemandsForPair(pair.Item1, pair.Item2);
@@ -917,13 +923,14 @@ namespace MetaOptimize
                             Debug.Assert(found == true || Math.Abs(demandInits[pair]) <= 0.0001);
                         }
                         solver.AddLeqZeroConstraint(axVariableConstraint);
-                        this.DemandVariables[pair] = demandLvlEnforcement;
+                        output[pair] = demandLvlEnforcement;
                         break;
                     default:
                         throw new Exception("wrong method for inner problem encoder!");
                 }
             }
             // solver.AddLeqZeroConstraint(sumAllAuxVars);
+            return output;
         }
 
         /// <summary>
@@ -957,8 +964,8 @@ namespace MetaOptimize
             var solver = optimalEncoder.Solver;
             solver.CleanAll();
 
-            CreateDemandVariables(solver, innerEncoding, demandList);
-            var optimalEncoding = optimalEncoder.Encoding(this.Topology, this.DemandVariables, numProcesses: this.NumProcesses);
+            this.DemandVariables = CreateDemandVariables(solver, innerEncoding, demandList);
+            var optimalEncoding = optimalEncoder.Encoding(this.Topology, this.DemandVariables, numProcesses: this.NumProcesses, noAdditionalConstraints: true);
             var heuristicEncoding = heuristicEncoder.Encoding(this.Topology, this.DemandVariables, numProcesses: this.NumProcesses);
 
             // ensures that demand in both problems is the same and lower than demand upper bound constraint.
@@ -1019,19 +1026,23 @@ namespace MetaOptimize
         private (double, (TEOptimizationSolution, TEOptimizationSolution)) GetGap (
             IEncoder<TVar, TSolution> optimalEncoder,
             IEncoder<TVar, TSolution> heuristicEncoder,
-            Dictionary<(string, string), double> demands)
+            Dictionary<(string, string), double> demands,
+            InnerEncodingMethodChoice innerEncoding = InnerEncodingMethodChoice.KKT,
+            IDemandList demandList = null)
         {
             // solving the hueristic for the demand
             heuristicEncoder.Solver.CleanAll();
+            var demandVariables = CreateDemandVariables(heuristicEncoder.Solver, innerEncoding, demandList);
             var encodingHeuristic = heuristicEncoder.Encoding(this.Topology, demandEqualityConstraints: demands,
-                    noAdditionalConstraints: true, numProcesses: this.NumProcesses);
+                    noAdditionalConstraints: true, numProcesses: this.NumProcesses, preDemandVariables: demandVariables);
             var solverSolutionHeuristic = heuristicEncoder.Solver.Maximize(encodingHeuristic.MaximizationObjective);
             var optimizationSolutionHeuristic = (TEOptimizationSolution)heuristicEncoder.GetSolution(solverSolutionHeuristic);
 
             // solving the optimal for the demand
             optimalEncoder.Solver.CleanAll();
+            demandVariables = CreateDemandVariables(optimalEncoder.Solver, innerEncoding, demandList);
             var encodingOptimal = optimalEncoder.Encoding(this.Topology, demandEqualityConstraints: demands,
-                    noAdditionalConstraints: true, numProcesses: this.NumProcesses);
+                    noAdditionalConstraints: true, numProcesses: this.NumProcesses, preDemandVariables: demandVariables);
             var solverSolutionOptimal = optimalEncoder.Solver.Maximize(encodingOptimal.MaximizationObjective);
             var optimizationSolutionOptimal = (TEOptimizationSolution)optimalEncoder.GetSolution(solverSolutionOptimal);
             double currGap = optimizationSolutionOptimal.TotalDemandMet - optimizationSolutionHeuristic.TotalDemandMet;

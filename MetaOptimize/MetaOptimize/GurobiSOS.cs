@@ -19,11 +19,12 @@ namespace MetaOptimize
     public class GurobiSOS : ISolver<GRBVar, GRBModel>
     {
         private GRBEnv _env = null;
-        private double _bigM = Math.Pow(10, 8);
+        private double _bigM = Math.Pow(10, 4);
+        private double _tolerance = Math.Pow(10, -8);
         /// <summary>
         /// list of Aux Vars for Q.
         /// </summary>
-        protected IList<GRBVar> auxQVarList = new List<GRBVar>();
+        protected IList<Polynomial<GRBVar>> auxPolyList = new List<Polynomial<GRBVar>>();
         /// <summary>
         /// Gurobi Vars.
         /// </summary>
@@ -107,7 +108,7 @@ namespace MetaOptimize
             // for 8.1 and later
             GRBEnv env = new GRBEnv(true);
             env.Set("LogFile", "maxFlowSolver.log");
-            env.TokenServer = "10.137.70.76"; // ishai-z420
+            // env.TokenServer = "10.137.70.76"; // ishai-z420
             env.Start();
             return env;
         }
@@ -192,7 +193,7 @@ namespace MetaOptimize
             this._objective = 0;
             this._model.Parameters.Threads = this._numThreads;
             this._model.Parameters.OutputFlag = this._verbose;
-            this.auxQVarList = new List<GRBVar>();
+            this.auxPolyList = new List<Polynomial<GRBVar>>();
             SetCallbacks();
         }
 
@@ -309,20 +310,8 @@ namespace MetaOptimize
         /// <returns>Linear expression.</returns>
         private GRBLinExpr ConvertQEToLinear(IList<Polynomial<GRBVar>> coeffPolyList, IList<GRBVar> variableList, Polynomial<GRBVar> linearPoly)
         {
-            GRBLinExpr obj = 0;
-            foreach (var term in linearPoly.GetTerms()) {
-                switch (term.Exponent)
-                {
-                    case 1:
-                        obj.AddTerm(term.Coefficient, term.Variable.Value);
-                        break;
-                    case 0:
-                        obj += (term.Coefficient);
-                        break;
-                    default:
-                        throw new Exception("non 0|1 exponent is not modeled");
-                }
-            }
+            Utils.logger("Using big-M QE to Linear Conversion.", this._verbose);
+            GRBLinExpr obj = this.Convert(linearPoly);
 
             for (int i = 0; i < coeffPolyList.Count; i++) {
                 Polynomial<GRBVar> coeffPoly = coeffPolyList[i];
@@ -334,20 +323,27 @@ namespace MetaOptimize
                             var auxVar = this.CreateVariable("aux_qe");
                             // if (binary_variable.VType == GRB.BINARY) {
                             obj.AddTerm(term.Coefficient, auxVar);
-                            var auxConst = new Polynomial<GRBVar>(new Term<GRBVar>(1, variable));
+                            // aux >= y_i - M (1 - x_i)
+                            var auxConst = new Polynomial<GRBVar>(new Term<GRBVar>(-1, variable));
                             auxConst.Add(new Term<GRBVar>(1 * this._bigM));
                             auxConst.Add(new Term<GRBVar>(-1 * this._bigM, binary_variable));
-                            auxConst.Add(new Term<GRBVar>(-1, auxVar));
+                            auxConst.Add(new Term<GRBVar>(1, auxVar));
                             this.AddLeqZeroConstraint(auxConst.Negate());
-                            this.AddLeqZeroConstraint(new Polynomial<GRBVar>(new Term<GRBVar>(1, auxVar)));
-                            // var auxConst1 = new Polynomial<GRBVar>(new Term<GRBVar>(1, auxVar));
-                            // auxConst1.Add(new Term<GRBVar>(-1, variable));
-                            // this.AddLeqZeroConstraint(auxConst1);
-                            // var auxConst2 = new Polynomial<GRBVar>(new Term<GRBVar>(1, auxVar));
-                            // // auxConst2.Add(new Term<GRBVar>(-1 * this._bigM));
-                            // auxConst2.Add(new Term<GRBVar>(-1  * this._bigM, binary_variable));
-                            // this.AddLeqZeroConstraint(auxConst2);
-                            auxQVarList.Add(auxVar);
+                            // aux >= -Mx_i
+                            var auxConst3 = new Polynomial<GRBVar>(new Term<GRBVar>(-1, auxVar));
+                            auxConst3.Add(new Term<GRBVar>(-1 * this._bigM, binary_variable));
+                            this.AddLeqZeroConstraint(auxConst3);
+                            // aux <= y_i + (1 - x_i)M
+                            var auxConst1 = new Polynomial<GRBVar>(new Term<GRBVar>(-1, variable));
+                            auxConst1.Add(new Term<GRBVar>(-1 * this._bigM));
+                            auxConst1.Add(new Term<GRBVar>(1 * this._bigM, binary_variable));
+                            auxConst1.Add(new Term<GRBVar>(1, auxVar));
+                            this.AddLeqZeroConstraint(auxConst1);
+                            // aux <= Mx_i
+                            var auxConst2 = new Polynomial<GRBVar>(new Term<GRBVar>(1, auxVar));
+                            auxConst2.Add(new Term<GRBVar>(-1  * this._bigM, binary_variable));
+                            this.AddLeqZeroConstraint(auxConst2);
+                            // auxQVarList.Add(auxVar);
                             // } else {
                             //     throw new Exception("coefficient should be binary but it is not");
                             // }
@@ -368,6 +364,7 @@ namespace MetaOptimize
         /// </summary>
         private GRBQuadExpr ConvertQEToQEExp(IList<Polynomial<GRBVar>> coeffPolyList, IList<GRBVar> variableList, Polynomial<GRBVar> linearPoly)
         {
+            Utils.logger("Using QE expressions as they are.", this._verbose);
             GRBQuadExpr quadConstraint = this.Convert(linearPoly);
             for (int i = 0; i < coeffPolyList.Count; i++) {
                 var coeffPoly = this.Convert(coeffPolyList[i]);
@@ -378,17 +375,51 @@ namespace MetaOptimize
         }
 
         /// <summary>
+        /// Converts Quadratic to Linear using SOS.
+        /// </summary>
+        private GRBLinExpr ConvertQESOS(IList<Polynomial<GRBVar>> coeffPolyList, IList<GRBVar> variableList, Polynomial<GRBVar> linearPoly)
+        {
+            Utils.logger("Using Indicator for QE Conversion.", this._verbose);
+            GRBLinExpr obj = this.Convert(linearPoly);
+
+            for (int i = 0; i < coeffPolyList.Count; i++) {
+                Polynomial<GRBVar> coeffPoly = coeffPolyList[i];
+                GRBVar variable = variableList[i];
+                foreach (var term in coeffPoly.GetTerms()) {
+                    switch (term.Exponent) {
+                        case 1:
+                            GRBVar binary_variable = term.Variable.Value;
+                            var auxVar = this.CreateVariable("aux_qe");
+                            // if (binary_variable.VType == GRB.BINARY) {
+                            obj.AddTerm(term.Coefficient, auxVar);
+                            // var auxiliaries = new GRBVar[] { 1 - binary_variable, auxVar };
+                            this._model.AddGenConstrIndicator(binary_variable, 1, variable - auxVar, GRB.EQUAL, 0, "general_one_indicator_" + i);
+                            this._model.AddGenConstrIndicator(binary_variable, 0, auxVar, GRB.EQUAL, 0, "general_zero_indicator_" + i);
+                            break;
+                        case 0:
+                            obj.AddTerm(term.Coefficient, variable);
+                            break;
+                        default:
+                            throw new Exception("non 0|1 exponent is not modeled!!");
+                    }
+                }
+            }
+            return obj;
+        }
+
+        /// <summary>
         /// Add a less than or equal to zero constraint (Quadratic).
         /// Following constraints; A * B + C \leq 0.
         /// </summary>
         public string AddLeqZeroConstraint(IList<Polynomial<GRBVar>> coeffPolyList, IList<GRBVar> variableList, Polynomial<GRBVar> linearPoly)
         {
-            string name = "ineq_index_" + this._constraintIneqCount++;
-            // GRBLinExpr quadConstraint = this.ConvertQE(coeffPolyList, variableList, linearPoly);
-            // this._model.AddConstr(quadConstraint, GRB.LESS_EQUAL, 0.0, name);
-            var quadConstraint = this.ConvertQEToQEExp(coeffPolyList, variableList, linearPoly);
-            this._model.AddQConstr(quadConstraint, GRB.EQUAL, 0.0, name);
-            return name;
+            throw new Exception("not necessary");
+            // string name = "ineq_index_" + this._constraintIneqCount++;
+            // // GRBLinExpr quadConstraint = this.ConvertQE(coeffPolyList, variableList, linearPoly);
+            // // this._model.AddConstr(quadConstraint, GRB.LESS_EQUAL, 0.0, name);
+            // var quadConstraint = this.ConvertQEToQEExp(coeffPolyList, variableList, linearPoly);
+            // this._model.AddQConstr(quadConstraint, GRB.EQUAL, 0.0, name);
+            // return name;
         }
 
         /// <summary>
@@ -409,10 +440,12 @@ namespace MetaOptimize
         public string AddEqZeroConstraint(IList<Polynomial<GRBVar>> coeffPolyList, IList<GRBVar> variableList, Polynomial<GRBVar> linearPoly)
         {
             string name = "ineq_index_" + this._constraintIneqCount++;
-            // GRBLinExpr quadConstraint = this.ConvertQE(coeffPolyList, variableList, linearPoly);
+            // GRBLinExpr quadConstraint = this.ConvertQEToLinear(coeffPolyList, variableList, linearPoly);
             // this._model.AddConstr(quadConstraint, GRB.EQUAL, 0.0, name);
-            var quadConstraint = this.ConvertQEToQEExp(coeffPolyList, variableList, linearPoly);
-            this._model.AddQConstr(quadConstraint, GRB.EQUAL, 0.0, name);
+            GRBLinExpr quadConstraint = this.ConvertQESOS(coeffPolyList, variableList, linearPoly);
+            this._model.AddConstr(quadConstraint, GRB.EQUAL, 0.0, name);
+            // var quadConstraint = this.ConvertQEToQEExp(coeffPolyList, variableList, linearPoly);
+            // this._model.AddQConstr(quadConstraint, GRB.EQUAL, 0.0, name);
             return name;
         }
 
@@ -455,6 +488,23 @@ namespace MetaOptimize
             // Add SOS constraint.
             var auxiliaries = new GRBVar[] { var_1, var_2 };
             this._model.AddSOS(auxiliaries, new Double[] { 1, 2 }, GRB.SOS_TYPE1); // note: weights do not matter
+        }
+
+        /// <summary>
+        /// Add a = max(b, c) constraint.
+        /// </summary>
+        public void AddMaxConstraint(GRBVar LHS, Polynomial<GRBVar> maxItem1, Polynomial<GRBVar> maxItem2) {
+            // Create auxilary variable for each polynomial
+            var var_1 = this._model.AddVar(Double.NegativeInfinity, Double.PositiveInfinity, 0, GRB.CONTINUOUS, "aux_" + this._auxiliaryVars.Count);
+            this._auxiliaryVars.Add($"aux_{this._auxiliaryVars.Count}", var_1);
+
+            var var_2 = this._model.AddVar(Double.NegativeInfinity, Double.PositiveInfinity, 0, GRB.CONTINUOUS, "aux_" + this._auxiliaryVars.Count);
+            this._auxiliaryVars.Add($"aux_{this._auxiliaryVars.Count}", var_2);
+
+            this._model.AddConstr(this.Convert(maxItem1), GRB.EQUAL, var_1, "eq_index_" + this._constraintEqCount++);
+            this._model.AddConstr(this.Convert(maxItem2), GRB.EQUAL, var_2, "eq_index_" + this._constraintEqCount++);
+            // Add Max Constraint
+            this._model.AddGenConstrMax(LHS, new GRBVar[] { var_2, var_1 }, 0.0, "min_constraint");
         }
 
         /// <summary>
@@ -510,21 +560,32 @@ namespace MetaOptimize
         {
             Console.WriteLine("in maximize call");
             GRBLinExpr objective = 0;
-            foreach (var auxVar in auxQVarList) {
-                objective += auxVar / this._bigM;
+            foreach (var auxVar in auxPolyList) {
+                objective += this.Convert(auxVar);
             }
             this._model.SetObjective(objective + this._objective, GRB.MAXIMIZE);
             // this._model.Parameters.MIPFocus = 3;
             // this._model.Parameters.Cuts = 3;
             // this._model.Parameters.Heuristics = 0.5;
-
-            string exhaust_dir_name = @"c:\tmp\grbsos_exhaust\rand_" + (new Random()).Next(1000) + @"\";
-            Directory.CreateDirectory(exhaust_dir_name);
-            this._model.Write($"{exhaust_dir_name}\\model_" + DateTime.Now.Millisecond + ".lp");
+            // this._model.Parameters.NumericFocus = 2;
+            // this._model.Parameters.Quad = 1;
+            // this._model.Parameters.QCPDual = 1;
+            // this._model.Set(GRB.DoubleParam.IntFeasTol, this._tolerance);
+            // this._model.Set(GRB.DoubleParam.FeasibilityTol, this._tolerance);
+            // string exhaust_dir_name = @"../logs/grbsos_exhaust/rand_" + (new Random()).Next(1000) + @"/";
+            // Directory.CreateDirectory(exhaust_dir_name);
+            // this._model.Write($"{exhaust_dir_name}/model_" + DateTime.Now.Millisecond + ".lp");
 
             this._model.Optimize();
             if (this._model.Status != GRB.Status.TIME_LIMIT & this._model.Status != GRB.Status.OPTIMAL & this._model.Status != GRB.Status.INTERRUPTED)
             {
+                this._model.Parameters.DualReductions = 0;
+                this._model.Reset();
+                this._model.Optimize();
+                this._model.ComputeIIS();
+                string exhaust_dir_name = @"../logs/grbsos_exhaust/rand_" + (new Random()).Next(1000) + @"/";
+                Directory.CreateDirectory(exhaust_dir_name);
+                this._model.Write($"{exhaust_dir_name}/model_infeas_reduce_" + DateTime.Now.Millisecond + ".lp");
                 throw new Exception($"model not optimal {ModelStatusToString(this._model.Status)}");
                 // throw new InfeasibleOrUnboundSolution();
             }
@@ -605,6 +666,14 @@ namespace MetaOptimize
         /// </summary>
         public void InitializeVariables(GRBVar variable, int value) {
             variable.Start = value;
+        }
+
+        /// <summary>
+        /// adding some auxiliary term to be added to the global objective when maximized.
+        /// </summary>
+        public void AddGlobalTerm(Polynomial<GRBVar> auxObjPoly)
+        {
+            this.auxPolyList.Add(auxObjPoly);
         }
     }
 }

@@ -10,10 +10,10 @@ namespace MetaOptimize.Cli {
         /// based on inputs.
         /// </summary>
         public static (IEncoder<TVar, TSolution>, IDictionary<(string, string), int>, IList<IDictionary<(string, string), int>>) getHeuristic<TVar, TSolution>(
-                ISolver<TVar, TSolution> solver,
-                Topology topology, Heuristic h, int numPaths, int numSlices = -1, double demandPinningThreshold = -1,
+                ISolver<TVar, TSolution> solver, Topology topology, Heuristic h, int numPaths, int numSlices = -1, double demandPinningThreshold = -1,
                 IDictionary<(string, string), int> partition = null, int numSamples = -1, IList<IDictionary<(string, string), int>> partitionsList = null,
-                double partitionSensitivity = -1, bool DirectEncoder = false)
+                double partitionSensitivity = -1, bool DirectEncoder = false, double scaleFactor = 1.0,
+                InnerEncodingMethodChoice InnerEncoding = InnerEncodingMethodChoice.KKT)
         {
             IEncoder<TVar, TSolution> heuristicEncoder;
             switch (h)
@@ -35,9 +35,12 @@ namespace MetaOptimize.Cli {
                     if (DirectEncoder) {
                         Console.WriteLine("Direct DP");
                         heuristicEncoder = new DirectDemandPinningEncoder<TVar, TSolution>(solver, numPaths, demandPinningThreshold);
+                    } else if (InnerEncoding == InnerEncodingMethodChoice.PrimalDual) {
+                        Console.WriteLine("Indirect Quantized DP");
+                        heuristicEncoder = new DemandPinningQuantizedEncoder<TVar, TSolution>(solver, numPaths, demandPinningThreshold, scaleFactor: scaleFactor);
                     } else {
                         Console.WriteLine("Indirect DP");
-                        heuristicEncoder = new DemandPinningEncoder<TVar, TSolution>(solver, numPaths, demandPinningThreshold);
+                        heuristicEncoder = new DemandPinningEncoder<TVar, TSolution>(solver, numPaths, demandPinningThreshold, scaleFactor: scaleFactor);
                     }
                     break;
                 case Heuristic.ExpectedPop:

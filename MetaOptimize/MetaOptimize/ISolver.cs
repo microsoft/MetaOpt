@@ -100,6 +100,11 @@ namespace MetaOptimize
         public void AddOrEqZeroConstraint(Polynomial<TVar> polynomial1, Polynomial<TVar> polynomial2);
 
         /// <summary>
+        /// Add a = max(b, c) constraint.
+        /// </summary>
+        public void AddMaxConstraint(TVar LHS, Polynomial<TVar> maxItem1, Polynomial<TVar> maxItem2);
+
+        /// <summary>
         /// Remove a constraint.
         /// </summary>
         /// <param name="constraintName">name of the constraint in the string format.</param>
@@ -158,5 +163,10 @@ namespace MetaOptimize
         /// initialize some of the variables.
         /// </summary>
         public void InitializeVariables(TVar variable, int value);
+
+        /// <summary>
+        /// adding some auxiliary term to be added to the global objective when maximized.
+        /// </summary>
+        public void AddGlobalTerm(Polynomial<TVar> auxObjPoly);
     }
 }

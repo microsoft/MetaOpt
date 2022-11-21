@@ -221,6 +221,18 @@ namespace MetaOptimize.Cli
         public bool Debug { get; set; }
 
         /// <summary>
+        /// To downscale the solver.
+        /// </summary>
+        [Option('p', "downscale", Default = 1.0, HelpText = "Factor to downscale MetaOpt.")]
+        public double DownScaleFactor { get; set; }
+
+        /// <summary>
+        /// number of threads to use in gurobi.
+        /// </summary>
+        [Option('t', "gurobithreads", Default = 0, HelpText = "number of threads to use for Gurobi.")]
+        public int NumGurobiThreads { get; set; }
+
+        /// <summary>
         /// to show more detailed logs.
         /// </summary>
         [Option('v', "verbose", Default = false, HelpText = "more detailed logs")]

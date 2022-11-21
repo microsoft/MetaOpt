@@ -15,6 +15,7 @@ namespace MetaOptimize
     /// </summary>
     public class DirectDemandPinningEncoder<TVar, TSolution> : IEncoder<TVar, TSolution>
     {
+        private double _threshold_tolerance = Math.Pow(10, -6);
         /// <summary>
         /// The solver being used.
         /// </summary>
@@ -112,7 +113,7 @@ namespace MetaOptimize
             this.variables = new HashSet<TVar>();
             this.Paths = new Dictionary<(string, string), string[][]>();
             // establish the demand variables.
-            this.DemandConstraints = demandConstraints;
+            this.DemandConstraints = new Dictionary<(string, string), double>(demandConstraints);
 
             // establish the total demand met variable.
             this.TotalDemandMetVariable = this.Solver.CreateVariable("total_demand_met");
@@ -128,16 +129,31 @@ namespace MetaOptimize
             }
             this.totalDemandPinned = 0.0;
             foreach (var (pair, demand) in this.DemandConstraints) {
-                if (demand <= Threshold) {
-                    var shortestPaths = this.Topology.ShortestKPaths(1, pair.Item1, pair.Item2)[0];
-                    for (int i = 0; i < shortestPaths.Count() - 1; i++) {
-                        this.link_to_cap_mapping[(shortestPaths[i], shortestPaths[i + 1])] -= demand;
+                if (!IsDemandValid(pair)) {
+                    continue;
+                }
+                if (demand <= Threshold + this._threshold_tolerance) {
+                    var shortestPaths = this.Topology.ShortestKPaths(1, pair.Item1, pair.Item2);
+                    if (shortestPaths.Count() <= 0) {
+                        continue;
                     }
+                    for (int i = 0; i < shortestPaths[0].Count() - 1; i++) {
+                        var edge = (shortestPaths[0][i], shortestPaths[0][i + 1]);
+                        this.link_to_cap_mapping[edge] -= demand;
+                        if (this.link_to_cap_mapping[edge] < -1 * this._threshold_tolerance) {
+                            Console.WriteLine(edge.Item1 + " " + edge.Item2 + " " +
+                                    this.link_to_cap_mapping[(shortestPaths[0][i], shortestPaths[0][i + 1])]);
+                            throw new Exception("negative link capacity");
+                        } else {
+                            this.link_to_cap_mapping[edge] = Math.Max(0, this.link_to_cap_mapping[edge]);
+                        }
+                    }
+                    // Console.WriteLine("pinned " + demand);
                     this.totalDemandPinned += demand;
                     this.DemandConstraints[pair] = 0;
                 }
             }
-
+            Console.WriteLine("Total Demand pinned = " + this.totalDemandPinned);
             this.Paths = this.Topology.AllPairsKShortestPathMultiProcessing(this.K, numProcesses: numProcesses, verbose: verbose);
             foreach (var pair in this.Topology.GetNodePairs())
             {
@@ -269,7 +285,7 @@ namespace MetaOptimize
 
             foreach (var (edge, total) in sumPerEdge)
             {
-                // Console.WriteLine("cap " + edge + " " + this.link_to_cap_mapping[(edge.Source, edge.Target)]);
+                // Console.WriteLine("cap " + edge.Source + " " + edge.Target + " " + this.link_to_cap_mapping[(edge.Source, edge.Target)]);
                 total.Add(new Term<TVar>(-1 * this.link_to_cap_mapping[(edge.Source, edge.Target)]));
                 this.Solver.AddLeqZeroConstraint(total);
             }

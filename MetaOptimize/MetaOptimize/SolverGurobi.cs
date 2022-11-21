@@ -363,6 +363,13 @@ namespace MetaOptimize
         }
 
         /// <summary>
+        /// Add a = max(b, c) constraint.
+        /// </summary>
+        public void AddMaxConstraint(GRBVar LHS, Polynomial<GRBVar> maxItem1, Polynomial<GRBVar> maxItem2) {
+            throw new Exception("Not implemented yet.");
+        }
+
+        /// <summary>
         /// Remove a constraint.
         /// </summary>
         /// <param name="constraintName">name of the constraint in the string format.</param>
@@ -493,6 +500,14 @@ namespace MetaOptimize
         /// initialize some of the variables.
         /// </summary>
         public void InitializeVariables(GRBVar variable, int value)
+        {
+            throw new Exception("Not implemented yet.");
+        }
+
+        /// <summary>
+        /// adding some auxiliary term to be added to the global objective when maximized.
+        /// </summary>
+        public void AddGlobalTerm(Polynomial<GRBVar> auxObjPoly)
         {
             throw new Exception("Not implemented yet.");
         }
