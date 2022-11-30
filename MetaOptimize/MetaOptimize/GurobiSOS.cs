@@ -244,6 +244,30 @@ namespace MetaOptimize
         }
 
         /// <summary>
+        /// Create a new continuous variable with a given name.
+        /// </summary>
+        public GRBVar CreateContinuousVariable(string name, double lb = double.NegativeInfinity, double ub = double.PositiveInfinity)
+        {
+            return this.CreateVariable(name, type: GRB.CONTINUOUS, lb: lb, ub: ub);
+        }
+
+        /// <summary>
+        /// Create a new binary variable with a given name.
+        /// </summary>
+        public GRBVar CreateBinaryVariable(string name)
+        {
+            return this.CreateVariable(name, type: GRB.BINARY);
+        }
+
+        /// <summary>
+        /// Create a new integer variable with a given name.
+        /// </summary>
+        public GRBVar CreateIntegerVariable(string name, double lb = double.NegativeInfinity, double ub = double.PositiveInfinity)
+        {
+            return this.CreateVariable(name, type: GRB.INTEGER, lb: lb, ub: ub);
+        }
+
+        /// <summary>
         /// Get the resulting value assigned to a variable.
         /// </summary>
         /// <param name="objective">The solver solution.</param>
@@ -413,13 +437,15 @@ namespace MetaOptimize
         /// </summary>
         public string AddLeqZeroConstraint(IList<Polynomial<GRBVar>> coeffPolyList, IList<GRBVar> variableList, Polynomial<GRBVar> linearPoly)
         {
-            throw new Exception("not necessary");
-            // string name = "ineq_index_" + this._constraintIneqCount++;
-            // // GRBLinExpr quadConstraint = this.ConvertQE(coeffPolyList, variableList, linearPoly);
-            // // this._model.AddConstr(quadConstraint, GRB.LESS_EQUAL, 0.0, name);
+            // throw new Exception("not necessary");
+            string name = "ineq_index_" + this._constraintIneqCount++;
+            GRBLinExpr quadConstraint = this.ConvertQEToLinear(coeffPolyList, variableList, linearPoly);
+            this._model.AddConstr(quadConstraint, GRB.LESS_EQUAL, 0.0, name);
             // var quadConstraint = this.ConvertQEToQEExp(coeffPolyList, variableList, linearPoly);
-            // this._model.AddQConstr(quadConstraint, GRB.EQUAL, 0.0, name);
-            // return name;
+            // this._model.AddQConstr(quadConstraint, GRB.LESS_EQUAL, 0.0, name);
+            // GRBLinExpr quadConstraint = this.ConvertQESOS(coeffPolyList, variableList, linearPoly);
+            // this._model.AddConstr(quadConstraint, GRB.LESS_EQUAL, 0.0, name);
+            return name;
         }
 
         /// <summary>
@@ -567,7 +593,7 @@ namespace MetaOptimize
             // this._model.Parameters.MIPFocus = 3;
             // this._model.Parameters.Cuts = 3;
             // this._model.Parameters.Heuristics = 0.5;
-            // this._model.Parameters.NumericFocus = 2;
+            // this._model.Parameters.NumericFocus = 3;
             // this._model.Parameters.Quad = 1;
             // this._model.Parameters.QCPDual = 1;
             // this._model.Set(GRB.DoubleParam.IntFeasTol, this._tolerance);

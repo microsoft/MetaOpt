@@ -8,6 +8,7 @@ namespace MetaOptimize.Test
 {
     using Microsoft.VisualStudio.TestTools.UnitTesting;
     using ZenLib;
+    using ZenLib.ModelChecking;
 
     /// <summary>
     /// testing demandPinning.

@@ -11,7 +11,7 @@ namespace MetaOptimize
     using System.Linq;
 
     /// <summary>
-    /// A simple topology class that wraps a graph.
+    /// A simple bin class that contains the bin sizes.
     /// </summary>
     public class Bins
     {
@@ -57,6 +57,18 @@ namespace MetaOptimize
         public int GetNum()
         {
             return this.binSizeList.Count;
+        }
+
+        /// <summary>
+        /// return max capacity.
+        /// </summary>
+        public double MaxCapacity(int dim)
+        {
+            double maxCap = 0;
+            foreach (var binSize in this.binSizeList) {
+                maxCap = Math.Max(maxCap, binSize[dim]);
+            }
+            return maxCap;
         }
     }
 }

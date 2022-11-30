@@ -6,6 +6,7 @@ namespace MetaOptimize.Test
 {
     using Microsoft.VisualStudio.TestTools.UnitTesting;
     using ZenLib;
+    using ZenLib.ModelChecking;
 
     /// <summary>
     /// Tests for the optimality gap.

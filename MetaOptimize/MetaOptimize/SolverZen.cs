@@ -17,7 +17,7 @@ namespace MetaOptimize
         /// <summary>
         /// This is the objective function.
         /// </summary>
-        protected Polynomial<Zen<Real>> _objective;
+        protected Polynomial<Zen<Real>> _objective = null;
 
         /// <summary>
         /// The solver constraints.
@@ -48,7 +48,9 @@ namespace MetaOptimize
         /// Reset the solver by removing all the variables and constraints.
         /// </summary>
         public void CleanAll(double timeout = -1) {
-            throw new Exception("need to be implemented");
+            ConstraintExprs = new List<Zen<bool>>();
+            Variables = new HashSet<Zen<Real>>();
+            _objective = null;
         }
 
         /// <summary>
@@ -75,15 +77,16 @@ namespace MetaOptimize
                 case GRB.CONTINUOUS:
                     break;
                 case GRB.BINARY:
-                    throw new Exception("not implemented");
+                    this.ConstraintExprs.Add(Zen.Or(variable == (Real)0, variable == (Real)1));
+                    break;
                 case GRB.INTEGER:
                     throw new Exception("not implemented");
                 default:
                     throw new Exception("invalid variable type");
             }
             this.Variables.Add(variable);
-            // this.ConstraintExprs.Add(variable <= (Real)ub);
-            // this.ConstraintExprs.Add(variable >= (Real)lb);
+            this.ConstraintExprs.Add(variable <= (Real)ub);
+            this.ConstraintExprs.Add(variable >= (Real)lb);
             return variable;
         }
 
@@ -251,7 +254,11 @@ namespace MetaOptimize
         /// </summary>
         public virtual ZenSolution Maximize(Polynomial<Zen<Real>> objective, bool reset)
         {
-            throw new Exception("this part should be reimplemented for Zen.");
+            // if (reset) {
+            //     throw new Exception("this part should be implemented!!");
+            // }
+            SetObjective(objective);
+            return Maximize();
         }
 
         /// <summary>

@@ -25,9 +25,14 @@ namespace MetaOptimize
         public Bins bins { get; set; }
 
         /// <summary>
-        /// The object variables.
+        /// The demand variables.
         /// </summary>
-        public Dictionary<int, List<Polynomial<TVar>>> DemandVariables { get; set; }
+        public Dictionary<int, List<TVar>> DemandVariables { get; set; }
+
+        /// <summary>
+        /// The demand variables per bin.
+        /// </summary>
+        public Dictionary<int, List<List<TVar>>> DemandPerBinVariables { get; set; }
 
         /// <summary>
         /// The demand constraints in terms of constant values.
@@ -75,24 +80,26 @@ namespace MetaOptimize
                         return true;
                     }
                 }
+                return false;
             }
-            return false;
+            return true;
         }
 
-        private void InitializeVariables(Dictionary<int, List<Polynomial<TVar>>> preDemandVariables = null,
+        private void InitializeVariables(Dictionary<int, List<TVar>> preDemandVariables = null,
             Dictionary<int, List<double>> demandEqualityConstraints = null)
         {
             this.DemandConstraints = demandEqualityConstraints ?? new Dictionary<int, List<double>>();
-            this.DemandVariables = new Dictionary<int, List<Polynomial<TVar>>>();
+            this.DemandVariables = new Dictionary<int, List<TVar>>();
 
             if (preDemandVariables == null) {
                 for (int id = 0; id < this.NumItems; id++) {
                     if (!IsDemandValid(id)) {
                         continue;
                     }
+                    this.DemandVariables[id] = new List<TVar>();
                     for (int dimension = 0; dimension < this.NumDimensions; dimension++) {
                         var variable = this.Solver.CreateVariable("demand_" + id + "_" + dimension);
-                        this.DemandVariables[id].Add(new Polynomial<TVar>(new Term<TVar>(1, variable)));
+                        this.DemandVariables[id].Add(variable);
                     }
                 }
             } else {
@@ -108,22 +115,30 @@ namespace MetaOptimize
 
             this.TotalNumBinsUsedVariable = this.Solver.CreateVariable("total_num_bins");
             this.PlacementVariables = new Dictionary<int, List<TVar>>();
+            this.DemandPerBinVariables = new Dictionary<int, List<List<TVar>>>();
             foreach (int id in this.DemandVariables.Keys) {
+                this.PlacementVariables[id] = new List<TVar>();
+                this.DemandPerBinVariables[id] = new List<List<TVar>>();
                 for (int bid = 0; bid < this.bins.GetNum(); bid++) {
                     this.PlacementVariables[id].Add(this.Solver.CreateVariable("placement_item_" + id + "_bin_" + bid, type: GRB.BINARY));
+                    this.DemandPerBinVariables[id].Add(new List<TVar>());
+                    for (int did = 0; did < this.NumDimensions; did++) {
+                        this.DemandPerBinVariables[id][bid].Add(
+                            this.Solver.CreateVariable("dem_per_bin_item_" + id + "_bin_" + bid + "_dim_" + did, lb: 0));
+                    }
                 }
             }
 
             this.BinUsedVariables = new List<TVar>();
             for (int bid = 0; bid < this.bins.GetNum(); bid++) {
-                this.BinUsedVariables[bid] = this.Solver.CreateVariable("bin_used_" + bid, type: GRB.BINARY);
+                this.BinUsedVariables.Add(this.Solver.CreateVariable("bin_used_" + bid, type: GRB.BINARY));
             }
         }
 
         /// <summary>
         /// Encoder the problem.
         /// </summary>
-        public OptimizationEncoding<TVar, TSolution> Encoding(Bins bins, Dictionary<int, List<Polynomial<TVar>>> preDemandVariables = null,
+        public OptimizationEncoding<TVar, TSolution> Encoding(Bins bins, Dictionary<int, List<TVar>> preDemandVariables = null,
             Dictionary<int, List<double>> demandEqualityConstraints = null, bool verbose = false)
         {
             Utils.logger("initialize variables", verbose);
@@ -136,13 +151,32 @@ namespace MetaOptimize
                 var binSize = binSizeList[binId];
                 for (int dimension = 0; dimension < this.NumDimensions; dimension++) {
                     var capPoly = new Polynomial<TVar>(new Term<TVar>(-1 * binSize[dimension], this.BinUsedVariables[binId]));
-                    var demandCoeff = new List<Polynomial<TVar>>();
-                    var demandVar = new List<TVar>();
+                    // var demandCoeff = new List<Polynomial<TVar>>();
+                    // var demandVar = new List<TVar>();
                     foreach (int itemID in this.DemandVariables.Keys) {
-                        demandCoeff.Add(this.DemandVariables[itemID][dimension]);
-                        demandVar.Add(this.PlacementVariables[itemID][binId]);
+                        // demandVar.Add(this.DemandVariables[itemID][dimension]);
+                        // demandCoeff.Add(new Polynomial<TVar>(new Term<TVar>(1, this.PlacementVariables[itemID][binId])));
+                        capPoly.Add(new Term<TVar>(1, this.DemandPerBinVariables[itemID][binId][dimension]));
                     }
-                    this.Solver.AddLeqZeroConstraint(demandCoeff, demandVar, capPoly);
+                    // this.Solver.AddLeqZeroConstraint(demandCoeff, demandVar, capPoly);
+                    this.Solver.AddLeqZeroConstraint(capPoly);
+                }
+            }
+
+            Utils.logger("ensure only one demandPerBinVariable is non-zero", verbose);
+            foreach (int itemID in this.DemandVariables.Keys) {
+                for (int dimension = 0; dimension < this.NumDimensions; dimension++) {
+                    var sumPoly = new Polynomial<TVar>();
+                    for (int binId = 0; binId < this.bins.GetNum(); binId++) {
+                        var poly = new Polynomial<TVar>();
+                        poly.Add(new Term<TVar>(1, this.DemandPerBinVariables[itemID][binId][dimension]));
+                        poly.Add(new Term<TVar>(-1 * this.bins.MaxCapacity(dimension), this.PlacementVariables[itemID][binId]));
+                        this.Solver.AddLeqZeroConstraint(poly);
+
+                        sumPoly.Add(new Term<TVar>(1, this.DemandPerBinVariables[itemID][binId][dimension]));
+                    }
+                    sumPoly.Add(new Term<TVar>(-1, this.DemandVariables[itemID][dimension]));
+                    this.Solver.AddEqZeroConstraint(sumPoly);
                 }
             }
 
@@ -153,6 +187,20 @@ namespace MetaOptimize
                     placePoly.Add(new Term<TVar>(1, this.PlacementVariables[itemID][binId]));
                 }
                 this.Solver.AddEqZeroConstraint(placePoly);
+            }
+
+            Utils.logger("ensuring demand constraints are respected", verbose);
+            foreach (var (itemID, demandConstant) in this.DemandConstraints)
+            {
+                for (int dimension = 0; dimension < this.NumDimensions; dimension++) {
+                    if (demandConstant[dimension] <= 0) {
+                        continue;
+                    }
+                    var poly = new Polynomial<TVar>();
+                    poly.Add(new Term<TVar>(1, this.DemandVariables[itemID][dimension]));
+                    poly.Add(new Term<TVar>(-1 * demandConstant[dimension]));
+                    this.Solver.AddEqZeroConstraint(poly);
+                }
             }
 
             Utils.logger("ensure objective == total bins used", verbose);
@@ -187,9 +235,7 @@ namespace MetaOptimize
                 for (var dimension = 0; dimension < this.NumDimensions; dimension++) {
                     demands[id].Add(0.0);
                     var perDimensionDemand = itemDemand[dimension];
-                    foreach (var term in perDimensionDemand.GetTerms()) {
-                        demands[id][dimension] += this.Solver.GetVariable(solution, term.Variable.Value) * term.Coefficient;
-                    }
+                    demands[id][dimension] = this.Solver.GetVariable(solution, perDimensionDemand);
                 }
             }
 
