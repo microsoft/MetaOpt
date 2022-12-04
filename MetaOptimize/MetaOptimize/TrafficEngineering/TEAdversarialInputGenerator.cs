@@ -63,7 +63,7 @@ namespace MetaOptimize
         /// <summary>
         /// Find an adversarial input that maximizes the optimality gap between two optimizations.
         /// </summary>
-        public (TEOptimizationSolution, TEOptimizationSolution) MaximizeOptimalityGap(
+        public virtual (TEOptimizationSolution, TEOptimizationSolution) MaximizeOptimalityGap(
             IEncoder<TVar, TSolution> optimalEncoder,
             IEncoder<TVar, TSolution> heuristicEncoder,
             double demandUB = -1,
@@ -1234,12 +1234,19 @@ namespace MetaOptimize
             return worstResult;
         }
 
-        private Dictionary<(string, string), double> getRandomDemand(Random rng, double demandUB)
+        /// <summary>
+        /// Generates random demands.
+        /// </summary>
+        protected Dictionary<(string, string), double> getRandomDemand(Random rng, double demandUB)
         {
             Dictionary<(string, string), double> currDemands = new Dictionary<(string, string), double>();
             // initializing some random demands
             foreach (var pair in this.Topology.GetNodePairs()) {
-                currDemands[pair] = rng.NextDouble() * demandUB;
+                if (this.Topology.ShortestKPaths(1, pair.Item1, pair.Item2).Count() <= 0) {
+                    currDemands[pair] = 0;
+                } else {
+                    currDemands[pair] = rng.NextDouble() * demandUB;
+                }
             }
             return currDemands;
         }

@@ -521,6 +521,18 @@ namespace MetaOptimize
         }
 
         /// <summary>
+        /// Get the resulting value assigned to a variable.
+        /// </summary>
+        public double GetDualVariable(GRBModel solution, string constraintName) {
+            if (solution.Status != GRB.Status.USER_OBJ_LIMIT & solution.Status != GRB.Status.TIME_LIMIT
+                & solution.Status != GRB.Status.OPTIMAL & solution.Status != GRB.Status.INTERRUPTED)
+            {
+                throw new Exception("can't read status since model is not optimal");
+            }
+            return this._model.GetConstrByName(constraintName).Pi;
+        }
+
+        /// <summary>
         /// initialize some of the variables.
         /// </summary>
         public void InitializeVariables(GRBVar variable, int value)

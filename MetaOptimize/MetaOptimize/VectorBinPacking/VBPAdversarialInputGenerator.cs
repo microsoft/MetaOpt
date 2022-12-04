@@ -60,7 +60,7 @@ namespace MetaOptimize
                 output[itemID] = new List<TVar>();
                 for (int dim = 0; dim < NumDimensions; dim++) {
                     // output[itemID].Add(new Polynomial<TVar>(new Term<TVar>(smallestDemandUnit, solver.CreateVariable("demand_" + itemID + "_" + dim, type: GRB.INTEGER))));
-                    output[itemID].Add(solver.CreateVariable("demand_" + itemID + "_" + dim, lb: 0));
+                    output[itemID].Add(solver.CreateVariable("demand_" + itemID + "_" + dim, lb: 0, ub: this.Bins.MaxCapacity(dim)));
                 }
             }
             return output;
@@ -159,15 +159,16 @@ namespace MetaOptimize
 
             Utils.logger("creating demand variables.", verbose);
             this.DemandVariables = CreateDemandVariables(solver);
-            // foreach (var (itemID, demandVar) in this.DemandVariables) {
-            //     for (int dim = 0; dim < NumDimensions; dim++) {
-            //         var outPoly = new Polynomial<TVar>();
-            //         outPoly.Add(new Term<TVar>(-1 * smallestDemandUnit, solver.CreateVariable("demand_" + itemID + "_" + dim, type: GRB.INTEGER, lb: 0)));
-            //         outPoly.Add(new Term<TVar>(1, demandVar[dim]));
-            //         solver.AddEqZeroConstraint(outPoly);
-            //     }
-            // }
+            foreach (var (itemID, demandVar) in this.DemandVariables) {
+                for (int dim = 0; dim < NumDimensions; dim++) {
+                    var outPoly = new Polynomial<TVar>();
+                    outPoly.Add(new Term<TVar>(-1 * smallestDemandUnit, solver.CreateVariable("demand_" + itemID + "_" + dim, type: GRB.INTEGER, lb: 0)));
+                    outPoly.Add(new Term<TVar>(1, demandVar[dim]));
+                    solver.AddEqZeroConstraint(outPoly);
+                }
+            }
             Utils.logger("generating optimal encoding.", verbose);
+            // var optBins = this.Bins.GetFirstKBins(numBinsUsedOptimal);
             var optimalEncoding = optimalEncoder.Encoding(Bins, preDemandVariables: this.DemandVariables, verbose: verbose);
             Utils.logger("generating heuristic encoding.", verbose);
             var heuristicEncoding = heuristicEncoder.Encoding(Bins, preDemandVariables: this.DemandVariables, verbose: verbose);

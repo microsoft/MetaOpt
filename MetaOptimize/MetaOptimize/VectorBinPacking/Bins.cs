@@ -8,6 +8,7 @@ namespace MetaOptimize
     using System.Collections.Concurrent;
     using System.Collections.Generic;
     using System.Collections.ObjectModel;
+    using System.Diagnostics;
     using System.Linq;
 
     /// <summary>
@@ -20,7 +21,7 @@ namespace MetaOptimize
         /// <summary>
         /// Creates a new instance of the <see cref="Bins"/> class.
         /// </summary>
-        public Bins(int numBins, IList<double> binSize)
+        public Bins(int numBins, List<double> binSize)
         {
             this.binSizeList = new List<List<double>>();
             for (int i = 0; i < numBins; i++) {
@@ -31,7 +32,7 @@ namespace MetaOptimize
         /// <summary>
         /// Creates a new instance of the <see cref="Bins"/> class.
         /// </summary>
-        public Bins(IList<IList<double>> binList)
+        public Bins(List<List<double>> binList)
         {
             this.binSizeList = new List<List<double>>();
             foreach (var binSize in binList) {
@@ -69,6 +70,53 @@ namespace MetaOptimize
                 maxCap = Math.Max(maxCap, binSize[dim]);
             }
             return maxCap;
+        }
+
+        /// <summary>
+        /// return the sum of capacity of first $K$ bins.
+        /// </summary>
+        public double SumCapFirst(int k, int dim) {
+            Debug.Assert(k <= this.binSizeList.Count);
+            double sumCap = 0;
+            for (int i = 0; i < k; i++) {
+                sumCap += this.binSizeList[k][dim];
+            }
+            return sumCap;
+        }
+
+        /// <summary>
+        /// return the sum of capaicty of bin $k$ over all dimensions.
+        /// </summary>
+        public double SumOverAllDim(int k) {
+            double sumCap = 0;
+            foreach (var binSize in this.binSizeList[k]) {
+                sumCap += binSize;
+            }
+            return sumCap;
+        }
+
+        /// <summary>
+        /// return the sum of capacity of first $k$ bins over all dimensions.
+        /// </summary>
+        public double SumOverAllDimFirst(int k) {
+            Debug.Assert(k <= this.binSizeList.Count);
+            double sumCap = 0;
+            for (int i = 0; i < k; i++) {
+                sumCap += this.SumOverAllDim(i);
+            }
+            return sumCap;
+        }
+
+        /// <summary>
+        /// returns a new bin consisting of the first $k$ bins.
+        /// </summary>
+        public Bins GetFirstKBins(int k) {
+            Debug.Assert(k <= this.binSizeList.Count);
+            var newBinSizeList = new List<List<double>>();
+            for (int i = 0; i < k; i++) {
+                newBinSizeList.Add(this.binSizeList[k]);
+            }
+            return new Bins(newBinSizeList);
         }
     }
 }

@@ -12,8 +12,9 @@ import os
 
 topo_name_list = [
     # ("GtsCe", 1), 
-    ("Cogentco", 0),
-    # ("Kdl", 1)
+    # ("Cogentco", 0),
+    # ("Uninett2010", 0)
+    ("Kdl", 1)
     # ("b4-teavar", 0),
     # ("ring_200", 0),
     # ("ring_400", 0)
@@ -22,10 +23,11 @@ num_partitions_list = [
     # 2, 
     # 3,
     # 5, 
-    10, 
+    # 10, 
     # 12,
     # 15, 
-    # 20, 
+    20, 
+    # 25,
     50,
     # 100,
 ]

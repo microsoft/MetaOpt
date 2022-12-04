@@ -53,6 +53,26 @@ namespace MetaOptimize.Cli {
                     Console.WriteLine("Exploring the expected pop heuristic");
                     heuristicEncoder = new ExpectedPopEncoder<TVar, TSolution>(solver, numPaths, numSamples, numSlices, partitionsList);
                     break;
+                case Heuristic.PopDp:
+                    Console.WriteLine("Exploring combination of POP and DP.");
+                    var heuristicEncoderList = new List<IEncoder<TVar, TSolution>>();
+                    if (partition == null) {
+                        partition = topology.RandomPartition(numSlices);
+                    }
+                    if (InnerEncoding == InnerEncodingMethodChoice.PrimalDual) {
+                        Console.WriteLine("Indirect Quantized DP");
+                        var heuristicEncoder1 = new DemandPinningQuantizedEncoder<TVar, TSolution>(solver, numPaths, demandPinningThreshold, scaleFactor: scaleFactor);
+                        heuristicEncoderList.Add(heuristicEncoder1);
+                    } else {
+                        Console.WriteLine("Indirect DP");
+                        var heuristicEncoder1 = new DemandPinningEncoder<TVar, TSolution>(solver, numPaths, demandPinningThreshold, scaleFactor: scaleFactor);
+                        heuristicEncoderList.Add(heuristicEncoder1);
+                    }
+                    Console.WriteLine("Adding the pop heuristic");
+                    var heuristicEncoder2 = new PopEncoder<TVar, TSolution>(solver, numPaths, numSlices, partition, partitionSensitivity: partitionSensitivity);
+                    heuristicEncoderList.Add(heuristicEncoder2);
+                    heuristicEncoder = new TECombineHeuristicsEncoder<TVar, TSolution>(solver, heuristicEncoderList, k: numPaths);
+                    break;
                 default:
                     throw new Exception("No heuristic selected.");
             }

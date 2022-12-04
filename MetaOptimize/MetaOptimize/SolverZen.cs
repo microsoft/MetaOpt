@@ -112,6 +112,13 @@ namespace MetaOptimize
         }
 
         /// <summary>
+        /// Get the resulting value assigned to a variable.
+        /// </summary>
+        public double GetDualVariable(ZenSolution solution, string constraintName) {
+            throw new Exception("not implemented yet!!!");
+        }
+
+        /// <summary>
         /// Add a less than or equal to zero constraint.
         /// </summary>
         /// <param name="polynomial">The polynomial.</param>
