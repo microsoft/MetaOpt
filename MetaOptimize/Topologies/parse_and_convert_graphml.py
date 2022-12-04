@@ -35,11 +35,12 @@ def read_graph_json(fname):
 
 
 
-# # print("Hi")
+# # # print("Hi")
 # topo_name_list = [
 #     # "GtsCe", 
 #     # "Cogentco",
-#     "Kdl"
+#     # "Kdl",
+#     "Uninett2010",
 # ]
 # for topo_name in topo_name_list:
 #     fname = f'../../../ncflow/topologies/topology-zoo/{topo_name}.graphml'
@@ -47,14 +48,14 @@ def read_graph_json(fname):
 #     fname = f'./{topo_name}.json'
 #     write_graph_json(G, fname)
 
-num_nodes_list = [
-    20, 
-    # 200, 
-    # 400,
-]
-for num_nodes in num_nodes_list:
-    fname = f"./ring_{num_nodes}.json"
-    G = ring_topology(num_nodes=num_nodes, cap=1000)
-    # for edge in G.edges:
-    #     print(edge)
-    write_graph_json(G, fname=fname)
+# num_nodes_list = [
+#     20, 
+#     # 200, 
+#     # 400,
+# ]
+# for num_nodes in num_nodes_list:
+#     fname = f"./ring_{num_nodes}.json"
+#     G = ring_topology(num_nodes=num_nodes, cap=1000)
+#     # for edge in G.edges:
+#     #     print(edge)
+#     write_graph_json(G, fname=fname)

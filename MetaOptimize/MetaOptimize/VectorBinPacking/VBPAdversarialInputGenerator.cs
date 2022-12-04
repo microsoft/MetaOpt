@@ -60,7 +60,7 @@ namespace MetaOptimize
                 output[itemID] = new List<TVar>();
                 for (int dim = 0; dim < NumDimensions; dim++) {
                     // output[itemID].Add(new Polynomial<TVar>(new Term<TVar>(smallestDemandUnit, solver.CreateVariable("demand_" + itemID + "_" + dim, type: GRB.INTEGER))));
-                    output[itemID].Add(solver.CreateVariable("demand_" + itemID + "_" + dim, lb: 0));
+                    output[itemID].Add(solver.CreateVariable("demand_" + itemID + "_" + dim, lb: 0, ub: this.Bins.MaxCapacity(dim)));
                 }
             }
             return output;
@@ -169,6 +169,7 @@ namespace MetaOptimize
                 }
             }
             Utils.logger("generating optimal encoding.", verbose);
+            // var optBins = this.Bins.GetFirstKBins(numBinsUsedOptimal);
             var optimalEncoding = optimalEncoder.Encoding(Bins, preDemandVariables: this.DemandVariables, verbose: verbose);
             Utils.logger("generating heuristic encoding.", verbose);
             var heuristicEncoding = heuristicEncoder.Encoding(Bins, preDemandVariables: this.DemandVariables, verbose: verbose);

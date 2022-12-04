@@ -41,6 +41,12 @@ namespace MetaOptimize.Cli
         public InnerEncodingMethodChoice InnerEncoding { get; set; }
 
         /// <summary>
+        /// adversarial generator (Encoding or Benders).
+        /// </summary>
+        [Option('e', "adversarialgen", Default = AdversarialGenMethodChoice.Encoding, HelpText = "Method to use for adversarial generator.")]
+        public AdversarialGenMethodChoice AdversarialGen { get; set; }
+
+        /// <summary>
         /// demand list (only applies for PrimalDual).
         /// </summary>
         [Option('d', "demandlist", Default = "0", HelpText = "quantized list of demands (only applies to PrimalDual -- should separate value with ',' no space).")]
@@ -258,6 +264,11 @@ namespace MetaOptimize.Cli
         /// The threshold heuristic.
         /// </summary>
         DemandPinning,
+
+        /// <summary>
+        /// Combine POP and DP.
+        /// </summary>
+        PopDp,
     }
     /// <summary>
     /// The solver we want to use.

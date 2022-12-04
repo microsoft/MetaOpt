@@ -36,6 +36,11 @@ namespace MetaOptimize
         public double GetVariable(TSolution solution, TVar variable);
 
         /// <summary>
+        /// Get the resulting value assigned to a variable.
+        /// </summary>
+        public double GetDualVariable(TSolution solution, string constrName);
+
+        /// <summary>
         /// set the objective.
         /// </summary>
         /// <param name="objective">The solver solution.</param>
