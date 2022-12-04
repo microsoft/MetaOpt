@@ -6,6 +6,7 @@ namespace MetaOptimize
 {
     using System;
     using System.Collections.Generic;
+    using System.Diagnostics;
     using System.Linq;
     using Gurobi;
     using ZenLib;
@@ -14,6 +15,7 @@ namespace MetaOptimize
     /// </summary>
     public class SolverZen : ISolver<Zen<Real>, ZenSolution>
     {
+        private int precision = 100;
         /// <summary>
         /// This is the objective function.
         /// </summary>
@@ -80,13 +82,24 @@ namespace MetaOptimize
                     this.ConstraintExprs.Add(Zen.Or(variable == (Real)0, variable == (Real)1));
                     break;
                 case GRB.INTEGER:
-                    throw new Exception("not implemented");
+                    Zen<bool> constr = true;
+                    Debug.Assert((lb > double.NegativeInfinity) && (ub < double.PositiveInfinity));
+                    for (int i = (int)lb; i <= (int)ub; i++) {
+                        // Console.WriteLine(i);
+                        constr = Zen.Or(constr, variable == (Real)i);
+                    }
+                    this.ConstraintExprs.Add(constr);
+                    break;
                 default:
                     throw new Exception("invalid variable type");
             }
             this.Variables.Add(variable);
-            this.ConstraintExprs.Add(variable <= (Real)ub);
-            this.ConstraintExprs.Add(variable >= (Real)lb);
+            if (ub < double.PositiveInfinity) {
+                this.ConstraintExprs.Add(variable <= new Real((int)(ub * precision), precision));
+            }
+            if (lb > double.NegativeInfinity) {
+                this.ConstraintExprs.Add(variable >= new Real((int)(lb * precision), precision));
+            }
             return variable;
         }
 

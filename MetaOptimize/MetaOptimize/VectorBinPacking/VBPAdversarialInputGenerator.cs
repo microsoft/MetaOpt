@@ -159,14 +159,15 @@ namespace MetaOptimize
 
             Utils.logger("creating demand variables.", verbose);
             this.DemandVariables = CreateDemandVariables(solver);
-            // foreach (var (itemID, demandVar) in this.DemandVariables) {
-            //     for (int dim = 0; dim < NumDimensions; dim++) {
-            //         var outPoly = new Polynomial<TVar>();
-            //         outPoly.Add(new Term<TVar>(-1 * smallestDemandUnit, solver.CreateVariable("demand_" + itemID + "_" + dim, type: GRB.INTEGER, lb: 0)));
-            //         outPoly.Add(new Term<TVar>(1, demandVar[dim]));
-            //         solver.AddEqZeroConstraint(outPoly);
-            //     }
-            // }
+            foreach (var (itemID, demandVar) in this.DemandVariables) {
+                for (int dim = 0; dim < NumDimensions; dim++) {
+                    var outPoly = new Polynomial<TVar>();
+                    outPoly.Add(new Term<TVar>(-1 * smallestDemandUnit,
+                                    solver.CreateVariable("demand_" + itemID + "_" + dim, type: GRB.INTEGER, lb: 0, ub: this.Bins.MaxCapacity(dim) / smallestDemandUnit)));
+                    outPoly.Add(new Term<TVar>(1, demandVar[dim]));
+                    solver.AddEqZeroConstraint(outPoly);
+                }
+            }
             Utils.logger("generating optimal encoding.", verbose);
             var optimalEncoding = optimalEncoder.Encoding(Bins, preDemandVariables: this.DemandVariables, verbose: verbose);
             Utils.logger("generating heuristic encoding.", verbose);
