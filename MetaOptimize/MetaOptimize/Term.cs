@@ -12,6 +12,7 @@ namespace MetaOptimize
     /// </summary>
     public class Term<TVar>
     {
+        private int precision = 100;
         /// <summary>
         /// The variable name.
         /// </summary>
@@ -71,12 +72,18 @@ namespace MetaOptimize
         {
             if (this.Exponent == 0)
             {
-                return new Real((int)this.Coefficient);
+                if ((int)this.Coefficient == Coefficient) {
+                    return new Real((int)this.Coefficient);
+                }
+                return new Real((int)(this.Coefficient * precision), precision);
             }
 
             if (this.Exponent == 1)
             {
-                return new Real((int)this.Coefficient) * (dynamic)this.Variable.Value;
+                if ((int)this.Coefficient == Coefficient) {
+                    return new Real((int)this.Coefficient) * (dynamic)this.Variable.Value;
+                }
+                return new Real((int)(this.Coefficient * precision), precision) * (dynamic)this.Variable.Value;
             }
 
             throw new System.Exception($"exponent can only be 0 or 1.");
