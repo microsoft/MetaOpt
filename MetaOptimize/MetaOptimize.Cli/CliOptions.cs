@@ -89,6 +89,12 @@ namespace MetaOptimize.Cli
         public int Paths { get; set; }
 
         /// <summary>
+        /// The maximum shortest path length to pin in modified demandpinning.
+        /// </summary>
+        [Option('p', "maxshortestlen", Default = -1, HelpText = "The maximum shortest path length to pin (only applied to ModifiedDp).")]
+        public int MaxShortestPathLen { get; set; }
+
+        /// <summary>
         /// method for finding gap [search or direct].
         /// </summary>
         [Option('m', "method", Default = MethodChoice.Direct, HelpText = "the method for finding the desirable gap [Direct | Search | FindFeas | Random | HillClimber | SimulatedAnnealing]")]
@@ -185,6 +191,30 @@ namespace MetaOptimize.Cli
         public int NumInterClusterQuantizations { get; set; }
 
         /// <summary>
+        /// error analysis.
+        /// </summary>
+        [Option('j', "fullopt", Default = false, HelpText = "after finding the demand, will run the full optimization with demands as init point.")]
+        public bool FullOpt { get; set; }
+
+        /// <summary>
+        /// error analysis timer.
+        /// </summary>
+        [Option('j', "fullopttimer", Default = -1, HelpText = "the duration to run the full optimization for error analysis.")]
+        public double FullOptTimer { get; set; }
+
+        /// <summary>
+        /// gurobi improve upper bound instead of bestObj.
+        /// </summary>
+        [Option('j', "ubfocus", Default = false, HelpText = "if enabled after finding demand, will solve another optimization focusing on improving upper bound.")]
+        public bool UBFocus { get; set; }
+
+        /// <summary>
+        /// gurobi upper bound timer.
+        /// </summary>
+        [Option('j', "ubfocustimeout", Default = -1, HelpText = "the timer of solver when focusing on ub.")]
+        public double UBFocusTimer { get; set; }
+
+        /// <summary>
         /// num processes.
         /// </summary>
         [Option('s', "numProcesses", Default = -1, HelpText = "num processes to use for.")]
@@ -269,6 +299,26 @@ namespace MetaOptimize.Cli
         /// Combine POP and DP.
         /// </summary>
         PopDp,
+
+        /// <summary>
+        /// The average gap of running POP and DP in parallel.
+        /// </summary>
+        ExpectedPopDp,
+
+        /// <summary>
+        /// Parallel POP. Running multiple instances of POP in parallel.
+        /// </summary>
+        ParallelPop,
+
+        /// <summary>
+        /// Running multiple instances of POP in parallel with DP.
+        /// </summary>
+        ParallelPopDp,
+
+        /// <summary>
+        /// Modified Demand Pinning with upper bound of pinned path lengths.
+        /// </summary>
+        ModifiedDp,
     }
     /// <summary>
     /// The solver we want to use.

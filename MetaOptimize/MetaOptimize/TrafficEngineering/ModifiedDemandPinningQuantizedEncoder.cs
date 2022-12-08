@@ -1,0 +1,84 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace MetaOptimize
+{
+    using System;
+    using System.Collections.Generic;
+    using System.Linq;
+    using ZenLib;
+    /// <summary>
+    /// Encodes demand pinning solution.
+    /// </summary>
+    public class ModifiedDemandPinningQuantizedEncoder<TVar, TSolution> : DemandPinningEncoder<TVar, TSolution>
+    {
+        /// <summary>
+        /// Auxilary variable used to encode DP.
+        /// </summary>
+        private Dictionary<(string, string), Polynomial<TVar>> SPLowerBound { get; set; }
+        private Dictionary<(string, string), Polynomial<TVar>> NSPUpperBound { get; set; }
+
+        /// <summary>
+        /// maximum shortest path length to pin.
+        /// </summary>
+        private int MaxShortestPathLen;
+
+        /// <summary>
+        /// Create a new instance of the <see cref="DemandPinningEncoder{TVar, TSolution}"/> class.
+        /// </summary>
+        /// <param name="solver">The solver.</param>
+        /// <param name="k">The max number of paths between nodes.</param>
+        /// <param name="MaxShortestPathLen">The maximum shortest path length to pin.</param>
+        /// <param name="threshold"> The threshold to use for demand pinning.</param>
+        /// <param name="scaleFactor"> The scale factor to show the input is downscaled.</param>
+        public ModifiedDemandPinningQuantizedEncoder(ISolver<TVar, TSolution> solver, int k, int MaxShortestPathLen, double threshold = 0,
+                double scaleFactor = 1.0) : base(solver, k, threshold, scaleFactor)
+        {
+            if (MaxShortestPathLen < 1) {
+                throw new Exception("The max shortest path len should be >= 1 but received " + MaxShortestPathLen);
+            }
+            this.MaxShortestPathLen = MaxShortestPathLen;
+        }
+
+        /// <summary>
+        /// Create auxiliary variables to model max() in DP formulation.
+        /// </summary>
+        protected override void CreateAuxVariable() {
+            this.SPLowerBound = new Dictionary<(string, string), Polynomial<TVar>>();
+            this.NSPUpperBound = new Dictionary<(string, string), Polynomial<TVar>>();
+            foreach (var pair in this.Topology.GetNodePairs())
+            {
+                if (!IsDemandValid(pair)) {
+                    continue;
+                }
+                this.SPLowerBound[pair] = this.DemandVariables[pair].GetTermsWithCoeffLeq(this.Threshold);
+                this.NSPUpperBound[pair] = this.DemandVariables[pair].GetTermsWithCoeffGreater(this.Threshold);
+            }
+        }
+
+        /// <summary>
+        /// add Demand Pinning Constraints.
+        /// </summary>
+        protected override void GenerateDPConstraints(Polynomial<TVar> objectiveFunction)
+        {
+            // generating the max constraints that achieve pinning.
+            foreach (var (pair, polyTerm) in sumNonShortest) {
+                var shortestPaths = this.Topology.ShortestKPaths(1, pair.Item1, pair.Item2);
+                if (shortestPaths[0].Count() <= this.MaxShortestPathLen) {
+                    // shortest path flows \geq quantized demand with coefficient less than equal threshold
+                    var shortestPathUB = this.SPLowerBound[pair].Copy();
+                    shortestPathUB.Add(new Term<TVar>(-1, shortestFlowVariables[pair]));
+                    this.innerProblemEncoder.AddLeqZeroConstraint(shortestPathUB);
+                } else {
+                    // // non shortest path flows \leq quantized demand with coefficient greater than threshold
+                    // var nonShortestPathUB = this.NSPUpperBound[pair].Negate();
+                    // nonShortestPathUB.Add(this.sumNonShortest[pair]);
+                    // this.innerProblemEncoder.AddLeqZeroConstraint(nonShortestPathUB);
+                }
+            }
+        }
+    }
+}

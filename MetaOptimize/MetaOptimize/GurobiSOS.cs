@@ -90,6 +90,11 @@ namespace MetaOptimize
         protected string _logFileFilename = null;
 
         /// <summary>
+        /// if set, will focus on improving the best bound instead of current solution.
+        /// </summary>
+        protected bool _focusBstBd = false;
+
+        /// <summary>
         /// releases gurobi environment. // sk: not sure about this.
         /// </summary>
         public void Delete()
@@ -148,7 +153,7 @@ namespace MetaOptimize
         /// constructor.
         /// </summary>
         public GurobiSOS(double timeout = double.PositiveInfinity, int verbose = 0, int numThreads = 0, double timeToTerminateNoImprovement = -1,
-                bool recordProgress = false, string logPath = null)
+                bool recordProgress = false, string logPath = null, bool focusBstBd = false)
         {
             this._env = SetupGurobi();
             this._model = new GRBModel(this._env);
@@ -157,6 +162,7 @@ namespace MetaOptimize
             this._numThreads = numThreads;
             this._model.Parameters.TimeLimit = timeout;
             this._model.Parameters.Presolve = 2;
+            this._focusBstBd = focusBstBd;
             if (numThreads < 0) {
                 throw new Exception("num threads should be either 0 (automatic) or positive but got " + numThreads);
             }
@@ -198,12 +204,27 @@ namespace MetaOptimize
         }
 
         /// <summary>
+        /// Reset the solver by removing all the variables and constraints.
+        /// </summary>
+        public void CleanAll(bool focusBstBd, double timeout = -1) {
+            this._focusBstBd = focusBstBd;
+            CleanAll(timeout);
+        }
+
+        /// <summary>
         /// set the timeout.
         /// </summary>
         /// <param name="timeout">value for timeout.</param>
         public void SetTimeout(double timeout) {
             this._timeout = timeout;
             this._model.Parameters.TimeLimit = timeout;
+        }
+
+        /// <summary>
+        /// set the FocusBstBd.
+        /// </summary>
+        public void SetFocusBstBd(bool focusBstBd) {
+            this._focusBstBd = focusBstBd;
         }
 
         /// <summary>
@@ -590,6 +611,13 @@ namespace MetaOptimize
                 objective += this.Convert(auxVar);
             }
             this._model.SetObjective(objective + this._objective, GRB.MAXIMIZE);
+            if (this._focusBstBd) {
+                this._model.Parameters.MIPFocus = 3;
+                this._model.Parameters.Heuristics = 0.01;
+            } else {
+                this._model.Parameters.MIPFocus = 1;
+                this._model.Parameters.Heuristics = 0.95;
+            }
             // this._model.Parameters.MIPFocus = 3;
             // this._model.Parameters.Cuts = 3;
             // this._model.Parameters.Heuristics = 0.5;
