@@ -117,6 +117,13 @@ namespace MetaOptimize
         }
 
         /// <summary>
+        /// Reset the solver by removing all the variables and constraints.
+        /// </summary>
+        public void CleanAll(bool focusBstBd, double timeout = -1) {
+            throw new Exception("not implemented yet");
+        }
+
+        /// <summary>
         /// constructor.
         /// </summary>
         public SolverGurobi()
@@ -136,6 +143,13 @@ namespace MetaOptimize
         /// </summary>
         /// <param name="timeout">value for timeout.</param>
         public void SetTimeout(double timeout) {
+            throw new Exception("have not implemented yet");
+        }
+
+        /// <summary>
+        /// set the FocusBstBd.
+        /// </summary>
+        public void SetFocusBstBd(bool focusBstBd) {
             throw new Exception("have not implemented yet");
         }
 

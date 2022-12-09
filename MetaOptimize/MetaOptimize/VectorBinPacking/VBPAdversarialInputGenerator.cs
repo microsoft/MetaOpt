@@ -16,7 +16,7 @@ namespace MetaOptimize
     /// </summary>
     public class VBPAdversarialInputGenerator<TVar, TSolution>
     {
-        private double smallestDemandUnit =  Math.Pow(10, -2);
+        private double smallestDemandUnit =  Math.Pow(10, -4);
         /// <summary>
         /// The bins to fill.
         /// </summary>
@@ -137,7 +137,9 @@ namespace MetaOptimize
             IEncoder<TVar, TSolution> optimalEncoder,
             IEncoder<TVar, TSolution> heuristicEncoder,
             int numBinsUsedOptimal,
+            bool orderItems,
             double demandUB = -1,
+            IList<IList<double>> demandList = null,
             IDictionary<int, List<double>> constrainedDemands = null,
             bool simplify = false,
             bool verbose = false,
@@ -159,13 +161,31 @@ namespace MetaOptimize
 
             Utils.logger("creating demand variables.", verbose);
             this.DemandVariables = CreateDemandVariables(solver);
-            foreach (var (itemID, demandVar) in this.DemandVariables) {
-                for (int dim = 0; dim < NumDimensions; dim++) {
-                    var outPoly = new Polynomial<TVar>();
-                    outPoly.Add(new Term<TVar>(-1 * smallestDemandUnit,
-                                    solver.CreateVariable("demand_" + itemID + "_" + dim, type: GRB.INTEGER, lb: 0, ub: this.Bins.MaxCapacity(dim) / smallestDemandUnit)));
-                    outPoly.Add(new Term<TVar>(1, demandVar[dim]));
-                    solver.AddEqZeroConstraint(outPoly);
+            if (demandList == null) {
+                Utils.logger("demand List is null.", verbose);
+                foreach (var (itemID, demandVar) in this.DemandVariables) {
+                    for (int dim = 0; dim < NumDimensions; dim++) {
+                        var outPoly = new Polynomial<TVar>();
+                        outPoly.Add(new Term<TVar>(-1 * smallestDemandUnit,
+                                        solver.CreateVariable("demand_" + itemID + "_" + dim, type: GRB.INTEGER, lb: 0, ub: this.Bins.MaxCapacity(dim) / smallestDemandUnit)));
+                        outPoly.Add(new Term<TVar>(1, demandVar[dim]));
+                        solver.AddEqZeroConstraint(outPoly);
+                    }
+                }
+            } else {
+                Utils.logger("demand List specified.", verbose);
+                foreach (var (itemID, demandVar) in this.DemandVariables) {
+                    for (int dim = 0; dim < NumDimensions; dim++) {
+                        var demandPoly = new Polynomial<TVar>(new Term<TVar>(1, demandVar[dim]));
+                        var sumPoly = new Polynomial<TVar>(new Term<TVar>(1));
+                        foreach (var demandlvl in demandList[dim]) {
+                            var newBinary = solver.CreateVariable("bin_dim_" + itemID + "_" + dim + "_" + demandlvl, type: GRB.BINARY);
+                            demandPoly.Add(new Term<TVar>(-1 * demandlvl, newBinary));
+                            sumPoly.Add(new Term<TVar>(-1, newBinary));
+                        }
+                        solver.AddEqZeroConstraint(demandPoly);
+                        solver.AddEqZeroConstraint(sumPoly);
+                    }
                 }
             }
             Utils.logger("generating optimal encoding.", verbose);
@@ -184,14 +204,16 @@ namespace MetaOptimize
             Utils.logger("adding equality constraints for specified demands.", verbose);
             EnsureDemandEquality(solver, constrainedDemands);
 
-            Utils.logger("ensuring demands are sorted.", verbose);
-            for (int itemID = 0; itemID < this.NumItems - 1; itemID++) {
-                var poly = new Polynomial<TVar>();
-                for (int dim = 0; dim < this.NumDimensions; dim++) {
-                    poly.Add(new Term<TVar>(1, this.DemandVariables[itemID + 1][dim]));
-                    poly.Add(new Term<TVar>(-1, this.DemandVariables[itemID][dim]));
+            if (orderItems) {
+                Utils.logger("ensuring demands are sorted.", verbose);
+                for (int itemID = 0; itemID < this.NumItems - 1; itemID++) {
+                    var poly = new Polynomial<TVar>();
+                    for (int dim = 0; dim < this.NumDimensions; dim++) {
+                        poly.Add(new Term<TVar>(1, this.DemandVariables[itemID + 1][dim]));
+                        poly.Add(new Term<TVar>(-1, this.DemandVariables[itemID][dim]));
+                    }
+                    solver.AddLeqZeroConstraint(poly);
                 }
-                solver.AddLeqZeroConstraint(poly);
             }
 
             var optimalBinsPoly = new Polynomial<TVar>();

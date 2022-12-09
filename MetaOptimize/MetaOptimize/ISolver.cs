@@ -17,6 +17,11 @@ namespace MetaOptimize
         public void CleanAll(double timeout = -1);
 
         /// <summary>
+        /// Reset the solver by removing all the variables and constraints.
+        /// </summary>
+        public void CleanAll(bool focusBstBd, double timeout = -1);
+
+        /// <summary>
         /// Create a new variable with a given name.
         /// </summary>
         /// <param name="name">The variable name.</param>
@@ -57,6 +62,11 @@ namespace MetaOptimize
         /// </summary>
         /// <param name="timeout">value for timeout.</param>
         public void SetTimeout(double timeout);
+
+        /// <summary>
+        /// set the FocusBstBd.
+        /// </summary>
+        public void SetFocusBstBd(bool focusBstBd);
 
         /// <summary>
         /// get model.

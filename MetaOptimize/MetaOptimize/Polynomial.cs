@@ -238,5 +238,18 @@ namespace MetaOptimize
             }
             return newTerm;
         }
+
+        /// <summary>
+        /// get all the terms with coefficient less than or equal to a threshold.
+        /// </summary>
+        public Polynomial<TVar> GetTermsWithCoeffGreater(double threshold) {
+            var newTerm = new Polynomial<TVar>();
+            foreach (var term in this.Terms) {
+                if (term.Coefficient > threshold + 0.00001) {
+                    newTerm.Add(term.Copy());
+                }
+            }
+            return newTerm;
+        }
     }
 }

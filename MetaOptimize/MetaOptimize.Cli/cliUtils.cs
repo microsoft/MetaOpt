@@ -13,7 +13,7 @@ namespace MetaOptimize.Cli {
                 ISolver<TVar, TSolution> solver, Topology topology, Heuristic h, int numPaths, int numSlices = -1, double demandPinningThreshold = -1,
                 IDictionary<(string, string), int> partition = null, int numSamples = -1, IList<IDictionary<(string, string), int>> partitionsList = null,
                 double partitionSensitivity = -1, bool DirectEncoder = false, double scaleFactor = 1.0,
-                InnerEncodingMethodChoice InnerEncoding = InnerEncodingMethodChoice.KKT)
+                InnerEncodingMethodChoice InnerEncoding = InnerEncodingMethodChoice.KKT, int maxShortestPathLen = -1)
         {
             IEncoder<TVar, TSolution> heuristicEncoder;
             switch (h)
@@ -72,6 +72,92 @@ namespace MetaOptimize.Cli {
                     var heuristicEncoder2 = new PopEncoder<TVar, TSolution>(solver, numPaths, numSlices, partition, partitionSensitivity: partitionSensitivity);
                     heuristicEncoderList.Add(heuristicEncoder2);
                     heuristicEncoder = new TECombineHeuristicsEncoder<TVar, TSolution>(solver, heuristicEncoderList, k: numPaths);
+                    break;
+                case Heuristic.ExpectedPopDp:
+                    Console.WriteLine("Exploring expected combination of POP and DP.");
+                    var expectedPopDpEncoderList = new List<IEncoder<TVar, TSolution>>();
+                    if (partition == null) {
+                        partition = topology.RandomPartition(numSlices);
+                    }
+                    if (InnerEncoding == InnerEncodingMethodChoice.PrimalDual) {
+                        Console.WriteLine("Indirect Quantized DP");
+                        var dpEncoder = new DemandPinningQuantizedEncoder<TVar, TSolution>(solver, numPaths, demandPinningThreshold, scaleFactor: scaleFactor);
+                        expectedPopDpEncoderList.Add(dpEncoder);
+                    } else {
+                        Console.WriteLine("Indirect DP");
+                        var dpEncoder = new DemandPinningEncoder<TVar, TSolution>(solver, numPaths, demandPinningThreshold, scaleFactor: scaleFactor);
+                        expectedPopDpEncoderList.Add(dpEncoder);
+                    }
+                    if (partitionsList == null) {
+                        partitionsList = new List<IDictionary<(string, string), int>>();
+                        for (int i = 0; i < numSamples; i++) {
+                            partitionsList.Add(topology.RandomPartition(numSlices));
+                        }
+                    }
+                    Console.WriteLine("Exploring the expected pop heuristic");
+                    var expectedPopEncoder = new ExpectedPopEncoder<TVar, TSolution>(solver, numPaths, numSamples, numSlices, partitionsList);
+                    expectedPopDpEncoderList.Add(expectedPopEncoder);
+                    heuristicEncoder = new TECombineHeuristicsEncoder<TVar, TSolution>(solver, expectedPopDpEncoderList, k: numPaths);
+                    break;
+                case Heuristic.ParallelPop:
+                    Console.WriteLine("Exploring Parallel POP.");
+                    var parallelPopEncoderList = new List<IEncoder<TVar, TSolution>>();
+                    if (partitionsList == null) {
+                        partitionsList = new List<IDictionary<(string, string), int>>();
+                        for (int i = 0; i < numSamples; i++) {
+                            partitionsList.Add(topology.RandomPartition(numSlices));
+                        }
+                    }
+                    for (int i = 0; i < numSamples; i++) {
+                        Console.WriteLine(String.Format("Adding POP instance {0}", i));
+                        var popEncoder = new PopEncoder<TVar, TSolution>(solver, numPaths, numSlices, partitionsList[i], partitionSensitivity: partitionSensitivity);
+                        parallelPopEncoderList.Add(popEncoder);
+                    }
+                    heuristicEncoder = new TECombineHeuristicsEncoder<TVar, TSolution>(solver, parallelPopEncoderList, k: numPaths);
+                    break;
+                case Heuristic.ParallelPopDp:
+                    Console.WriteLine("Exploring Parallel POP + DP.");
+                    var parallelPopDpEncoderList = new List<IEncoder<TVar, TSolution>>();
+                    if (partition == null) {
+                        partition = topology.RandomPartition(numSlices);
+                    }
+                    Console.WriteLine("Adding DemandPinning.");
+                    if (InnerEncoding == InnerEncodingMethodChoice.PrimalDual) {
+                        Console.WriteLine("Indirect Quantized DP");
+                        var dpEncoder = new DemandPinningQuantizedEncoder<TVar, TSolution>(solver, numPaths, demandPinningThreshold, scaleFactor: scaleFactor);
+                        parallelPopDpEncoderList.Add(dpEncoder);
+                    } else {
+                        Console.WriteLine("Indirect DP");
+                        var dpEncoder = new DemandPinningEncoder<TVar, TSolution>(solver, numPaths, demandPinningThreshold, scaleFactor: scaleFactor);
+                        parallelPopDpEncoderList.Add(dpEncoder);
+                    }
+                    Console.WriteLine("Adding parallel POP.");
+                    if (partitionsList == null) {
+                        partitionsList = new List<IDictionary<(string, string), int>>();
+                        for (int i = 0; i < numSamples; i++) {
+                            partitionsList.Add(topology.RandomPartition(numSlices));
+                        }
+                    }
+                    for (int i = 0; i < numSamples; i++) {
+                        Console.WriteLine(String.Format("Adding POP instance {0}", i));
+                        var popEncoder = new PopEncoder<TVar, TSolution>(solver, numPaths, numSlices, partitionsList[i], partitionSensitivity: partitionSensitivity);
+                        parallelPopDpEncoderList.Add(popEncoder);
+                    }
+                    heuristicEncoder = new TECombineHeuristicsEncoder<TVar, TSolution>(solver, parallelPopDpEncoderList, k: numPaths);
+                    break;
+                case Heuristic.ModifiedDp:
+                    Console.WriteLine("Exploring modified demand pinning heuristic");
+                    if (DirectEncoder) {
+                        Console.WriteLine("Direct DP");
+                        throw new Exception("Not implemented yet.");
+                    } else if (InnerEncoding == InnerEncodingMethodChoice.PrimalDual) {
+                        Console.WriteLine("Indirect Quantized DP");
+                        heuristicEncoder = new ModifiedDemandPinningQuantizedEncoder<TVar, TSolution>(solver,
+                                                numPaths, maxShortestPathLen, demandPinningThreshold, scaleFactor: scaleFactor);
+                    } else {
+                        Console.WriteLine("Indirect DP");
+                        throw new Exception("Not implemented yet.");
+                    }
                     break;
                 default:
                     throw new Exception("No heuristic selected.");
