@@ -184,6 +184,7 @@ namespace MetaOptimize
             Utils.logger("adding equality constraints for specified demands.", verbose);
             EnsureDemandEquality(solver, constrainedDemands);
 
+            Utils.logger("ensuring demands are sorted.", verbose);
             for (int itemID = 0; itemID < this.NumItems - 1; itemID++) {
                 var poly = new Polynomial<TVar>();
                 for (int dim = 0; dim < this.NumDimensions; dim++) {
