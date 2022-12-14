@@ -172,7 +172,7 @@ namespace MetaOptimize
             foreach (var (itemID, demandConstant) in this.DemandConstraints)
             {
                 for (int dimension = 0; dimension < this.NumDimensions; dimension++) {
-                    if (demandConstant[dimension] <= 0) {
+                    if (demandConstant[dimension] < 0) {
                         continue;
                     }
                     var poly = new Polynomial<TVar>();
