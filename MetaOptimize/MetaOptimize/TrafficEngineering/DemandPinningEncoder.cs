@@ -71,6 +71,7 @@ namespace MetaOptimize
         // public Dictionary<(string, string), TVar> maxPinned { get; set; }
 
         private double _bigM = Math.Pow(10, 4);
+        private double capacityTolerance = Math.Pow(10, -4);
         /// <summary>
         /// scale factor.
         /// </summary>

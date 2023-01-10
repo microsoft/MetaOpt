@@ -206,6 +206,14 @@ namespace MetaOptimize
         /// <param name="dest">The destination node.</param>
         public string[][] ShortestKPaths(int k, string source, string dest)
         {
+            if (this.paths.ContainsKey(k) && this.paths[k].ContainsKey((source, dest))) {
+                return this.paths[k][(source, dest)];
+            }
+
+            if (!this.paths.ContainsKey(k)) {
+                this.paths[k] = new Dictionary<(string, string), string[][]>();
+            }
+
             var algorithm = new YenShortestPathsAlgorithm<string>(this.Graph, source, dest, k);
 
             try
@@ -214,12 +222,13 @@ namespace MetaOptimize
                 {
                     return Enumerable.Concat(Enumerable.Repeat(source, 1), p.Select(e => e.Target)).ToArray();
                 });
-                return paths.ToArray();
+                this.paths[k][(source, dest)] = paths.ToArray();
             }
             catch (QuikGraph.NoPathFoundException)
             {
-                return new string[0][];
+                this.paths[k][(source, dest)] = new string[0][];
             }
+            return this.paths[k][(source, dest)];
         }
 
         /// <summary>

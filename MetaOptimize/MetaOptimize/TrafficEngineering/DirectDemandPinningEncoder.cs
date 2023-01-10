@@ -133,6 +133,7 @@ namespace MetaOptimize
                     continue;
                 }
                 if (demand <= Threshold + this._threshold_tolerance) {
+                    // Console.WriteLine(pair.Item1 + " " + pair.Item2 + " " + demand + " " + Threshold);
                     var shortestPaths = this.Topology.ShortestKPaths(1, pair.Item1, pair.Item2);
                     if (shortestPaths.Count() <= 0) {
                         continue;
@@ -141,9 +142,8 @@ namespace MetaOptimize
                         var edge = (shortestPaths[0][i], shortestPaths[0][i + 1]);
                         this.link_to_cap_mapping[edge] -= demand;
                         if (this.link_to_cap_mapping[edge] < -1 * this._threshold_tolerance) {
-                            Console.WriteLine(edge.Item1 + " " + edge.Item2 + " " +
-                                    this.link_to_cap_mapping[(shortestPaths[0][i], shortestPaths[0][i + 1])]);
-                            throw new Exception("negative link capacity");
+                            Console.WriteLine(edge.Item1 + " " + edge.Item2 + " " + this.link_to_cap_mapping[edge]);
+                            throw new DemandPinningLinkNegativeException("negative link capacity", edge, this.Threshold);
                         } else {
                             this.link_to_cap_mapping[edge] = Math.Max(0, this.link_to_cap_mapping[edge]);
                         }

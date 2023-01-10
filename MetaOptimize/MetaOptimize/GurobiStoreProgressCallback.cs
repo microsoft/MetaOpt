@@ -14,6 +14,7 @@ namespace MetaOptimize
         private Stopwatch timer;
         private String dirname;
         private String filename;
+        private double timeBias = 0.0;
 
         public GurobiStoreProgressCallback(GRBModel model, String dirname, String filename) {
             this.model = model;
@@ -44,7 +45,14 @@ namespace MetaOptimize
 
         public void CallCallback(double objective)
         {
-            Utils.AppendToFile(dirname, filename, timer.ElapsedMilliseconds + ", " + objective);
+            double time = timeBias + timer.ElapsedMilliseconds;
+            Utils.AppendToFile(dirname, filename, time + ", " + objective);
+        }
+
+        public void ResetProgressTimer()
+        {
+            this.timeBias = Double.Parse(Utils.readLastLineFile(this.dirname, this.filename).Split(", ")[0]);
+            this.timer = Stopwatch.StartNew();
         }
     }
 }

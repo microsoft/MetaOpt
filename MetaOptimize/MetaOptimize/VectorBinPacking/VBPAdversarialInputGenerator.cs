@@ -313,6 +313,22 @@ namespace MetaOptimize
                 case FFDMethodChoice.FFDDiv:
                     Utils.logger("Using FFDDiv Heuristic.", verbose);
                     Debug.Assert(this.NumDimensions == 2);
+                    for (int itemID = 0; itemID < this.NumItems; itemID++) {
+                        solver.AddLeqZeroConstraint(new Polynomial<TVar>(
+                            new Term<TVar>(-1, this.DemandVariables[itemID][0]),
+                            new Term<TVar>(this.smallestDemandUnit)));
+                        solver.AddLeqZeroConstraint(new Polynomial<TVar>(
+                            new Term<TVar>(-1, this.DemandVariables[itemID][1]),
+                            new Term<TVar>(this.smallestDemandUnit)));
+                    }
+                    for (int itemID = 0; itemID < this.NumItems - 1; itemID++) {
+                        var poly1 = this.DemandToBinaryPoly[itemID][0].Copy();
+                        var poly2 = this.DemandToBinaryPoly[itemID + 1][0].Copy();
+                        poly1 = this.MultiplicationBinaryContinuousPoly(solver, poly1, this.DemandVariables[itemID + 1][1], this.Bins.MaxCapacity(1));
+                        poly2 = this.MultiplicationBinaryContinuousPoly(solver, poly2, this.DemandVariables[itemID][1], this.Bins.MaxCapacity(0));
+                        poly2.Add(poly1.Negate());
+                        solver.AddLeqZeroConstraint(poly2);
+                    }
                     break;
                 default:
                     throw new Exception("invalid FFD Heuristic Method.");

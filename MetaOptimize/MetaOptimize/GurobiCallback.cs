@@ -40,5 +40,10 @@ namespace MetaOptimize
         {
             this.terminationCallback.ResetTermination();
         }
+
+        public void ResetProgressTimer()
+        {
+            this.storeProgressCallback.ResetProgressTimer();
+        }
     }
 }

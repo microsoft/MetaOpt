@@ -166,6 +166,75 @@ namespace MetaOptimize.Cli {
         }
 
         /// <summary>
+        /// Get the topology and the clusters.
+        /// </summary>
+        public static (Topology, List<Topology>) getTopology(string topologyFile, string pathFile, double downScaleFactor, bool enableClustering,
+                int numClusters, string clusterDir, bool verbose)
+        {
+            Topology topology = Parser.ReadTopologyJson(topologyFile, pathFile, scaleFactor: downScaleFactor);
+            List<Topology> clusters = new List<Topology>();
+            if (enableClustering) {
+                for (var cidx = 0; cidx < numClusters; cidx++) {
+                    var path = Path.Combine(clusterDir, string.Format("cluster_{0}.json", cidx));
+                    Utils.logger(String.Format("Cluster idx {0}: path = {1}", cidx, path), verbose);
+                    clusters.Add(Parser.ReadTopologyJson(path, scaleFactor: downScaleFactor));
+                }
+            }
+            return (topology, clusters);
+        }
+
+        /// <summary>
+        /// Get the method from MetaOpt to find adversarial inputs.
+        /// </summary>
+        public static (TEOptimizationSolution, TEOptimizationSolution) getMetaOptResult<TVar, TSolution>(
+                TEAdversarialInputGenerator<TVar, TSolution> adversarialInputGenerator,
+                IEncoder<TVar, TSolution> optimalEncoder,
+                IEncoder<TVar, TSolution> heuristicEncoder,
+                double demandUB,
+                InnerEncodingMethodChoice innerEncoding,
+                GenericDemandList demandList,
+                bool enableClustering,
+                int clusterVersion,
+                List<Topology> clusters,
+                int numInterClusterSamples,
+                int numNodesPerCluster,
+                int numInterClusterQuantizations,
+                bool simplify,
+                bool verbose)
+        {
+            Utils.logger("Going to find the maximum gap directly", verbose);
+            Utils.logger("Simplified Option: " + simplify, verbose);
+            Utils.logger("Cluster lvl scale up: " + enableClustering, verbose);
+            (TEOptimizationSolution, TEOptimizationSolution) result;
+            if (enableClustering) {
+                switch (clusterVersion)
+                {
+                    case 1:
+                        result = adversarialInputGenerator.MaximizeOptimalityGapWithClusteringV1(clusters, optimalEncoder, heuristicEncoder, demandUB,
+                                numInterClusterSamples, numNodesPerCluster, innerEncoding: innerEncoding, demandList: demandList,
+                                simplify: simplify, verbose: verbose);
+                        break;
+                    case 2:
+                        result = adversarialInputGenerator.MaximizeOptimalityGapWithClusteringV2(clusters, optimalEncoder, heuristicEncoder, demandUB,
+                                numInterClusterSamples, numNodesPerCluster, innerEncoding: innerEncoding, demandList: demandList,
+                                simplify: simplify, verbose: verbose);
+                        break;
+                    case 3:
+                        result = adversarialInputGenerator.MaximizeOptimalityGapWithClusteringV3(clusters, optimalEncoder, heuristicEncoder, demandUB,
+                                numInterClusterSamples, numNodesPerCluster, innerEncoding, demandList: demandList,
+                                numInterClusterQuantizations: numInterClusterQuantizations, simplify: simplify, verbose: verbose);
+                        break;
+                    default:
+                        throw new Exception("Cluster Version is invalid");
+                }
+            } else {
+                result = adversarialInputGenerator.MaximizeOptimalityGap(optimalEncoder, heuristicEncoder, demandUB, innerEncoding: innerEncoding,
+                        demandList: demandList, simplify: simplify, verbose: verbose);
+            }
+            return result;
+        }
+
+        /// <summary>
         /// Solves the adversarial input for demand pinning heuristic
         /// with specified parameters.
         /// </summary>

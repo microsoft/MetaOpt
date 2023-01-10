@@ -2,6 +2,7 @@ namespace MetaOptimize {
     using System;
     using System.Collections.Generic;
     using System.IO;
+    using System.Linq;
     using Newtonsoft.Json;
     /// <summary>
     /// Implements a utility function with some .
@@ -216,6 +217,34 @@ namespace MetaOptimize {
             }
             string serializedjson = JsonConvert.SerializeObject(storeOutput);
             File.WriteAllText(pathToWrite, serializedjson);
+        }
+
+        /// <summary>
+        /// write demands to file.
+        /// </summary>
+        public static void writeDemandsToFile(string pathToWrite, IDictionary<(string, string), double> demand)
+        {
+            if (File.Exists(pathToWrite)) {
+                throw new Exception("path to file to store the paths exist!!");
+            }
+            var dirname = Path.GetDirectoryName(pathToWrite);
+            if (!Directory.Exists(dirname)) {
+                Directory.CreateDirectory(dirname);
+            }
+            string serializedjson = JsonConvert.SerializeObject(demand);
+            File.WriteAllText(pathToWrite, serializedjson);
+        }
+
+        /// <summary>
+        /// read last line of file.
+        /// </summary>
+        public static string readLastLineFile(string dirname, string filename)
+        {
+            string path = Path.Combine(dirname, filename);
+            if (!File.Exists(path)) {
+                throw new Exception("File does not exist!");
+            }
+            return File.ReadLines(path).Last();
         }
     }
 }

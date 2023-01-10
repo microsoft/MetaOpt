@@ -1057,6 +1057,7 @@ namespace MetaOptimize
             IEncoder<TVar, TSolution> heuristicEncoder,
             int numTrials,
             double demandUB,
+            bool grey = false,
             int seed = 0,
             bool verbose = false,
             bool storeProgress = false,
@@ -1093,12 +1094,30 @@ namespace MetaOptimize
             // Utils.StoreProgress(logPath, timer.ElapsedMilliseconds + ", " + currMaxGap, storeProgress);
 
             foreach (int i in Enumerable.Range(0, numTrials)) {
-                Dictionary<(string, string), double> demands = new Dictionary<(string, string), double>();
                 // initializing some random demands
-                foreach (var pair in this.Topology.GetNodePairs()) {
-                    demands[pair] = rng.NextDouble() * demandUB;
-                }
-                var (currGap, result) = GetGap(optimalEncoder, heuristicEncoder, demands);
+                Dictionary<(string, string), double> demands = getRandomDemand(rng, demandUB);
+                // finding the gap
+                double currGap = 0;
+                (TEOptimizationSolution, TEOptimizationSolution) result = (zero_solution, zero_solution);
+                bool feasible = true;
+                do {
+                    feasible = true;
+                    try {
+                        (currGap, result) = GetGap(optimalEncoder, heuristicEncoder, demands);
+                    } catch (DemandPinningLinkNegativeException e) {
+                        feasible = false;
+                        Console.WriteLine("Infeasible input!");
+                        if (grey) {
+                            ReduceDemandsOnLink(demands, e.Edge, e.Threshold, 0.1);
+                        } else {
+                            demands = getRandomDemand(rng, demandUB);
+                        }
+                        Utils.StoreProgress(logPath, timer.ElapsedMilliseconds + ", " + currMaxGap, storeProgress);
+                    }
+                    if (timer.ElapsedMilliseconds > timeout_ms) {
+                        break;
+                    }
+                } while (!feasible);
                 Utils.WriteToConsole("===========================================================", verbose);
                 Utils.WriteToConsole("===========================================================", verbose);
                 Utils.WriteToConsole("===========================================================", verbose);
@@ -1139,6 +1158,7 @@ namespace MetaOptimize
             int numNeighbors,
             double demandUB,
             double stddev,
+            bool grey = false,
             int seed = 0,
             bool verbose = false,
             bool storeProgress = false,
@@ -1174,24 +1194,76 @@ namespace MetaOptimize
 
             bool timeoutReached = false;
             foreach (int i in Enumerable.Range(0, numTrials)) {
-                Dictionary<(string, string), double> currDemands = new Dictionary<(string, string), double>();
                 // initializing some random demands
-                foreach (var pair in this.Topology.GetNodePairs()) {
-                    currDemands[pair] = rng.NextDouble() * demandUB;
-                }
-                var (currGap, currResult) = GetGap(optimalEncoder, heuristicEncoder, currDemands);
+                var currDemands = getRandomDemand(rng, demandUB);
+                double currGap = 0.0;
+                (TEOptimizationSolution, TEOptimizationSolution) currResult = (zero_solution, zero_solution);
+                bool feasible = true;
+                do {
+                    feasible = true;
+                    try {
+                        (currGap, currResult) = GetGap(optimalEncoder, heuristicEncoder, currDemands);
+                    }
+                    catch (DemandPinningLinkNegativeException e) {
+                        Console.WriteLine("Infeasible input!");
+                        feasible = false;
+                        if (grey) {
+                            ReduceDemandsOnLink(currDemands, e.Edge, e.Threshold, 0.1);
+                        } else {
+                            currDemands = getRandomDemand(rng, demandUB);
+                        }
+                        Utils.StoreProgress(logPath, timer.ElapsedMilliseconds + ", " + Math.Max(currGap, currMaxGap), storeProgress);
+                    }
+                    if (timer.ElapsedMilliseconds > timeout_ms) {
+                        timeoutReached = true;
+                        break;
+                    }
+                } while (!feasible);
                 Utils.StoreProgress(logPath, timer.ElapsedMilliseconds + ", " + Math.Max(currGap, currMaxGap), storeProgress);
                 bool localMax = true;
                 do {
+                    if (timeoutReached) {
+                        break;
+                    }
                     localMax = true;
                     foreach (int j in Enumerable.Range(0, numNeighbors)) {
                         // generating neighbor demands
                         Dictionary<(string, string), double> neighborDemands = new Dictionary<(string, string), double>();
+                        double maxNeighborDemand = 0;
                         foreach (var pair in this.Topology.GetNodePairs()) {
-                            neighborDemands[pair] = Math.Max(0, currDemands[pair] + GaussianRandomNumberGenerator(rng, 0, stddev));
+                            neighborDemands[pair] = Math.Min(Math.Max(0, currDemands[pair] + GaussianRandomNumberGenerator(rng, 0, stddev)), demandUB);
+                            maxNeighborDemand = Math.Max(maxNeighborDemand, neighborDemands[pair]);
                         }
+                        Console.WriteLine(maxNeighborDemand);
                         // finding gap for the neighbor
-                        var (neighborGap, neighborResult) = GetGap(optimalEncoder, heuristicEncoder, neighborDemands);
+                        double neighborGap = 0.0;
+                        (TEOptimizationSolution, TEOptimizationSolution) neighborResult = (zero_solution, zero_solution);
+                        feasible = true;
+                        do {
+                            feasible = true;
+                            try {
+                                (neighborGap, neighborResult) = GetGap(optimalEncoder, heuristicEncoder, neighborDemands);
+                            }
+                            catch (DemandPinningLinkNegativeException e) {
+                                Console.WriteLine("Infeasible input!");
+                                feasible = false;
+                                if (grey) {
+                                    ReduceDemandsOnLink(neighborDemands, e.Edge, e.Threshold, 0.1);
+                                } else {
+                                    maxNeighborDemand = 0;
+                                    foreach (var pair in this.Topology.GetNodePairs()) {
+                                        neighborDemands[pair] = Math.Min(Math.Max(0, currDemands[pair] + GaussianRandomNumberGenerator(rng, 0, stddev)), demandUB);
+                                        maxNeighborDemand = Math.Max(maxNeighborDemand, neighborDemands[pair]);
+                                    }
+                                    Console.WriteLine(maxNeighborDemand);
+                                }
+                                Utils.StoreProgress(logPath, timer.ElapsedMilliseconds + ", " + Math.Max(currGap, currMaxGap), storeProgress);
+                            }
+                            if (timer.ElapsedMilliseconds > timeout_ms) {
+                                timeoutReached = true;
+                                break;
+                            }
+                        } while (!feasible);
                         // check if better advers input
                         if (neighborGap > currGap) {
                             Utils.WriteToConsole("===========================================================", verbose);
@@ -1241,14 +1313,44 @@ namespace MetaOptimize
         {
             Dictionary<(string, string), double> currDemands = new Dictionary<(string, string), double>();
             // initializing some random demands
+            double maxDemand = 0;
             foreach (var pair in this.Topology.GetNodePairs()) {
                 if (this.Topology.ShortestKPaths(1, pair.Item1, pair.Item2).Count() <= 0) {
                     currDemands[pair] = 0;
                 } else {
                     currDemands[pair] = rng.NextDouble() * demandUB;
                 }
+                maxDemand = Math.Max(maxDemand, currDemands[pair]);
             }
+            Console.WriteLine(maxDemand);
             return currDemands;
+        }
+
+        /// <summary>
+        /// Reduce the demands on an specific link.
+        /// </summary>
+        protected void ReduceDemandsOnLink(Dictionary<(string, string), double> demands, (string, string) edge, double threshold, double split_ratio)
+        {
+            Debug.Assert(split_ratio <= 1);
+            foreach (var pair in Topology.GetNodePairs()) {
+                if (demands[pair] <= 0 || demands[pair] > threshold) {
+                    continue;
+                }
+                var paths = this.Topology.ShortestKPaths(1, pair.Item1, pair.Item2);
+                if (paths.Count() <= 0) {
+                    continue;
+                }
+
+                for (int i = 0; i < paths[0].Count() - 1; i++) {
+                    if (paths[0][i] != edge.Item1) {
+                        continue;
+                    }
+                    if (paths[0][i + 1] != edge.Item2) {
+                        continue;
+                    }
+                    demands[pair] *= split_ratio;
+                }
+            }
         }
 
         /// <summary>
@@ -1263,6 +1365,7 @@ namespace MetaOptimize
             double stddev,
             double initialTmp,
             double tmpDecreaseFactor,
+            bool grey = false,
             int numNoIncreaseToReset = -1,
             double NoChangeRelThreshold = 0.01,
             int seed = 0,
@@ -1299,8 +1402,35 @@ namespace MetaOptimize
             bool timeoutReached = false;
             var timeout_ms = timeout * 1000;
             Stopwatch timer = Stopwatch.StartNew();
+            TEOptimizationSolution zero_solution = new TEOptimizationSolution {
+                    TotalDemandMet = 0,
+                    Demands = new Dictionary<(string, string), double> { },
+                    Flows = new Dictionary<(string, string), double> { },
+                    FlowsPaths = new Dictionary<string[], double> { },
+                };
+            bool feasible = true;
             Dictionary<(string, string), double> currDemands = getRandomDemand(rng, demandUB);
-            var (currGap, currResult) = GetGap(optimalEncoder, heuristicEncoder, currDemands);
+            double currGap = 0;
+            (TEOptimizationSolution, TEOptimizationSolution) currResult = (zero_solution, zero_solution);
+            do {
+                feasible = true;
+                try {
+                    (currGap, currResult) = GetGap(optimalEncoder, heuristicEncoder, currDemands);
+                } catch (DemandPinningLinkNegativeException e) {
+                    feasible = false;
+                    Console.WriteLine("Infeasible input!");
+                    if (grey) {
+                        ReduceDemandsOnLink(currDemands, e.Edge, e.Threshold, 0.1);
+                    } else {
+                        currDemands = getRandomDemand(rng, demandUB);
+                    }
+                    Utils.StoreProgress(logPath, timer.ElapsedMilliseconds + ", 0.0", storeProgress);
+                }
+                if (timer.ElapsedMilliseconds > timeout_ms) {
+                    timeoutReached = true;
+                    break;
+                }
+            } while (!feasible);
             (TEOptimizationSolution, TEOptimizationSolution) worstResult = currResult;
             double currMaxGap = currGap;
             double restartMaxGap = currGap;
@@ -1308,16 +1438,50 @@ namespace MetaOptimize
 
             int noIncrease = 0;
             foreach (int p in Enumerable.Range(0, numTmpSteps)) {
+                if (timeoutReached) {
+                    break;
+                }
                 foreach (int Mp in Enumerable.Range(0, numNeighbors)) {
                     // generating neighbor demands
                     Dictionary<(string, string), double> neighborDemands = new Dictionary<(string, string), double>();
+                    double maxNeighborDemand = 0;
                     foreach (var pair in this.Topology.GetNodePairs()) {
-                        neighborDemands[pair] = Math.Max(0, currDemands[pair] + GaussianRandomNumberGenerator(rng, 0, stddev));
+                        neighborDemands[pair] = Math.Min(Math.Max(0, currDemands[pair] + GaussianRandomNumberGenerator(rng, 0, stddev)), demandUB);
+                        maxNeighborDemand = Math.Max(maxNeighborDemand, neighborDemands[pair]);
                     }
+                    Console.WriteLine(maxNeighborDemand);
                     // finding gap for the neighbor
-                    var (neighborGap, neighborResult) = GetGap(optimalEncoder, heuristicEncoder, neighborDemands);
+                    feasible = true;
+                    double neighborGap = 0;
+                    (TEOptimizationSolution, TEOptimizationSolution) neighborResult = (zero_solution, zero_solution);
+                    do {
+                        feasible = true;
+                        try {
+                            (neighborGap, neighborResult) = GetGap(optimalEncoder, heuristicEncoder, neighborDemands);
+                        } catch (DemandPinningLinkNegativeException e) {
+                            feasible = false;
+                            Console.WriteLine("Infeasible input!");
+                            if (grey) {
+                                ReduceDemandsOnLink(neighborDemands, e.Edge, e.Threshold, 0.1);
+                            } else {
+                                maxNeighborDemand = 0;
+                                foreach (var pair in this.Topology.GetNodePairs()) {
+                                    neighborDemands[pair] = Math.Min(Math.Max(0, currDemands[pair] + GaussianRandomNumberGenerator(rng, 0, stddev)), demandUB);
+                                    maxNeighborDemand = Math.Max(maxNeighborDemand, neighborDemands[pair]);
+                                }
+                                Console.WriteLine(maxNeighborDemand);
+                            }
+                            Utils.StoreProgress(logPath, timer.ElapsedMilliseconds + ", " + currMaxGap, storeProgress);
+                        }
+                        if (timer.ElapsedMilliseconds > timeout_ms) {
+                            timeoutReached = true;
+                            break;
+                        }
+                    } while (!feasible);
                     Utils.StoreProgress(logPath, timer.ElapsedMilliseconds + ", " + currMaxGap, storeProgress);
-
+                    if (timeoutReached) {
+                        break;
+                    }
                     // check if better advers input
                     if (neighborGap > currGap) {
                         Utils.WriteToConsole("===========================================================", verbose);
@@ -1340,11 +1504,11 @@ namespace MetaOptimize
                             " max gap = " + currMaxGap, verbose);
                         double currProbability = Math.Exp((neighborGap - currGap) / currTmp);
                         double randomNumber = rng.NextDouble();
-                        // Console.WriteLine("current temperature is " + currTmp);
-                        // Console.WriteLine("current gap difference is " + (neighborGap - currGap));
-                        // Console.WriteLine("current probability is " + currProbability + " and the random number is " + randomNumber);
+                        Utils.WriteToConsole("current temperature is " + currTmp, verbose);
+                        Utils.WriteToConsole("current gap difference is " + (neighborGap - currGap), verbose);
+                        Utils.WriteToConsole("current probability is " + currProbability + " and the random number is " + randomNumber, verbose);
                         if (randomNumber <= currProbability) {
-                            // Console.WriteLine("accepting the lower gap");
+                            Utils.WriteToConsole("accepting the lower gap", verbose);
                             currDemands = neighborDemands;
                             currResult = neighborResult;
                             currGap = neighborGap;
@@ -1368,8 +1532,27 @@ namespace MetaOptimize
                 currTmp = currTmp * tmpDecreaseFactor;
                 // reset the initial point if no increase in numNoIncreaseToReset iterations
                 if (noIncrease > numNoIncreaseToReset) {
+                    feasible = true;
                     currDemands = getRandomDemand(rng, demandUB);
-                    (currGap, currResult) = GetGap(optimalEncoder, heuristicEncoder, currDemands);
+                    do {
+                        feasible = true;
+                        try {
+                            (currGap, currResult) = GetGap(optimalEncoder, heuristicEncoder, currDemands);
+                        } catch (DemandPinningLinkNegativeException e) {
+                            feasible = false;
+                            Console.WriteLine("Infeasible input!");
+                            if (grey) {
+                                ReduceDemandsOnLink(currDemands, e.Edge, e.Threshold, 0.1);
+                            } else {
+                                currDemands = getRandomDemand(rng, demandUB);
+                            }
+                            Utils.StoreProgress(logPath, timer.ElapsedMilliseconds + ", " + currMaxGap, storeProgress);
+                        }
+                        if (timer.ElapsedMilliseconds > timeout_ms) {
+                            timeoutReached = true;
+                            break;
+                        }
+                    } while (!feasible);
                     if (currGap > currMaxGap) {
                         worstResult = currResult;
                         currMaxGap = currGap;

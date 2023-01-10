@@ -143,10 +143,14 @@ namespace MetaOptimize
         protected void ResetCallbackTimer() {
             if (this._timeToTerminateIfNoImprovement > 0 & this._storeProgress) {
                 this.guorbiCallback.ResetTermination();
+                this.guorbiCallback.ResetProgressTimer();
                 this._model.SetCallback(this.guorbiCallback);
             } else if (this._timeToTerminateIfNoImprovement > 0) {
                 this.gurobiTerminationCallback.ResetTermination();
+                this._model.SetCallback(this.gurobiTerminationCallback);
             } else if (this._storeProgress) {
+                this.gurobiStoreProgressCallback.ResetProgressTimer();
+                this._model.SetCallback(this.gurobiStoreProgressCallback);
             }
         }
         /// <summary>
@@ -614,10 +618,17 @@ namespace MetaOptimize
             if (this._focusBstBd) {
                 this._model.Parameters.MIPFocus = 3;
                 this._model.Parameters.Heuristics = 0.01;
+                this._model.Parameters.Cuts = 0;
             } else {
                 this._model.Parameters.MIPFocus = 1;
-                this._model.Parameters.Heuristics = 0.95;
+                this._model.Parameters.Heuristics = 0.99;
+                this._model.Parameters.RINS = GRB.MAXINT;
+                // this._model.Parameters.ConcurrentMIP = 4;
+                // this._model.Parameters.ImproveStartTime = 200;
+                // this._model.Parameters.Cuts = 0;
             }
+            // this._model = this._model.Relax();
+            // this._model.Parameters.DisplayInterval = 10;
             // this._model.Parameters.MIPFocus = 3;
             // this._model.Parameters.Cuts = 3;
             // this._model.Parameters.Heuristics = 0.5;
