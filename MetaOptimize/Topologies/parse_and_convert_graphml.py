@@ -59,3 +59,8 @@ def read_graph_json(fname):
 #     # for edge in G.edges:
 #     #     print(edge)
 #     write_graph_json(G, fname=fname)
+
+
+# G = read_graph_json("../Topologies/b4-teavar.json")
+
+# print(nx.diameter(G))
