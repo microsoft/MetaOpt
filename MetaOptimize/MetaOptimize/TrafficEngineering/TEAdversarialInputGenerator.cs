@@ -37,6 +37,11 @@ namespace MetaOptimize
         protected Dictionary<(string, string), Polynomial<TVar>> DemandVariables { get; set; }
 
         /// <summary>
+        /// demnad constrains enforced by locality.
+        /// </summary>
+        protected Dictionary<(string, string), double> LocalityConstrainedDemands { get; set; }
+
+        /// <summary>
         /// Constructor.
         /// </summary>
         public TEAdversarialInputGenerator(Topology topology, int k, int numProcesses = -1) {
@@ -74,7 +79,11 @@ namespace MetaOptimize
             bool verbose = false,
             bool cleanUpSolver = true,
             IDictionary<(string, string), double> perDemandUB = null,
-            IDictionary<(string, string), double> demandInits = null)
+            IDictionary<(string, string), double> demandInits = null,
+            double density = 1.0,
+            double LargeDemandLB = -1,
+            int LargeMaxDistance = -1,
+            int SmallMaxDistance = -1)
         {
             if (optimalEncoder.Solver != heuristicEncoder.Solver)
             {
@@ -84,33 +93,47 @@ namespace MetaOptimize
             {
                 throw new Exception("should provide the demand list if inner encoding method is primal dual.");
             }
-            if (demandUB != -1 & perDemandUB != null) {
+            if (demandUB != -1 & perDemandUB != null)
+            {
                 throw new Exception("if global demand ub is enabled, then perDemandUB should be null");
             }
+            CheckDensityAndLocalityInputs(innerEncoding, density, LargeDemandLB, LargeMaxDistance, SmallMaxDistance);
 
             var solver = optimalEncoder.Solver;
-            if (cleanUpSolver) {
+            if (cleanUpSolver)
+            {
                 solver.CleanAll();
             }
 
             Utils.logger("creating demand variables.", verbose);
-            this.DemandVariables = CreateDemandVariables(solver, innerEncoding, demandList, demandInits);
+            Utils.logger("max large demand distance: " + LargeMaxDistance, verbose);
+            Utils.logger("max small demand distance: " + SmallMaxDistance, verbose);
+            Utils.logger("large demand lb: " + LargeDemandLB, verbose);
+            (this.DemandVariables, this.LocalityConstrainedDemands) =
+                        CreateDemandVariables(solver, innerEncoding, demandList, demandInits, LargeDemandLB, LargeMaxDistance, SmallMaxDistance);
             Utils.logger("generating optimal encoding.", verbose);
             var optimalEncoding = optimalEncoder.Encoding(this.Topology, preDemandVariables: this.DemandVariables,
-                    innerEncoding: innerEncoding, numProcesses: this.NumProcesses, verbose: verbose, noAdditionalConstraints: true);
+                    innerEncoding: innerEncoding, numProcesses: this.NumProcesses, verbose: verbose,
+                    demandEqualityConstraints: LocalityConstrainedDemands, noAdditionalConstraints: true);
             Utils.logger("generating heuristic encoding.", verbose);
             var heuristicEncoding = heuristicEncoder.Encoding(this.Topology, preDemandVariables: this.DemandVariables,
-                    innerEncoding: innerEncoding, numProcesses: this.NumProcesses, verbose: verbose);
+                    innerEncoding: innerEncoding, numProcesses: this.NumProcesses, verbose: verbose,
+                    demandEqualityConstraints: LocalityConstrainedDemands);
 
             // ensures that demand in both problems is the same and lower than demand upper bound constraint.
             Utils.logger("adding constraints for upper bound on demands.", verbose);
-            if (perDemandUB != null) {
+            if (perDemandUB != null)
+            {
                 EnsureDemandUB(solver, perDemandUB);
-            } else {
+            }
+            else
+            {
                 EnsureDemandUB(solver, demandUB);
             }
             Utils.logger("adding equality constraints for specified demands.", verbose);
             EnsureDemandEquality(solver, constrainedDemands);
+            Utils.logger("Adding density constraint: max density = " + density, verbose);
+            EnsureDensityConstraint(solver, density);
 
             // var pairNameToConstraintMapping = new Dictionary<(string, string), string>();
             // foreach (var (pair, demandVar) in this.DemandVariables) {
@@ -188,6 +211,45 @@ namespace MetaOptimize
             heuristicEncoder.DisplaySolution(solution); */
         }
 
+        private static void CheckDensityAndLocalityInputs(
+            InnerEncodingMethodChoice innerEncoding,
+            double density,
+            double LargeDemandLB,
+            int LargeMaxDistance,
+            int SmallMaxDistance)
+        {
+            if (density > 1.0 || density < 0)
+            {
+                throw new Exception("density should be between 0 an 1 but got " + density);
+            }
+            if (LargeMaxDistance <= 0 && LargeMaxDistance != -1)
+            {
+                throw new Exception("Large Flow Max Distance should either -1 [disabled] or >= 1 but got " + LargeMaxDistance);
+            }
+            if (SmallMaxDistance <= 0 && SmallMaxDistance != -1)
+            {
+                throw new Exception("Small Flow Max Distance should either -1 [disabled] or >= 1 but got " + SmallMaxDistance);
+            }
+            if ((LargeMaxDistance >= 1 || SmallMaxDistance >= 1) && LargeDemandLB < 0)
+            {
+                throw new Exception("The demand value that separates large from small demands should be positive but got " + LargeDemandLB);
+            }
+            if (LargeMaxDistance >= 1 || SmallMaxDistance >= 1 || density < 1.0)
+            {
+                if (innerEncoding == InnerEncodingMethodChoice.KKT)
+                {
+                    throw new Exception("to apply locality or sparsity constraints, the encoding should be primal-dual.");
+                }
+            }
+        }
+
+        private bool checkIfPairIsConstrained(
+            IDictionary<(string, string), double> constrainedDemands,
+            (string, string) pair)
+        {
+            return constrainedDemands.ContainsKey(pair) || this.LocalityConstrainedDemands.ContainsKey(pair);
+        }
+
         /// <summary>
         /// Maximize optimality gap with clustering method used for scale up.
         /// </summary>
@@ -202,8 +264,17 @@ namespace MetaOptimize
             GenericDemandList demandList = null,
             IDictionary<(string, string), double> constrainedDemands = null,
             bool simplify = false,
-            bool verbose = false)
+            bool verbose = false,
+            double density = 1.0,
+            double LargeDemandLB = -1,
+            int LargeMaxDistance = -1,
+            int SmallMaxDistance = -1)
         {
+            CheckDensityAndLocalityInputs(innerEncoding, density, LargeDemandLB, LargeMaxDistance, SmallMaxDistance);
+            if (density < 1.0) {
+                throw new Exception("density constraint is not implemented completely for the clustering approach. " +
+                                    "Need to think about how to translate to cluster level density.");
+            }
             var seenNode = new HashSet<string>();
             foreach (var cluster in clusters) {
                 foreach (var node in cluster.GetAllNodes()) {
@@ -226,23 +297,29 @@ namespace MetaOptimize
             var solver = optimalEncoder.Solver;
             solver.CleanAll();
             Utils.logger("creating demand variables.", verbose);
-            this.DemandVariables = CreateDemandVariables(solver, innerEncoding, demandList);
+            (this.DemandVariables, this.LocalityConstrainedDemands) =
+                        CreateDemandVariables(solver, innerEncoding, demandList,
+                                LargeDemandLB: LargeDemandLB, LargeMaxDistance: LargeMaxDistance, SmallMaxDistance: SmallMaxDistance);
             Utils.logger("generating optimal encoding.", verbose);
             var optimalEncoding = optimalEncoder.Encoding(this.Topology, preDemandVariables: this.DemandVariables,
-                    innerEncoding: innerEncoding, numProcesses: this.NumProcesses, verbose: verbose, noAdditionalConstraints: true);
+                    innerEncoding: innerEncoding, numProcesses: this.NumProcesses, verbose: verbose,
+                    demandEqualityConstraints: this.LocalityConstrainedDemands, noAdditionalConstraints: true);
             Utils.logger("generating heuristic encoding.", verbose);
             var heuristicEncoding = heuristicEncoder.Encoding(this.Topology, preDemandVariables: this.DemandVariables,
-                    innerEncoding: innerEncoding, numProcesses: this.NumProcesses, verbose: verbose);
+                    innerEncoding: innerEncoding, numProcesses: this.NumProcesses, verbose: verbose,
+                    demandEqualityConstraints: LocalityConstrainedDemands);
 
             // ensures that demand in both problems is the same and lower than demand upper bound constraint.
             Utils.logger("adding constraints for upper bound on demands.", verbose);
             EnsureDemandUB(solver, demandUB);
             Utils.logger("adding equality constraints for specified demands.", verbose);
             EnsureDemandEquality(solver, constrainedDemands);
+            Utils.logger("Adding density constraint: max density = " + density, verbose);
+            EnsureDensityConstraint(solver, density);
 
             var pairNameToConstraintMapping = new Dictionary<(string, string), string>();
             foreach (var (pair, demandVar) in this.DemandVariables) {
-                if (constrainedDemands.ContainsKey(pair)) {
+                if (checkIfPairIsConstrained(constrainedDemands, pair)) {
                     continue;
                 }
                 var constrName = solver.AddLeqZeroConstraint(demandVar);
@@ -262,7 +339,7 @@ namespace MetaOptimize
                     string.Format("finding adversarial demand for cluster with {0} nodes and {1} edges", cluster.GetAllNodes().Count(), cluster.GetAllEdges().Count()),
                     verbose);
                 foreach (var pair in cluster.GetNodePairs()) {
-                    if (constrainedDemands.ContainsKey(pair)) {
+                    if (checkIfPairIsConstrained(constrainedDemands, pair)) {
                         continue;
                     }
                     solver.ChangeConstraintRHS(pairNameToConstraintMapping[pair], demandUB);
@@ -321,13 +398,13 @@ namespace MetaOptimize
                     }
                     foreach (var node1 in cluster1Nodes) {
                         foreach (var node2 in cluster2Nodes) {
-                            if (constrainedDemands.ContainsKey((node1, node2))) {
+                            if (checkIfPairIsConstrained(constrainedDemands, (node1, node2))) {
                                 continue;
                             }
                             solver.ChangeConstraintRHS(pairNameToConstraintMapping[(node1, node2)], demandUB);
                             consideredPairs.Add((node1, node2));
 
-                            if (constrainedDemands.ContainsKey((node2, node1))) {
+                            if (checkIfPairIsConstrained(constrainedDemands, (node2, node1))) {
                                 continue;
                             }
                             solver.ChangeConstraintRHS(pairNameToConstraintMapping[(node2, node1)], demandUB);
@@ -425,7 +502,7 @@ namespace MetaOptimize
                 var solver = optimalEncoder.Solver;
                 solver.CleanAll();
                 Utils.logger("creating demand variables.", verbose);
-                this.DemandVariables = CreateDemandVariables(solver, innerEncoding, demandList);
+                (this.DemandVariables, this.LocalityConstrainedDemands) = CreateDemandVariables(solver, innerEncoding, demandList);
                 Utils.logger("generating optimal encoding.", verbose);
                 var optimalEncoding = optimalEncoder.Encoding(this.Topology, preDemandVariables: this.DemandVariables,
                                         demandEqualityConstraints: demandMatrix, innerEncoding: innerEncoding,
@@ -779,7 +856,7 @@ namespace MetaOptimize
             var solver = optimalEncoder.Solver;
             solver.CleanAll();
 
-            this.DemandVariables = CreateDemandVariables(solver, innerEncoding, demandList);
+            (this.DemandVariables, this.LocalityConstrainedDemands) = CreateDemandVariables(solver, innerEncoding, demandList);
             var optimalEncoding = optimalEncoder.Encoding(this.Topology, this.DemandVariables, numProcesses: this.NumProcesses, noAdditionalConstraints: true);
             var heuristicEncoding = heuristicEncoder.Encoding(this.Topology, this.DemandVariables, numProcesses: this.NumProcesses);
 
@@ -827,6 +904,11 @@ namespace MetaOptimize
             demandUB = Math.Min(this.Topology.MaxCapacity() * this.K, demandUB);
             foreach (var (pair, variable) in this.DemandVariables)
             {
+                if (this.LocalityConstrainedDemands.ContainsKey(pair)) {
+                    if (this.LocalityConstrainedDemands[pair] > demandUB) {
+                        throw new Exception("the locality based constrain and the demand upper bound are in conflict.");
+                    }
+                }
                 // var heuristicVariable = heuristicEncoding.DemandVariables[pair];
                 // solver.AddEqZeroConstraint(new Polynomial<TVar>(new Term<TVar>(1, variable), new Term<TVar>(-1, heuristicVariable)));
                 var poly = variable.Copy();
@@ -844,6 +926,11 @@ namespace MetaOptimize
                 var ub = perDemandUb;
                 if (ub < 0) {
                     ub = double.PositiveInfinity;
+                }
+                if (this.LocalityConstrainedDemands.ContainsKey(pair)) {
+                    if (this.LocalityConstrainedDemands[pair] > demandUB[pair]) {
+                        throw new Exception("the locality based constrain and the demand upper bound are in conflict.");
+                    }
                 }
                 ub = Math.Min(this.Topology.MaxCapacity() * this.K, ub);
                 var poly = DemandVariables[pair].Copy();
@@ -880,19 +967,62 @@ namespace MetaOptimize
                 return;
             }
             foreach (var (pair, demand) in constrainedDemands) {
+                if (this.LocalityConstrainedDemands.ContainsKey(pair)) {
+                    if (this.LocalityConstrainedDemands[pair] != constrainedDemands[pair]) {
+                        throw new Exception("the constrained demand does not satisfy the locality imposed constraint.");
+                    }
+                }
                 AddSingleDemandEquality(solver, pair, demand);
             }
         }
 
-        private Dictionary<(string, string), Polynomial<TVar>> CreateDemandVariables(
+        private void EnsureDensityConstraint(
+            ISolver<TVar, TSolution> solver,
+            double density)
+        {
+            if (density < 0 || density >= 1.0 - 0.0001) {
+                return;
+            }
+            var densityConstraint = new Polynomial<TVar>();
+            foreach (var (pair, demandPoly) in this.DemandVariables) {
+                foreach (var term in demandPoly.GetTerms()) {
+                    var variable = term.Variable.Value;
+                    densityConstraint.Add(new Term<TVar>(1, variable));
+                }
+            }
+            densityConstraint.Add(new Term<TVar>(-1 * this.Topology.GetNodePairs().Count() * density));
+            solver.AddLeqZeroConstraint(densityConstraint);
+        }
+
+        private (Dictionary<(string, string), Polynomial<TVar>>, Dictionary<(string, string), double>) CreateDemandVariables(
                 ISolver<TVar, TSolution> solver,
                 InnerEncodingMethodChoice innerEncoding,
                 IDemandList demandList,
-                IDictionary<(string, string), double> demandInits = null) {
+                IDictionary<(string, string), double> demandInits = null,
+                double LargeDemandLB = -1,
+                int LargeMaxDistance = -1,
+                int SmallMaxDistance = -1)
+        {
+            if (LargeMaxDistance != -1) {
+                Debug.Assert(LargeMaxDistance >= 1);
+                Debug.Assert(LargeDemandLB > 0);
+                Debug.Assert(innerEncoding == InnerEncodingMethodChoice.PrimalDual);
+            } else {
+                LargeMaxDistance = int.MaxValue;
+            }
+
+            if (SmallMaxDistance != -1) {
+                Debug.Assert(SmallMaxDistance >= 1);
+                Debug.Assert(LargeDemandLB > 0);
+                Debug.Assert(innerEncoding == InnerEncodingMethodChoice.PrimalDual);
+            } else {
+                SmallMaxDistance = int.MaxValue;
+            }
+
             var output = new Dictionary<(string, string), Polynomial<TVar>>();
+            var LocalityConstrainedDemands = new Dictionary<(string, string), double>();
             Console.WriteLine("[INFO] In total " + this.Topology.GetNodePairs().Count() + " pairs");
-            // var sumAllAuxVars = new Polynomial<TVar>(new Term<TVar>(-0.01 * this.Topology.GetNodePairs().Count()));
-            // var sumAllAuxVars = new Polynomial<TVar>(new Term<TVar>(-5));
+
             foreach (var pair in this.Topology.GetNodePairs())
             {
                 switch (innerEncoding) {
@@ -900,12 +1030,25 @@ namespace MetaOptimize
                         output[pair] = new Polynomial<TVar>(new Term<TVar>(1, solver.CreateVariable("demand_" + pair.Item1 + "_" + pair.Item2)));
                         break;
                     case InnerEncodingMethodChoice.PrimalDual:
+                        // get demands lvls
                         var demands = demandList.GetDemandsForPair(pair.Item1, pair.Item2);
                         demands.Remove(0);
+                        // get distance
+                        var distance = this.Topology.ShortestKPaths(1, pair.Item1, pair.Item2)[0].Length - 1;
+                        // create demand variables
                         var axVariableConstraint = new Polynomial<TVar>(new Term<TVar>(-1));
                         var demandLvlEnforcement = new Polynomial<TVar>();
                         bool found = false;
+                        bool atLeastOneValidLvl = false;
                         foreach (double demandlvl in demands) {
+                            if (distance > LargeMaxDistance && demandlvl >= LargeDemandLB) {
+                                // Console.WriteLine("===== skipping " + pair.Item1 + " " + pair.Item2 + " " + distance + " " + demandlvl);
+                                continue;
+                            }
+                            if (distance > SmallMaxDistance && demandlvl < LargeDemandLB) {
+                                continue;
+                            }
+                            atLeastOneValidLvl = true;
                             var demandAuxVar = solver.CreateVariable("aux_demand_" + pair.Item1 + "_" + pair.Item2, type: GRB.BINARY);
                             demandLvlEnforcement.Add(new Term<TVar>(demandlvl, demandAuxVar));
                             axVariableConstraint.Add(new Term<TVar>(1, demandAuxVar));
@@ -922,15 +1065,19 @@ namespace MetaOptimize
                         if (demandInits != null) {
                             Debug.Assert(found == true || Math.Abs(demandInits[pair]) <= 0.0001);
                         }
-                        solver.AddLeqZeroConstraint(axVariableConstraint);
-                        output[pair] = demandLvlEnforcement;
+                        if (atLeastOneValidLvl) {
+                            solver.AddLeqZeroConstraint(axVariableConstraint);
+                            output[pair] = demandLvlEnforcement;
+                        } else {
+                            LocalityConstrainedDemands[pair] = 0.0;
+                        }
                         break;
                     default:
                         throw new Exception("wrong method for inner problem encoder!");
                 }
             }
             // solver.AddLeqZeroConstraint(sumAllAuxVars);
-            return output;
+            return (output, LocalityConstrainedDemands);
         }
 
         /// <summary>
@@ -964,7 +1111,7 @@ namespace MetaOptimize
             var solver = optimalEncoder.Solver;
             solver.CleanAll();
 
-            this.DemandVariables = CreateDemandVariables(solver, innerEncoding, demandList);
+            (this.DemandVariables, this.LocalityConstrainedDemands) = CreateDemandVariables(solver, innerEncoding, demandList);
             var optimalEncoding = optimalEncoder.Encoding(this.Topology, this.DemandVariables, numProcesses: this.NumProcesses, noAdditionalConstraints: true);
             var heuristicEncoding = heuristicEncoder.Encoding(this.Topology, this.DemandVariables, numProcesses: this.NumProcesses);
 
@@ -1032,7 +1179,7 @@ namespace MetaOptimize
         {
             // solving the hueristic for the demand
             heuristicEncoder.Solver.CleanAll();
-            var demandVariables = CreateDemandVariables(heuristicEncoder.Solver, innerEncoding, demandList);
+            var (demandVariables, _) = CreateDemandVariables(heuristicEncoder.Solver, innerEncoding, demandList);
             var encodingHeuristic = heuristicEncoder.Encoding(this.Topology, demandEqualityConstraints: demands,
                     noAdditionalConstraints: true, numProcesses: this.NumProcesses, preDemandVariables: demandVariables);
             var solverSolutionHeuristic = heuristicEncoder.Solver.Maximize(encodingHeuristic.MaximizationObjective);
@@ -1040,7 +1187,7 @@ namespace MetaOptimize
 
             // solving the optimal for the demand
             optimalEncoder.Solver.CleanAll();
-            demandVariables = CreateDemandVariables(optimalEncoder.Solver, innerEncoding, demandList);
+            (demandVariables, _) = CreateDemandVariables(optimalEncoder.Solver, innerEncoding, demandList);
             var encodingOptimal = optimalEncoder.Encoding(this.Topology, demandEqualityConstraints: demands,
                     noAdditionalConstraints: true, numProcesses: this.NumProcesses, preDemandVariables: demandVariables);
             var solverSolutionOptimal = optimalEncoder.Solver.Maximize(encodingOptimal.MaximizationObjective);

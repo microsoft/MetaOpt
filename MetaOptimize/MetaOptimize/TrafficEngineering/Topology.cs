@@ -376,6 +376,14 @@ namespace MetaOptimize
         }
 
         /// <summary>
+        /// the average link capacity.
+        /// </summary>
+        public double AverageCapacity()
+        {
+            return this.TotalCapacity() / (this.GetAllEdges().Count());
+        }
+
+        /// <summary>
         /// the maximum link capacity among all the edges in the topology.
         /// </summary>
         /// <returns>The maximum link capacity.</returns>

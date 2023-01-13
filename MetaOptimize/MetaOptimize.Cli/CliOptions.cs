@@ -149,6 +149,30 @@ namespace MetaOptimize.Cli
         public double TmpDecreaseFactor { get; set; }
 
         /// <summary>
+        /// max density of final traffic matrix.
+        /// </summary>
+        [Option('d', "maxdensity", Default = 1.0, HelpText = "maximum density of the final traffic demand.")]
+        public double MaxDensity { get; set; }
+
+        /// <summary>
+        /// max distance for large demands.
+        /// </summary>
+        [Option('m', "maxdistancelarge", Default = -1, HelpText = "maximum distance for large demands.")]
+        public int maxLargeDistance { get; set; }
+
+        /// <summary>
+        /// max distance for small demands.
+        /// </summary>
+        [Option('m', "maxdistancesmall", Default = -1, HelpText = "maximum distance for small demands.")]
+        public int maxSmallDistance { get; set; }
+
+        /// <summary>
+        /// Lower bound for large demands.
+        /// </summary>
+        [Option('m', "largedemandlb", Default = -1, HelpText = "to distinguish large demands from small demands.")]
+        public double LargeDemandLB { get; set; }
+
+        /// <summary>
         /// enable clustering breakdown.
         /// </summary>
         [Option('c', "enableclustering", Default = false, HelpText = "enabling clustering for scale.")]

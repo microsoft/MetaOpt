@@ -200,7 +200,11 @@ namespace MetaOptimize.Cli {
                 int numNodesPerCluster,
                 int numInterClusterQuantizations,
                 bool simplify,
-                bool verbose)
+                bool verbose,
+                double density,
+                double LargeDemandLB,
+                int LargeMaxDistance,
+                int SmallMaxDistance)
         {
             Utils.logger("Going to find the maximum gap directly", verbose);
             Utils.logger("Simplified Option: " + simplify, verbose);
@@ -210,26 +214,30 @@ namespace MetaOptimize.Cli {
                 switch (clusterVersion)
                 {
                     case 1:
-                        result = adversarialInputGenerator.MaximizeOptimalityGapWithClusteringV1(clusters, optimalEncoder, heuristicEncoder, demandUB,
-                                numInterClusterSamples, numNodesPerCluster, innerEncoding: innerEncoding, demandList: demandList,
-                                simplify: simplify, verbose: verbose);
-                        break;
+                        throw new Exception("density and locality not implemented yet.");
+                        // result = adversarialInputGenerator.MaximizeOptimalityGapWithClusteringV1(clusters, optimalEncoder, heuristicEncoder, demandUB,
+                        //         numInterClusterSamples, numNodesPerCluster, innerEncoding: innerEncoding, demandList: demandList,
+                        //         simplify: simplify, verbose: verbose);
+                        // break;
                     case 2:
                         result = adversarialInputGenerator.MaximizeOptimalityGapWithClusteringV2(clusters, optimalEncoder, heuristicEncoder, demandUB,
                                 numInterClusterSamples, numNodesPerCluster, innerEncoding: innerEncoding, demandList: demandList,
-                                simplify: simplify, verbose: verbose);
+                                simplify: simplify, verbose: verbose, density: density, LargeDemandLB: LargeDemandLB, LargeMaxDistance: LargeMaxDistance,
+                                SmallMaxDistance: SmallMaxDistance);
                         break;
                     case 3:
-                        result = adversarialInputGenerator.MaximizeOptimalityGapWithClusteringV3(clusters, optimalEncoder, heuristicEncoder, demandUB,
-                                numInterClusterSamples, numNodesPerCluster, innerEncoding, demandList: demandList,
-                                numInterClusterQuantizations: numInterClusterQuantizations, simplify: simplify, verbose: verbose);
-                        break;
+                        throw new Exception("density and locality not implemented yet.");
+                        // result = adversarialInputGenerator.MaximizeOptimalityGapWithClusteringV3(clusters, optimalEncoder, heuristicEncoder, demandUB,
+                        //         numInterClusterSamples, numNodesPerCluster, innerEncoding, demandList: demandList,
+                        //         numInterClusterQuantizations: numInterClusterQuantizations, simplify: simplify, verbose: verbose);
+                        // break;
                     default:
                         throw new Exception("Cluster Version is invalid");
                 }
             } else {
                 result = adversarialInputGenerator.MaximizeOptimalityGap(optimalEncoder, heuristicEncoder, demandUB, innerEncoding: innerEncoding,
-                        demandList: demandList, simplify: simplify, verbose: verbose);
+                        demandList: demandList, simplify: simplify, verbose: verbose, density: density, LargeDemandLB: LargeDemandLB,
+                        LargeMaxDistance: LargeMaxDistance, SmallMaxDistance: SmallMaxDistance);
             }
             return result;
         }
