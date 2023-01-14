@@ -15,7 +15,7 @@ class LeaderElectionUniform(AbstractPartitioningMethod):
     def name(self):
         return "leader_election_uniform"
 
-    def _partition_impl(self, G):
+    def _partition_impl(self, G, topo_name=""):
         if not hasattr(self, "_num_partitions"):
             self._num_partitions = self._default_num_partitions(G)
 

@@ -57,11 +57,11 @@ class AbstractPartitioningMethod(object):
     def _default_num_partitions(self, G):
         return int(np.sqrt(len(G.nodes)))
 
-    def partition(self, G, override_cache=False):
+    def partition(self, G, topo_name, override_cache=False):
         if not override_cache and self._use_cache and G.name in self._best_partitions:
             return self._best_partitions[G.name]
 
-        self._partition_vector = self._partition_impl(G)
+        self._partition_vector = self._partition_impl(G, topo_name)
         return self._partition_vector
 
     #################
@@ -73,7 +73,7 @@ class AbstractPartitioningMethod(object):
             'name needs to be implemented in the subclass: {}'.format(
                 self.__class__))
 
-    def _partition_impl(self, G):
+    def _partition_impl(self, G, topo_name):
         raise NotImplementedError(
             '_partition_impl needs to be implemented in the subclass: {}'.format(
                 self.__class__))
