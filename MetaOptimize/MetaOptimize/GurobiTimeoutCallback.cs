@@ -7,26 +7,26 @@ namespace MetaOptimize
     using System;
     using System.Diagnostics;
     using Gurobi;
-    class GurobiTerminationCallback : GRBCallback
+    class GurobiTimeoutCallback : GRBCallback
     {
         private GRBModel model;
-        private double prevObj;
         private Stopwatch timer;
-        private double terminateNoImprovement_ms;
+        private double timeout;
 
-        public GurobiTerminationCallback(GRBModel model, double terminateNoImprovement_ms) {
+        public GurobiTimeoutCallback(GRBModel model, double timeout) {
             this.model = model;
-            this.prevObj = double.NaN;
             this.timer = null;
-            this.terminateNoImprovement_ms = terminateNoImprovement_ms;
+            this.timeout = timeout;
+            if (this.timeout <= 0) {
+                this.timeout = Double.PositiveInfinity;
+            }
         }
 
         protected override void Callback()
         {
             try {
-                if (where == GRB.Callback.MIPNODE) {
-                    var obj = GetDoubleInfo(GRB.Callback.MIPNODE_OBJBST);
-                    CallCallback(obj);
+                if (where == GRB.Callback.MIP) {
+                    CallCallback();
                 }
             } catch (GRBException e) {
                 Console.WriteLine("Error code: " + e.ErrorCode);
@@ -37,28 +37,17 @@ namespace MetaOptimize
                 Console.WriteLine(e.StackTrace);
             }
         }
-
-        public void CallCallback(double obj)
+        public void CallCallback()
         {
             if (this.timer == null) {
                 this.timer = Stopwatch.StartNew();
             }
-            if (Double.IsNaN(prevObj)) {
-                prevObj = obj;
-                this.timer = Stopwatch.StartNew();
-            }
-            if (Math.Abs(obj - prevObj) > 0.01) {
-                prevObj = obj;
-                this.timer = Stopwatch.StartNew();
-            }
-            if (this.timer.ElapsedMilliseconds > terminateNoImprovement_ms) {
+            if (this.timer.ElapsedMilliseconds > timeout) {
                 this.model.Terminate();
             }
         }
-
         public void ResetTermination()
         {
-            this.prevObj = double.NaN;
             this.timer = null;
         }
     }

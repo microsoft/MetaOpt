@@ -119,39 +119,46 @@ namespace MetaOptimize
         }
 
         private GurobiCallback guorbiCallback;
-        private GurobiTerminationCallback gurobiTerminationCallback;
-        private GurobiStoreProgressCallback gurobiStoreProgressCallback;
+        // private GurobiTerminationCallback gurobiTerminationCallback;
+        // private GurobiStoreProgressCallback gurobiStoreProgressCallback;
+        // private GurobiTimeoutCallback gurobiTimeoutCallback;
         private void SetCallbacks() {
             var fileExtension = Path.GetExtension(this._logFileFilename);
             var filename = Path.GetFileNameWithoutExtension(this._logFileFilename);
-            if (this._timeToTerminateIfNoImprovement > 0 & this._storeProgress) {
-                this.guorbiCallback = new GurobiCallback(this._model, this._logFileDirname,
-                        filename + "_" + Utils.GetFID() + fileExtension, this._timeToTerminateIfNoImprovement * 1000);
-                this._model.SetCallback(this.guorbiCallback);
-            } else if (this._timeToTerminateIfNoImprovement > 0) {
-                this.gurobiTerminationCallback = new GurobiTerminationCallback(this._model, this._timeToTerminateIfNoImprovement * 1000);
-                this._model.SetCallback(this.gurobiTerminationCallback);
-            } else if (this._storeProgress) {
-                this.gurobiStoreProgressCallback = new GurobiStoreProgressCallback(this._model, this._logFileDirname, filename + "_" + Utils.GetFID() + fileExtension);
-                this._model.SetCallback(this.gurobiStoreProgressCallback);
-            }
+            this.guorbiCallback = new GurobiCallback(this._model, storeProgress: this._storeProgress,
+                dirname: this._logFileDirname, filename: filename + "_" + Utils.GetFID() + fileExtension,
+                this._timeToTerminateIfNoImprovement * 1000, this._timeout * 1000);
+            this._model.SetCallback(this.guorbiCallback);
+            // Debug.Assert(this._timeToTerminateIfNoImprovement <= 0 || this._timeout <= 0);
+            // if (this._timeToTerminateIfNoImprovement > 0 & this._storeProgress) {
+            //     this.guorbiCallback = new GurobiCallback(this._model, this._logFileDirname,
+            //             filename + "_" + Utils.GetFID() + fileExtension, this._timeToTerminateIfNoImprovement * 1000);
+            //     this._model.SetCallback(this.guorbiCallback);
+            // } else if (this._timeToTerminateIfNoImprovement > 0) {
+            //     this.gurobiTerminationCallback = new GurobiTerminationCallback(this._model, this._timeToTerminateIfNoImprovement * 1000);
+            //     this._model.SetCallback(this.gurobiTerminationCallback);
+            // } else if (this._storeProgress) {
+            //     this.gurobiStoreProgressCallback = new GurobiStoreProgressCallback(this._model, this._logFileDirname, filename + "_" + Utils.GetFID() + fileExtension);
+            //     this._model.SetCallback(this.gurobiStoreProgressCallback);
+            // }
         }
 
         /// <summary>
         /// to reset the timer for termination.
         /// </summary>
         protected void ResetCallbackTimer() {
-            if (this._timeToTerminateIfNoImprovement > 0 & this._storeProgress) {
-                this.guorbiCallback.ResetTermination();
-                this.guorbiCallback.ResetProgressTimer();
-                this._model.SetCallback(this.guorbiCallback);
-            } else if (this._timeToTerminateIfNoImprovement > 0) {
-                this.gurobiTerminationCallback.ResetTermination();
-                this._model.SetCallback(this.gurobiTerminationCallback);
-            } else if (this._storeProgress) {
-                this.gurobiStoreProgressCallback.ResetProgressTimer();
-                this._model.SetCallback(this.gurobiStoreProgressCallback);
-            }
+            this.guorbiCallback.ResetAll();
+            // if (this._timeToTerminateIfNoImprovement > 0 & this._storeProgress) {
+            //     this.guorbiCallback.ResetTermination();
+            //     this.guorbiCallback.ResetProgressTimer();
+            //     this._model.SetCallback(this.guorbiCallback);
+            // } else if (this._timeToTerminateIfNoImprovement > 0) {
+            //     this.gurobiTerminationCallback.ResetTermination();
+            //     this._model.SetCallback(this.gurobiTerminationCallback);
+            // } else if (this._storeProgress) {
+            //     this.gurobiStoreProgressCallback.ResetProgressTimer();
+            //     this._model.SetCallback(this.gurobiStoreProgressCallback);
+            // }
         }
         /// <summary>
         /// constructor.
@@ -164,7 +171,7 @@ namespace MetaOptimize
             this._timeout = timeout;
             this._verbose = verbose;
             this._numThreads = numThreads;
-            this._model.Parameters.TimeLimit = timeout;
+            // this._model.Parameters.TimeLimit = timeout;
             this._model.Parameters.Presolve = 2;
             this._focusBstBd = focusBstBd;
             if (numThreads < 0) {
@@ -194,7 +201,7 @@ namespace MetaOptimize
             if (timeout > 0) {
                 this._timeout = timeout;
             }
-            this._model.Parameters.TimeLimit = this._timeout;
+            // this._model.Parameters.TimeLimit = this._timeout;
             this._model.Parameters.Presolve = 2;
             this._constraintIneqCount = 0;
             this._constraintEqCount = 0;
@@ -221,7 +228,7 @@ namespace MetaOptimize
         /// <param name="timeout">value for timeout.</param>
         public void SetTimeout(double timeout) {
             this._timeout = timeout;
-            this._model.Parameters.TimeLimit = timeout;
+            // this._model.Parameters.TimeLimit = timeout;
         }
 
         /// <summary>
