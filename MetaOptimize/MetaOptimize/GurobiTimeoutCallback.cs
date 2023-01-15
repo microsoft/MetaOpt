@@ -12,6 +12,7 @@ namespace MetaOptimize
         private GRBModel model;
         private Stopwatch timer;
         private double timeout;
+        private double presolvetime_ms = -1;
 
         public GurobiTimeoutCallback(GRBModel model, double timeout) {
             this.model = model;
@@ -25,8 +26,10 @@ namespace MetaOptimize
         protected override void Callback()
         {
             try {
-                if (where == GRB.Callback.MIP) {
-                    CallCallback();
+                if (where == GRB.Callback.PRESOLVE) {
+                    presolvetime_ms = GetDoubleInfo(GRB.Callback.RUNTIME) * 1000;
+                } else {
+                    CallCallback(where, presolvetime_ms);
                 }
             } catch (GRBException e) {
                 Console.WriteLine("Error code: " + e.ErrorCode);
@@ -36,13 +39,23 @@ namespace MetaOptimize
                 Console.WriteLine("Error during callback");
                 Console.WriteLine(e.StackTrace);
             }
+            throw new Exception("Should not enter this function.");
         }
-        public void CallCallback()
+        public void CallCallback(int where, double presolvetime_ms)
         {
+            if (where == GRB.Callback.PRESOLVE) {
+                return;
+            }
+            if (where != GRB.Callback.MIP && this.timer == null) {
+                return;
+            }
             if (this.timer == null) {
                 this.timer = Stopwatch.StartNew();
             }
-            if (this.timer.ElapsedMilliseconds > timeout) {
+            double currTime_ms = timer.ElapsedMilliseconds;
+            if (currTime_ms > timeout) {
+                // Utils.AppendToFile(@"../logs/logs.txt", "terminating after = " + this.timer.ElapsedMilliseconds);
+                Console.WriteLine("Terminating After = " + currTime_ms + ", presolve time = " + presolvetime_ms);
                 this.model.Terminate();
             }
         }

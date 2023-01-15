@@ -16,8 +16,7 @@ namespace MetaOptimize
         private GurobiTerminationCallback terminationCallback;
         private bool timeoutCallbackEnabled = false;
         private GurobiTimeoutCallback timeoutCallback;
-        // double presolvetime_ms = -1;
-        // Stopwatch presolvetimer = null;
+        double presolvetime_ms = -1;
 
         public GurobiCallback(
             GRBModel model,
@@ -44,28 +43,28 @@ namespace MetaOptimize
         protected override void Callback()
         {
             try {
-                if (where == GRB.Callback.MIP) {
-                    // if (this.presolvetime_ms <= 0) {
-                    //     this.presolvetime_ms = this.presolvetimer.ElapsedMilliseconds;
-                    //     this.presolvetimer.Stop();
-                    //     Console.WriteLine("presolve timer=", presolvetime_ms);
-                    // }
-                    var obj = GetDoubleInfo(GRB.Callback.MIP_OBJBST);
-                    if (this.storeProgressEnabled) {
-                        this.storeProgressCallback.CallCallback(obj);
-                    }
-                    if (this.terminationCallbackEnabled) {
-                        this.terminationCallback.CallCallback(obj);
+                // Utils.AppendToFile(@"../logs/logs.txt", " where " + where);
+                if (where == GRB.Callback.PRESOLVE) {
+                    this.presolvetime_ms = GetDoubleInfo(GRB.Callback.RUNTIME) * 1000;
+                    // Utils.AppendToFile(@"../logs/logs.txt", "measured presolve timer = " + presolvetime_ms);
+                } else if (where == GRB.Callback.MESSAGE) {
+                    // nothing to do.
+                } else {
+                    if (where == GRB.Callback.MIP) {
+                        var obj = GetDoubleInfo(GRB.Callback.MIP_OBJBST);
+                        var currtime_ms = GetDoubleInfo(GRB.Callback.RUNTIME) * 1000;
+                        // Utils.AppendToFile(@"../logs/logs.txt", "measured time = " + currtime_ms + " obj = " + obj);
+                        if (this.storeProgressEnabled) {
+                            this.storeProgressCallback.CallCallback(obj, currtime_ms, presolvetime_ms);
+                        }
+                        if (this.terminationCallbackEnabled) {
+                            this.terminationCallback.CallCallback(obj);
+                        }
                     }
                     if (this.timeoutCallbackEnabled) {
-                        this.timeoutCallback.CallCallback();
+                        this.timeoutCallback.CallCallback(where, presolvetime_ms);
                     }
                 }
-                // else if (where == GRB.Callback.PRESOLVE) {
-                //     if (this.presolvetimer == null) {
-                //         this.presolvetimer = Stopwatch.StartNew();
-                //     }
-                // }
             } catch (GRBException e) {
                 Console.WriteLine("Error code: " + e.ErrorCode);
                 Console.WriteLine(e.Message);
@@ -99,8 +98,6 @@ namespace MetaOptimize
 
         public void ResetAll()
         {
-            // this.presolvetime_ms = -1;
-            // this.presolvetimer = null;
             this.ResetProgressTimer();
             this.ResetTermination();
             this.ResetTimeout();

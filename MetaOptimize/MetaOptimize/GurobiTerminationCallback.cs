@@ -36,14 +36,12 @@ namespace MetaOptimize
                 Console.WriteLine("Error during callback");
                 Console.WriteLine(e.StackTrace);
             }
+            throw new Exception("Should not enter this function.");
         }
 
         public void CallCallback(double obj)
         {
-            if (this.timer == null) {
-                this.timer = Stopwatch.StartNew();
-            }
-            if (Double.IsNaN(prevObj)) {
+            if (this.timer == null || Double.IsNaN(prevObj)) {
                 prevObj = obj;
                 this.timer = Stopwatch.StartNew();
             }
