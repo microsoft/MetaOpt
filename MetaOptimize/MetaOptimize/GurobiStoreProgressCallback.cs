@@ -15,6 +15,8 @@ namespace MetaOptimize
         private String filename;
         private double timeBias = 0.0;
         private double presolvetime_ms = -1;
+        private double bstObj = Double.NegativeInfinity;
+        private double lastTime = -1;
 
         public GurobiStoreProgressCallback(GRBModel model, String dirname, String filename) {
             this.model = model;
@@ -50,12 +52,25 @@ namespace MetaOptimize
 
         public void CallCallback(double objective, double currtime_ms, double presolvetime_ms)
         {
+            this.bstObj = Math.Max(this.bstObj, objective);
             double time = timeBias + currtime_ms - presolvetime_ms;
-            Utils.AppendToFile(dirname, filename, time + ", " + objective);
+            Utils.AppendToFile(dirname, filename, time + ", " + this.bstObj);
+            this.lastTime = time;
+        }
+
+        public void WriteLastLineBeforeTermination(double finaltime_ms)
+        {
+            // Utils.AppendToFile(@"../logs/logs.txt", " last time = " + lastTime + " final time = " + finaltime_ms);
+            finaltime_ms += timeBias;
+            if (finaltime_ms > lastTime) {
+                Utils.AppendToFile(dirname, filename, finaltime_ms + ", " + this.bstObj);
+                this.lastTime = finaltime_ms;
+            }
         }
 
         public void ResetProgressTimer()
         {
+            this.presolvetime_ms = 0;
             this.timeBias = Double.Parse(Utils.readLastLineFile(this.dirname, this.filename).Split(", ")[0]);
             // Utils.AppendToFile(@"../logs/logs.txt", "time bias = " + timeBias);
         }

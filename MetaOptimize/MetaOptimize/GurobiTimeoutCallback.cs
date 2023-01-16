@@ -41,7 +41,8 @@ namespace MetaOptimize
             }
             throw new Exception("Should not enter this function.");
         }
-        public void CallCallback(int where, double presolvetime_ms)
+        public void CallCallback(int where, double presolvetime_ms,
+            bool storeLastIfTerminated = false, GurobiStoreProgressCallback storeProgressCallback = null, double currtimeToWrite_ms = -1)
         {
             if (where == GRB.Callback.PRESOLVE) {
                 return;
@@ -54,13 +55,17 @@ namespace MetaOptimize
             }
             double currTime_ms = timer.ElapsedMilliseconds;
             if (currTime_ms > timeout) {
-                // Utils.AppendToFile(@"../logs/logs.txt", "terminating after = " + this.timer.ElapsedMilliseconds);
+                // Utils.AppendToFile(@"../logs/logs.txt", "terminating after = " + currTime_ms);
                 Console.WriteLine("Terminating After = " + currTime_ms + ", presolve time = " + presolvetime_ms);
+                if (storeLastIfTerminated) {
+                    storeProgressCallback.WriteLastLineBeforeTermination(currTime_ms);
+                }
                 this.model.Terminate();
             }
         }
         public void ResetTermination()
         {
+            this.presolvetime_ms = 0;
             this.timer = null;
         }
     }

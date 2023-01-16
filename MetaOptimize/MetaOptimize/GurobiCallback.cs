@@ -11,11 +11,11 @@ namespace MetaOptimize
     class GurobiCallback : GRBCallback
     {
         private bool storeProgressEnabled = false;
-        private GurobiStoreProgressCallback storeProgressCallback;
+        private GurobiStoreProgressCallback storeProgressCallback = null;
         private bool terminationCallbackEnabled = false;
-        private GurobiTerminationCallback terminationCallback;
+        private GurobiTerminationCallback terminationCallback = null;
         private bool timeoutCallbackEnabled = false;
-        private GurobiTimeoutCallback timeoutCallback;
+        private GurobiTimeoutCallback timeoutCallback = null;
         double presolvetime_ms = -1;
 
         public GurobiCallback(
@@ -50,8 +50,13 @@ namespace MetaOptimize
                 } else if (where == GRB.Callback.MESSAGE) {
                     // nothing to do.
                 } else {
-                    if (where == GRB.Callback.MIP) {
-                        var obj = GetDoubleInfo(GRB.Callback.MIP_OBJBST);
+                    if (where == GRB.Callback.MIP || where == GRB.Callback.MIPSOL) {
+                        double obj = -1;
+                        if (where == GRB.Callback.MIP) {
+                            obj = GetDoubleInfo(GRB.Callback.MIP_OBJBST);
+                        } else {
+                            obj = GetDoubleInfo(GRB.Callback.MIPSOL_OBJ);
+                        }
                         var currtime_ms = GetDoubleInfo(GRB.Callback.RUNTIME) * 1000;
                         // Utils.AppendToFile(@"../logs/logs.txt", "measured time = " + currtime_ms + " obj = " + obj);
                         if (this.storeProgressEnabled) {
@@ -62,7 +67,8 @@ namespace MetaOptimize
                         }
                     }
                     if (this.timeoutCallbackEnabled) {
-                        this.timeoutCallback.CallCallback(where, presolvetime_ms);
+                        this.timeoutCallback.CallCallback(where, presolvetime_ms,
+                            storeLastIfTerminated: storeProgressEnabled, storeProgressCallback: storeProgressCallback);
                     }
                 }
             } catch (GRBException e) {
@@ -98,6 +104,7 @@ namespace MetaOptimize
 
         public void ResetAll()
         {
+            this.presolvetime_ms = 0;
             this.ResetProgressTimer();
             this.ResetTermination();
             this.ResetTimeout();
