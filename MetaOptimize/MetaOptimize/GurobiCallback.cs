@@ -67,8 +67,7 @@ namespace MetaOptimize
                         }
                     }
                     if (this.timeoutCallbackEnabled) {
-                        this.timeoutCallback.CallCallback(where, presolvetime_ms,
-                            storeLastIfTerminated: storeProgressEnabled, storeProgressCallback: storeProgressCallback);
+                        this.timeoutCallback.CallCallback(where, presolvetime_ms);
                     }
                 }
             } catch (GRBException e) {
