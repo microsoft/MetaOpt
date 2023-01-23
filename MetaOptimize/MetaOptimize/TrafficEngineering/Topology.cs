@@ -210,23 +210,34 @@ namespace MetaOptimize
                 return this.paths[k][(source, dest)];
             }
 
-            if (!this.paths.ContainsKey(k)) {
-                this.paths[k] = new Dictionary<(string, string), string[][]>();
+            lock (this.paths)
+            {
+               if (!this.paths.ContainsKey(k))
+               {
+                 this.paths[k] = new Dictionary<(string, string), string[][]>();
+               }
             }
 
             var algorithm = new YenShortestPathsAlgorithm<string>(this.Graph, source, dest, k);
 
             try
             {
+                //
                 var paths = algorithm.Execute().Select(p =>
                 {
                     return Enumerable.Concat(Enumerable.Repeat(source, 1), p.Select(e => e.Target)).ToArray();
                 });
-                this.paths[k][(source, dest)] = paths.ToArray();
+                lock (this.paths)
+                {
+                    this.paths[k][(source, dest)] = paths.ToArray();
+                }
             }
             catch (QuikGraph.NoPathFoundException)
             {
-                this.paths[k][(source, dest)] = new string[0][];
+                lock (this.paths)
+                {
+                    this.paths[k][(source, dest)] = new string[0][];
+                }
             }
             return this.paths[k][(source, dest)];
         }
