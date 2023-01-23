@@ -33,7 +33,7 @@ class SpectralClustering(AbstractPartitioningMethod):
         return k_means.labels_
 
     # Normalized spectral clustering according to Ng, Jordan, and Weiss (2002)
-    def _partition_impl(self, G):
+    def _partition_impl(self, G, topo_name=""):
 
         def is_symmetric(a, rtol=1e-05, atol=1e-08):
                 return np.allclose(a, a.T, rtol=rtol, atol=atol)

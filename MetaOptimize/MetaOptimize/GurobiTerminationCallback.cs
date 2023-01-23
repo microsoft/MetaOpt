@@ -28,12 +28,6 @@ namespace MetaOptimize
                     var obj = GetDoubleInfo(GRB.Callback.MIPNODE_OBJBST);
                     CallCallback(obj);
                 }
-                if (this.timer == null) {
-                    this.timer = Stopwatch.StartNew();
-                }
-                if (this.timer.ElapsedMilliseconds > terminateNoImprovement_ms) {
-                    this.model.Terminate();
-                }
             } catch (GRBException e) {
                 Console.WriteLine("Error code: " + e.ErrorCode);
                 Console.WriteLine(e.Message);
@@ -42,11 +36,12 @@ namespace MetaOptimize
                 Console.WriteLine("Error during callback");
                 Console.WriteLine(e.StackTrace);
             }
+            throw new Exception("Should not enter this function.");
         }
 
         public void CallCallback(double obj)
         {
-            if (Double.IsNaN(prevObj)) {
+            if (this.timer == null || Double.IsNaN(prevObj)) {
                 prevObj = obj;
                 this.timer = Stopwatch.StartNew();
             }
@@ -54,12 +49,15 @@ namespace MetaOptimize
                 prevObj = obj;
                 this.timer = Stopwatch.StartNew();
             }
+            if (this.timer.ElapsedMilliseconds > terminateNoImprovement_ms) {
+                this.model.Terminate();
+            }
         }
 
         public void ResetTermination()
         {
             this.prevObj = double.NaN;
-            this.timer = Stopwatch.StartNew();
+            this.timer = null;
         }
     }
 }

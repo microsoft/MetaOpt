@@ -10,21 +10,66 @@ namespace MetaOptimize
     using Gurobi;
     class GurobiCallback : GRBCallback
     {
-        private GurobiStoreProgressCallback storeProgressCallback;
-        private GurobiTerminationCallback terminationCallback;
+        private bool storeProgressEnabled = false;
+        private GurobiStoreProgressCallback storeProgressCallback = null;
+        private bool terminationCallbackEnabled = false;
+        private GurobiTerminationCallback terminationCallback = null;
+        private bool timeoutCallbackEnabled = false;
+        private GurobiTimeoutCallback timeoutCallback = null;
+        double presolvetime_ms = -1;
 
-        public GurobiCallback(GRBModel model, String dirname, String filename, double terminateNoImprovement_ms) {
-            this.storeProgressCallback = new GurobiStoreProgressCallback(model, dirname, filename);
-            this.terminationCallback = new GurobiTerminationCallback(model, terminateNoImprovement_ms);
+        public GurobiCallback(
+            GRBModel model,
+            bool storeProgress = false,
+            String dirname = null,
+            String filename = null,
+            double terminateNoImprovement_ms = -1,
+            double timeout = 0)
+        {
+            if (storeProgress) {
+                this.storeProgressEnabled = true;
+                this.storeProgressCallback = new GurobiStoreProgressCallback(model, dirname, filename);
+            }
+            if (terminateNoImprovement_ms > 0) {
+                this.terminationCallbackEnabled = true;
+                this.terminationCallback = new GurobiTerminationCallback(model, terminateNoImprovement_ms);
+            }
+            if (timeout > 0) {
+                this.timeoutCallbackEnabled = true;
+                this.timeoutCallback = new GurobiTimeoutCallback(model, timeout);
+            }
         }
 
         protected override void Callback()
         {
             try {
-                if (where == GRB.Callback.MIP) {
-                    var obj = GetDoubleInfo(GRB.Callback.MIP_OBJBST);
-                    this.storeProgressCallback.CallCallback(obj);
-                    this.terminationCallback.CallCallback(obj);
+                // Utils.AppendToFile(@"../logs/logs.txt", " where " + where);
+                if (where == GRB.Callback.PRESOLVE) {
+                    this.presolvetime_ms = GetDoubleInfo(GRB.Callback.RUNTIME) * 1000;
+                    // Utils.AppendToFile(@"../logs/logs.txt", "measured presolve timer = " + presolvetime_ms);
+                } else if (where == GRB.Callback.MESSAGE) {
+                    // nothing to do.
+                } else {
+                    if (where == GRB.Callback.MIP || where == GRB.Callback.MIPSOL) {
+                        double obj = -1;
+                        if (where == GRB.Callback.MIP) {
+                            obj = GetDoubleInfo(GRB.Callback.MIP_OBJBST);
+                        } else {
+                            obj = GetDoubleInfo(GRB.Callback.MIPSOL_OBJ);
+                        }
+                        var currtime_ms = GetDoubleInfo(GRB.Callback.RUNTIME) * 1000;
+                        // Utils.AppendToFile(@"../logs/logs.txt", "measured time = " + currtime_ms + " obj = " + obj);
+                        if (this.storeProgressEnabled) {
+                            this.storeProgressCallback.CallCallback(obj, currtime_ms, presolvetime_ms);
+                        }
+                        if (this.terminationCallbackEnabled) {
+                            this.terminationCallback.CallCallback(obj);
+                        }
+                    }
+                    if (this.timeoutCallbackEnabled) {
+                        this.timeoutCallback.CallCallback(where, presolvetime_ms,
+                            storeLastIfTerminated: storeProgressEnabled, storeProgressCallback: storeProgressCallback);
+                    }
                 }
             } catch (GRBException e) {
                 Console.WriteLine("Error code: " + e.ErrorCode);
@@ -36,14 +81,33 @@ namespace MetaOptimize
             }
         }
 
-        public void ResetTermination()
+        private void ResetTermination()
         {
-            this.terminationCallback.ResetTermination();
+            if (this.terminationCallbackEnabled) {
+                this.terminationCallback.ResetTermination();
+            }
         }
 
-        public void ResetProgressTimer()
+        private void ResetProgressTimer()
         {
-            this.storeProgressCallback.ResetProgressTimer();
+            if (this.storeProgressEnabled) {
+                this.storeProgressCallback.ResetProgressTimer();
+            }
+        }
+
+        private void ResetTimeout()
+        {
+            if (this.timeoutCallbackEnabled) {
+                this.timeoutCallback.ResetTermination();
+            }
+        }
+
+        public void ResetAll()
+        {
+            this.presolvetime_ms = 0;
+            this.ResetProgressTimer();
+            this.ResetTermination();
+            this.ResetTimeout();
         }
     }
 }
