@@ -47,6 +47,36 @@ namespace MetaOptimize
         }
 
         /// <summary>
+        /// verify output.
+        /// </summary>
+        protected override void VerifyOutput(TSolution solution, Dictionary<(string, string), double> demands, Dictionary<(string, string), double> flows)
+        {
+            foreach (var (pair, demand) in demands) {
+                if (!flows.ContainsKey(pair)) {
+                    continue;
+                }
+                if (demand <= this.Threshold && Math.Abs(flows[pair] - demand) > 0.001) {
+                    Console.WriteLine($"{pair.Item1},{pair.Item2},{demand},{flows[pair]}");
+                    throw new Exception("does not match");
+                }
+                bool found = false;
+                if (demand <= 0.001) {
+                    found = true;
+                } else {
+                    foreach (var demandlvl in this.DemandVariables[pair].GetTerms()) {
+                        if (Math.Abs(demand - demandlvl.Coefficient) <= 0.001) {
+                            found = true;
+                        }
+                    }
+                }
+                if (!found) {
+                    Console.WriteLine($"{pair.Item1},{pair.Item2},{demand},{flows[pair]}");
+                    throw new Exception("does not match");
+                }
+            }
+        }
+
+        /// <summary>
         /// add Demand Pinning Constraints.
         /// </summary>
         protected override void GenerateDPConstraints(Polynomial<TVar> objectiveFunction)

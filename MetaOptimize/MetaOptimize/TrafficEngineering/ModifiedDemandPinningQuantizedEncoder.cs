@@ -13,7 +13,7 @@ namespace MetaOptimize
     /// <summary>
     /// Encodes demand pinning solution.
     /// </summary>
-    public class ModifiedDemandPinningQuantizedEncoder<TVar, TSolution> : DemandPinningEncoder<TVar, TSolution>
+    public class ModifiedDemandPinningQuantizedEncoder<TVar, TSolution> : DemandPinningQuantizedEncoder<TVar, TSolution>
     {
         /// <summary>
         /// Auxilary variable used to encode DP.
@@ -56,6 +56,39 @@ namespace MetaOptimize
                 }
                 this.SPLowerBound[pair] = this.DemandVariables[pair].GetTermsWithCoeffLeq(this.Threshold);
                 this.NSPUpperBound[pair] = this.DemandVariables[pair].GetTermsWithCoeffGreater(this.Threshold);
+            }
+        }
+
+        /// <summary>
+        /// verify output.
+        /// </summary>
+        protected override void VerifyOutput(TSolution solution, Dictionary<(string, string), double> demands, Dictionary<(string, string), double> flows)
+        {
+            foreach (var (pair, demand) in demands) {
+                if (!flows.ContainsKey(pair)) {
+                    continue;
+                }
+                var shortestPaths = this.Topology.ShortestKPaths(1, pair.Item1, pair.Item2);
+                if (shortestPaths[0].Count() <= this.MaxShortestPathLen) {
+                    if (demand <= this.Threshold && Math.Abs(flows[pair] - demand) > 0.001) {
+                        Console.WriteLine($"{pair.Item1},{pair.Item2},{demand},{flows[pair]}");
+                        throw new Exception("does not match");
+                    }
+                }
+                bool found = false;
+                if (demand <= 0.001) {
+                    found = true;
+                } else {
+                    foreach (var demandlvl in this.DemandVariables[pair].GetTerms()) {
+                        if (Math.Abs(demand - demandlvl.Coefficient) <= 0.001) {
+                            found = true;
+                        }
+                    }
+                }
+                if (!found) {
+                    Console.WriteLine($"{pair.Item1},{pair.Item2},{demand},{flows[pair]}");
+                    throw new Exception("does not match");
+                }
             }
         }
 

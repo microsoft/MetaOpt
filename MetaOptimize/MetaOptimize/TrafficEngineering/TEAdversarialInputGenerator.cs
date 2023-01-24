@@ -332,9 +332,9 @@ namespace MetaOptimize
             }
 
             var demandMatrix = new Dictionary<(string, string), double>();
-            var consideredPairs = new HashSet<(string, string)>();
             // find gap for all the clusters
             foreach (var cluster in clusters) {
+                var consideredPairs = new HashSet<(string, string)>();
                 Utils.logger(
                     string.Format("finding adversarial demand for cluster with {0} nodes and {1} edges", cluster.GetAllNodes().Count(), cluster.GetAllEdges().Count()),
                     verbose);
@@ -375,6 +375,7 @@ namespace MetaOptimize
 
             for (int cid1 = 0; cid1 < clusters.Count(); cid1++) {
                 for (int cid2 = cid1 + 1; cid2 < clusters.Count(); cid2++) {
+                    var consideredPairs = new HashSet<(string, string)>();
                     Utils.logger(
                         string.Format("inter-cluster adversarial demand between cluster {0} and cluster {1}", cid1, cid2),
                         verbose);

@@ -413,6 +413,24 @@ namespace MetaOptimize
                 this.Solver.AddGlobalTerm(this.DemandVariables[pair].Multiply(Math.Round(-1 / alpha, 3)));
             }
         }
+
+        /// <summary>
+        /// verify output.
+        /// </summary>
+        protected virtual void VerifyOutput(TSolution solution, Dictionary<(string, string), double> demands, Dictionary<(string, string), double> flows)
+        {
+            foreach (var (pair, demand) in demands) {
+                if (!flows.ContainsKey(pair)) {
+                    continue;
+                }
+                if (demand <= this.Threshold && Math.Abs(flows[pair] - demand) > 0.001) {
+                    Console.WriteLine($"{pair.Item1},{pair.Item2},{demand},{flows[pair]}");
+                    Console.WriteLine($"max aux variable {this.Solver.GetVariable(solution, this.MaxAuxVariables[pair])}");
+                    throw new Exception("does not match");
+                }
+            }
+        }
+
         /// <summary>
         /// placeholder for getsolution.
         /// </summary>
@@ -442,16 +460,7 @@ namespace MetaOptimize
                 flowPaths[path] = this.Solver.GetVariable(solution, variable) / this._scale;
             }
 
-            foreach (var (pair, demand) in demands) {
-                if (!flows.ContainsKey(pair)) {
-                    continue;
-                }
-                if (demand <= this.Threshold && Math.Abs(flows[pair] - demand) > 0.001) {
-                    Console.WriteLine($"{pair.Item1},{pair.Item2},{demand},{flows[pair]}");
-                    Console.WriteLine($"max aux variable {this.Solver.GetVariable(solution, this.MaxAuxVariables[pair])}");
-                    throw new Exception("does not match");
-                }
-            }
+            VerifyOutput(solution, demands, flows);
 
             return new TEOptimizationSolution
             {
