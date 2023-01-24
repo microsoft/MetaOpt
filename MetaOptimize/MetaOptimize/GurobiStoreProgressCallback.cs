@@ -70,6 +70,7 @@ namespace MetaOptimize
 
         public void ResetProgressTimer()
         {
+            Utils.AppendToFile(dirname, filename, "========= Reset Called ========");
             this.presolvetime_ms = 0;
             this.timeBias = Double.Parse(Utils.readLastLineFile(this.dirname, this.filename).Split(", ")[0]);
             // Utils.AppendToFile(@"../logs/logs.txt", "time bias = " + timeBias);
