@@ -49,7 +49,7 @@ namespace MetaOptimize
         /// <summary>
         /// Reset the solver by removing all the variables and constraints.
         /// </summary>
-        public void CleanAll(double timeout = -1) {
+        public void CleanAll(double timeout = -1, bool disableStoreProgress = false) {
             ConstraintExprs = new List<Zen<bool>>();
             Variables = new HashSet<Zen<Real>>();
             _objective = null;
@@ -59,6 +59,13 @@ namespace MetaOptimize
         /// Reset the solver by removing all the variables and constraints.
         /// </summary>
         public void CleanAll(bool focusBstBd, double timeout = -1) {
+            throw new Exception("not implemented yet");
+        }
+
+        /// <summary>
+        /// append as the next line of the store progress file.
+        /// </summary>
+        public void AppendToStoreProgressFile(double time_ms, double gap, bool reset = false) {
             throw new Exception("not implemented yet");
         }
 

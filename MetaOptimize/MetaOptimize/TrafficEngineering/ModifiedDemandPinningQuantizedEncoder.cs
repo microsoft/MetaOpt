@@ -95,8 +95,9 @@ namespace MetaOptimize
         /// <summary>
         /// add Demand Pinning Constraints.
         /// </summary>
-        protected override void GenerateDPConstraints(Polynomial<TVar> objectiveFunction)
+        protected override void GenerateDPConstraints(Polynomial<TVar> objectiveFunction, bool verbose)
         {
+            Utils.logger("Generating Modified Quantized DP constraints.", verbose);
             // generating the max constraints that achieve pinning.
             foreach (var (pair, polyTerm) in sumNonShortest) {
                 var shortestPaths = this.Topology.ShortestKPaths(1, pair.Item1, pair.Item2);

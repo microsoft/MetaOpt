@@ -109,5 +109,11 @@ namespace MetaOptimize
             this.ResetTermination();
             this.ResetTimeout();
         }
+
+        public void AppendToStoreProgressFile(double time_ms, double gap) {
+            if (storeProgressEnabled) {
+                this.storeProgressCallback.AppendToStoreProgressFile(time_ms, gap);
+            }
+        }
     }
 }

@@ -14,7 +14,7 @@ namespace MetaOptimize
         /// <summary>
         /// Reset the solver by removing all the variables and constraints.
         /// </summary>
-        public void CleanAll(double timeout = -1);
+        public void CleanAll(double timeout = -1, bool disableStoreProgress = false);
 
         /// <summary>
         /// Reset the solver by removing all the variables and constraints.
@@ -183,5 +183,10 @@ namespace MetaOptimize
         /// adding some auxiliary term to be added to the global objective when maximized.
         /// </summary>
         public void AddGlobalTerm(Polynomial<TVar> auxObjPoly);
+
+        /// <summary>
+        /// append as the next line of the store progress file.
+        /// </summary>
+        public void AppendToStoreProgressFile(double time_ms, double gap, bool reset = false);
     }
 }

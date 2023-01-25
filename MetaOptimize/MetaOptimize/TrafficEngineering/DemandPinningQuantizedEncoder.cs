@@ -64,6 +64,7 @@ namespace MetaOptimize
                     found = true;
                 } else {
                     foreach (var demandlvl in this.DemandVariables[pair].GetTerms()) {
+                        // Console.WriteLine("_" + demandlvl.Coefficient + " " + demand);
                         if (Math.Abs(demand - demandlvl.Coefficient) <= 0.001) {
                             found = true;
                         }
@@ -79,9 +80,10 @@ namespace MetaOptimize
         /// <summary>
         /// add Demand Pinning Constraints.
         /// </summary>
-        protected override void GenerateDPConstraints(Polynomial<TVar> objectiveFunction)
+        protected override void GenerateDPConstraints(Polynomial<TVar> objectiveFunction, bool verbose)
         {
             // generating the max constraints that achieve pinning.
+            Utils.logger("Generating Quantized DP constraints.", verbose);
             foreach (var (pair, polyTerm) in sumNonShortest) {
                 // shortest path flows \geq quantized demand with coefficient less than equal threshold
                 var shortestPathUB = this.SPLowerBound[pair].Copy();

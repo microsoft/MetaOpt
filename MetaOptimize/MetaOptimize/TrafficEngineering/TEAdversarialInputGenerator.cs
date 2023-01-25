@@ -216,7 +216,8 @@ namespace MetaOptimize
             double density,
             double LargeDemandLB,
             int LargeMaxDistance,
-            int SmallMaxDistance)
+            int SmallMaxDistance,
+            bool randomInitialization = false)
         {
             if (density > 1.0 || density < 0)
             {
@@ -239,6 +240,9 @@ namespace MetaOptimize
                 if (innerEncoding == InnerEncodingMethodChoice.KKT)
                 {
                     throw new Exception("to apply locality or sparsity constraints, the encoding should be primal-dual.");
+                }
+                if (randomInitialization) {
+                    throw new Exception("Not implemented random initialization yet.");
                 }
             }
         }
@@ -268,9 +272,11 @@ namespace MetaOptimize
             double density = 1.0,
             double LargeDemandLB = -1,
             int LargeMaxDistance = -1,
-            int SmallMaxDistance = -1)
+            int SmallMaxDistance = -1,
+            bool randomInitialization = false,
+            IEncoder<TVar, TSolution> HeuisticDirectEncoder = null)
         {
-            CheckDensityAndLocalityInputs(innerEncoding, density, LargeDemandLB, LargeMaxDistance, SmallMaxDistance);
+            CheckDensityAndLocalityInputs(innerEncoding, density, LargeDemandLB, LargeMaxDistance, SmallMaxDistance, randomInitialization);
             if (density < 1.0) {
                 throw new Exception("density constraint is not implemented completely for the clustering approach. " +
                                     "Need to think about how to translate to cluster level density.");
@@ -293,9 +299,32 @@ namespace MetaOptimize
             if (constrainedDemands == null) {
                 constrainedDemands = new Dictionary<(string, string), double>();
             }
+            Dictionary<(string, string), double> rndDemand = null;
+            var timer = Stopwatch.StartNew();
+            double currGap = 0;
+            if (randomInitialization) {
+                var rng = new Random(Seed: 0);
+                rndDemand = new Dictionary<(string, string), double>();
+                rndDemand = getRandomDemand(rng, demandUB, demandList);
+                bool feasible = true;
+                do {
+                    feasible = true;
+                    try {
+                        (currGap, _) = GetGap(optimalEncoder, HeuisticDirectEncoder, rndDemand, disableStoreProgress: true);
+                    } catch (DemandPinningLinkNegativeException e) {
+                        feasible = false;
+                        Console.WriteLine("Infeasible input!");
+                        ReduceDemandsOnLink(rndDemand, e.Edge, e.Threshold, 0);
+                    }
+                } while (!feasible);
+            }
+            timer.Stop();
 
             var solver = optimalEncoder.Solver;
             solver.CleanAll();
+            if (randomInitialization) {
+                solver.AppendToStoreProgressFile(timer.ElapsedMilliseconds, currGap, reset: false);
+            }
             Utils.logger("creating demand variables.", verbose);
             (this.DemandVariables, this.LocalityConstrainedDemands) =
                         CreateDemandVariables(solver, innerEncoding, demandList,
@@ -317,19 +346,33 @@ namespace MetaOptimize
             Utils.logger("Adding density constraint: max density = " + density, verbose);
             EnsureDensityConstraint(solver, density);
 
-            var pairNameToConstraintMapping = new Dictionary<(string, string), string>();
-            foreach (var (pair, demandVar) in this.DemandVariables) {
-                if (checkIfPairIsConstrained(constrainedDemands, pair)) {
-                    continue;
-                }
-                var constrName = solver.AddLeqZeroConstraint(demandVar);
-                pairNameToConstraintMapping[pair] = constrName;
-            }
-            solver.ModelUpdate();
-
             if (demandUB < 0) {
                 demandUB = this.K * this.Topology.MaxCapacity();
             }
+
+            var pairNameToConstraintMapping = new Dictionary<(string, string), string>();
+            if (!randomInitialization) {
+                Utils.logger("Initialize all demands with zero!", verbose);
+                foreach (var (pair, demandVar) in this.DemandVariables) {
+                    if (checkIfPairIsConstrained(constrainedDemands, pair)) {
+                        continue;
+                    }
+                    var constrName = solver.AddLeqZeroConstraint(demandVar);
+                    pairNameToConstraintMapping[pair] = constrName;
+                }
+            } else {
+                Utils.logger("Randomly Initialize Demands!", verbose);
+                foreach (var (pair, demandVar) in this.DemandVariables) {
+                    if (checkIfPairIsConstrained(constrainedDemands, pair)) {
+                        continue;
+                    }
+                    var poly = demandVar.Copy();
+                    poly.Add(new Term<TVar>(-1 * rndDemand[pair]));
+                    var constrName = solver.AddEqZeroConstraint(poly);
+                    pairNameToConstraintMapping[pair] = constrName;
+                }
+            }
+            solver.ModelUpdate();
 
             var demandMatrix = new Dictionary<(string, string), double>();
             // find gap for all the clusters
@@ -342,7 +385,11 @@ namespace MetaOptimize
                     if (checkIfPairIsConstrained(constrainedDemands, pair)) {
                         continue;
                     }
-                    solver.ChangeConstraintRHS(pairNameToConstraintMapping[pair], demandUB);
+                    if (!randomInitialization) {
+                        solver.ChangeConstraintRHS(pairNameToConstraintMapping[pair], demandUB);
+                    } else {
+                        solver.RemoveConstraint(pairNameToConstraintMapping[pair]);
+                    }
                     consideredPairs.Add(pair);
                 }
                 Utils.logger("setting the objective.", verbose);
@@ -351,6 +398,7 @@ namespace MetaOptimize
                             new Term<TVar>(-1, heuristicEncoding.GlobalObjective));
                 var solution = solver.Maximize(objective, reset: true);
                 var optimalSolution = (TEOptimizationSolution)optimalEncoder.GetSolution(solution);
+                var heuristicSolution = (TEOptimizationSolution)heuristicEncoder.GetSolution(solution);
                 foreach (var pair in consideredPairs) {
                     demandMatrix[pair] = optimalSolution.Demands[pair];
                     AddSingleDemandEquality(solver, pair, demandMatrix[pair]);
@@ -402,13 +450,21 @@ namespace MetaOptimize
                             if (checkIfPairIsConstrained(constrainedDemands, (node1, node2))) {
                                 continue;
                             }
-                            solver.ChangeConstraintRHS(pairNameToConstraintMapping[(node1, node2)], demandUB);
+                            if (!randomInitialization) {
+                                solver.ChangeConstraintRHS(pairNameToConstraintMapping[(node1, node2)], demandUB);
+                            } else {
+                                solver.RemoveConstraint(pairNameToConstraintMapping[(node1, node2)]);
+                            }
                             consideredPairs.Add((node1, node2));
 
                             if (checkIfPairIsConstrained(constrainedDemands, (node2, node1))) {
                                 continue;
                             }
-                            solver.ChangeConstraintRHS(pairNameToConstraintMapping[(node2, node1)], demandUB);
+                            if (!randomInitialization) {
+                                solver.ChangeConstraintRHS(pairNameToConstraintMapping[(node2, node1)], demandUB);
+                            } else {
+                                solver.RemoveConstraint(pairNameToConstraintMapping[(node1, node2)]);
+                            }
                             consideredPairs.Add((node2, node1));
                         }
                     }
@@ -418,6 +474,7 @@ namespace MetaOptimize
                                 new Term<TVar>(-1, heuristicEncoding.GlobalObjective));
                     var solution = solver.Maximize(objective, reset: true);
                     var optimalSolution = (TEOptimizationSolution)optimalEncoder.GetSolution(solution);
+                    var heuristicSolution = (TEOptimizationSolution)heuristicEncoder.GetSolution(solution);
                     foreach (var pair in consideredPairs) {
                         demandMatrix[pair] = optimalSolution.Demands[pair];
                         AddSingleDemandEquality(solver, pair, demandMatrix[pair]);
@@ -1176,10 +1233,11 @@ namespace MetaOptimize
             IEncoder<TVar, TSolution> heuristicEncoder,
             Dictionary<(string, string), double> demands,
             InnerEncodingMethodChoice innerEncoding = InnerEncodingMethodChoice.KKT,
-            IDemandList demandList = null)
+            IDemandList demandList = null,
+            bool disableStoreProgress = false)
         {
             // solving the hueristic for the demand
-            heuristicEncoder.Solver.CleanAll();
+            heuristicEncoder.Solver.CleanAll(disableStoreProgress: disableStoreProgress);
             var (demandVariables, _) = CreateDemandVariables(heuristicEncoder.Solver, innerEncoding, demandList);
             var encodingHeuristic = heuristicEncoder.Encoding(this.Topology, demandEqualityConstraints: demands,
                     noAdditionalConstraints: true, numProcesses: this.NumProcesses, preDemandVariables: demandVariables);
@@ -1187,7 +1245,7 @@ namespace MetaOptimize
             var optimizationSolutionHeuristic = (TEOptimizationSolution)heuristicEncoder.GetSolution(solverSolutionHeuristic);
 
             // solving the optimal for the demand
-            optimalEncoder.Solver.CleanAll();
+            optimalEncoder.Solver.CleanAll(disableStoreProgress: disableStoreProgress);
             (demandVariables, _) = CreateDemandVariables(optimalEncoder.Solver, innerEncoding, demandList);
             var encodingOptimal = optimalEncoder.Encoding(this.Topology, demandEqualityConstraints: demands,
                     noAdditionalConstraints: true, numProcesses: this.NumProcesses, preDemandVariables: demandVariables);
@@ -1455,6 +1513,28 @@ namespace MetaOptimize
         }
 
         /// <summary>
+        /// Generate single random demand.
+        /// </summary>
+        protected double getSingleRandomDemand(Random rng, (string, string) pair, double demandUB)
+        {
+            if (this.Topology.ShortestKPaths(1, pair.Item1, pair.Item2).Count() <= 0) {
+                    return 0;
+            }
+            return rng.NextDouble() * demandUB;
+        }
+
+        /// <summary>
+        /// Generate single random demand.
+        /// </summary>
+        protected double getSingleRandomDemand(Random rng, (string, string) pair, double demandUB, GenericDemandList demandList)
+        {
+            if (this.Topology.ShortestKPaths(1, pair.Item1, pair.Item2).Count() <= 0) {
+                    return 0;
+            }
+            return demandList.GetRandomDemandForPair(rng, pair.Item1, pair.Item2);
+        }
+
+        /// <summary>
         /// Generates random demands.
         /// </summary>
         protected Dictionary<(string, string), double> getRandomDemand(Random rng, double demandUB)
@@ -1463,11 +1543,23 @@ namespace MetaOptimize
             // initializing some random demands
             double maxDemand = 0;
             foreach (var pair in this.Topology.GetNodePairs()) {
-                if (this.Topology.ShortestKPaths(1, pair.Item1, pair.Item2).Count() <= 0) {
-                    currDemands[pair] = 0;
-                } else {
-                    currDemands[pair] = rng.NextDouble() * demandUB;
-                }
+                currDemands[pair] = getSingleRandomDemand(rng, pair, demandUB);
+                maxDemand = Math.Max(maxDemand, currDemands[pair]);
+            }
+            Console.WriteLine(maxDemand);
+            return currDemands;
+        }
+
+        /// <summary>
+        /// Generates random demands.
+        /// </summary>
+        protected Dictionary<(string, string), double> getRandomDemand(Random rng, double demandUB, GenericDemandList demandList)
+        {
+            Dictionary<(string, string), double> currDemands = new Dictionary<(string, string), double>();
+            // initializing some random demands
+            double maxDemand = 0;
+            foreach (var pair in this.Topology.GetNodePairs()) {
+                currDemands[pair] = getSingleRandomDemand(rng, pair, demandUB, demandList);
                 maxDemand = Math.Max(maxDemand, currDemands[pair]);
             }
             Console.WriteLine(maxDemand);

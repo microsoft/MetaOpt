@@ -360,7 +360,7 @@ namespace MetaOptimize
             }
 
             var objectiveFunction = new Polynomial<TVar>(new Term<TVar>(this._scale, this.TotalDemandMetVariable));
-            GenerateDPConstraints(objectiveFunction);
+            GenerateDPConstraints(objectiveFunction, verbose);
 
             // Generate the full constraints.
             this.innerProblemEncoder.AddMaximizationConstraints(objectiveFunction, noAdditionalConstraints);
@@ -378,9 +378,10 @@ namespace MetaOptimize
         /// <summary>
         /// add Demand Pinning Constraints.
         /// </summary>
-        protected virtual void GenerateDPConstraints(Polynomial<TVar> objectiveFunction)
+        protected virtual void GenerateDPConstraints(Polynomial<TVar> objectiveFunction, bool verbose)
         {
             // generating the max constraints that achieve pinning.
+            Utils.logger("Generating DP constraints.", verbose);
             foreach (var (pair, polyTerm) in sumNonShortest) {
                 // MaxAuxVariables \geq 0
                 this.innerProblemEncoder.AddLeqZeroConstraint(new Polynomial<TVar>(new Term<TVar>(-1, MaxAuxVariables[pair])));

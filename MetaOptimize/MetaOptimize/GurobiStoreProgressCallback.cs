@@ -68,6 +68,14 @@ namespace MetaOptimize
             }
         }
 
+        public void AppendToStoreProgressFile(double time_ms, double gap) {
+            if (time_ms > lastTime) {
+                this.bstObj = Math.Max(this.bstObj, gap);
+                Utils.AppendToFile(dirname, filename, time_ms + ", " + this.bstObj);
+                this.lastTime = time_ms;
+            }
+        }
+
         public void ResetProgressTimer()
         {
             this.presolvetime_ms = 0;

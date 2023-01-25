@@ -122,10 +122,14 @@ namespace MetaOptimize
         // private GurobiTerminationCallback gurobiTerminationCallback;
         // private GurobiStoreProgressCallback gurobiStoreProgressCallback;
         // private GurobiTimeoutCallback gurobiTimeoutCallback;
-        private void SetCallbacks() {
+        private void SetCallbacks(bool disableStoreProgress = false) {
             var fileExtension = Path.GetExtension(this._logFileFilename);
             var filename = Path.GetFileNameWithoutExtension(this._logFileFilename);
-            this.guorbiCallback = new GurobiCallback(this._model, storeProgress: this._storeProgress,
+            var progress = this._storeProgress;
+            if (disableStoreProgress) {
+                progress = false;
+            }
+            this.guorbiCallback = new GurobiCallback(this._model, storeProgress: progress,
                 dirname: this._logFileDirname, filename: filename + "_" + Utils.GetFID() + fileExtension,
                 this._timeToTerminateIfNoImprovement * 1000, this._timeout * 1000);
             this._model.SetCallback(this.guorbiCallback);
@@ -160,6 +164,7 @@ namespace MetaOptimize
             //     this._model.SetCallback(this.gurobiStoreProgressCallback);
             // }
         }
+
         /// <summary>
         /// constructor.
         /// </summary>
@@ -195,7 +200,7 @@ namespace MetaOptimize
         /// <summary>
         /// Reset the solver by removing all the variables and constraints.
         /// </summary>
-        public void CleanAll(double timeout = -1) {
+        public void CleanAll(double timeout = -1, bool disableStoreProgress = false) {
             this._model.Dispose();
             this._model = new GRBModel(this._env);
             if (timeout > 0) {
@@ -211,7 +216,17 @@ namespace MetaOptimize
             this._model.Parameters.Threads = this._numThreads;
             this._model.Parameters.OutputFlag = this._verbose;
             this.auxPolyList = new List<Polynomial<GRBVar>>();
-            SetCallbacks();
+            SetCallbacks(disableStoreProgress);
+        }
+
+        /// <summary>
+        /// append as the next line of the store progress file.
+        /// </summary>
+        public void AppendToStoreProgressFile(double time_ms, double gap, bool reset = false) {
+            this.guorbiCallback.AppendToStoreProgressFile(time_ms, gap);
+            if (reset) {
+                ResetCallbackTimer();
+            }
         }
 
         /// <summary>

@@ -42,5 +42,15 @@ namespace MetaOptimize
             var demand = demandlvls.ToList()[rng.Next(demandlvls.Count())];
             return demand;
         }
+
+        /// <summary>
+        /// get random demand between specific pair.
+        /// </summary>
+        public double GetRandomDemandForPair(Random rng, string src, string dst) {
+            var demandlvls = new HashSet<double>(this.GetDemandsForPair(src, dst));
+            demandlvls.Add(0);
+            var demand = demandlvls.ToList()[rng.Next(demandlvls.Count())];
+            return demand;
+        }
     }
 }

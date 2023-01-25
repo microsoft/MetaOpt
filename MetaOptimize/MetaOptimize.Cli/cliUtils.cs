@@ -1,5 +1,6 @@
 namespace MetaOptimize.Cli {
     using System;
+    using System.Diagnostics;
     using System.IO;
     /// <summary>
     /// Implements a utility function with some .
@@ -204,11 +205,14 @@ namespace MetaOptimize.Cli {
                 double density,
                 double LargeDemandLB,
                 int LargeMaxDistance,
-                int SmallMaxDistance)
+                int SmallMaxDistance,
+                bool MetaOptRandomInitialization,
+                IEncoder<TVar, TSolution> HeuisticDirectEncoder)
         {
             Utils.logger("Going to find the maximum gap directly", verbose);
             Utils.logger("Simplified Option: " + simplify, verbose);
             Utils.logger("Cluster lvl scale up: " + enableClustering, verbose);
+            Utils.logger("Random Initialization: " + MetaOptRandomInitialization, verbose);
             (TEOptimizationSolution, TEOptimizationSolution) result;
             if (enableClustering) {
                 switch (clusterVersion)
@@ -223,7 +227,7 @@ namespace MetaOptimize.Cli {
                         result = adversarialInputGenerator.MaximizeOptimalityGapWithClusteringV2(clusters, optimalEncoder, heuristicEncoder, demandUB,
                                 numInterClusterSamples, numNodesPerCluster, innerEncoding: innerEncoding, demandList: demandList,
                                 simplify: simplify, verbose: verbose, density: density, LargeDemandLB: LargeDemandLB, LargeMaxDistance: LargeMaxDistance,
-                                SmallMaxDistance: SmallMaxDistance);
+                                SmallMaxDistance: SmallMaxDistance, randomInitialization: MetaOptRandomInitialization, HeuisticDirectEncoder: HeuisticDirectEncoder);
                         break;
                     case 3:
                         throw new Exception("density and locality not implemented yet.");
@@ -235,6 +239,7 @@ namespace MetaOptimize.Cli {
                         throw new Exception("Cluster Version is invalid");
                 }
             } else {
+                Debug.Assert(!MetaOptRandomInitialization);
                 result = adversarialInputGenerator.MaximizeOptimalityGap(optimalEncoder, heuristicEncoder, demandUB, innerEncoding: innerEncoding,
                         demandList: demandList, simplify: simplify, verbose: verbose, density: density, LargeDemandLB: LargeDemandLB,
                         LargeMaxDistance: LargeMaxDistance, SmallMaxDistance: SmallMaxDistance);
