@@ -303,6 +303,7 @@ namespace MetaOptimize
             var timer = Stopwatch.StartNew();
             double currGap = 0;
             if (randomInitialization) {
+                Debug.Assert(innerEncoding == InnerEncodingMethodChoice.PrimalDual);
                 var rng = new Random(Seed: 0);
                 rndDemand = new Dictionary<(string, string), double>();
                 rndDemand = getRandomDemand(rng, demandUB, demandList);
@@ -361,6 +362,7 @@ namespace MetaOptimize
                     pairNameToConstraintMapping[pair] = constrName;
                 }
             } else {
+                Debug.Assert(innerEncoding == InnerEncodingMethodChoice.PrimalDual);
                 Utils.logger("Randomly Initialize Demands!", verbose);
                 foreach (var (pair, demandVar) in this.DemandVariables) {
                     if (checkIfPairIsConstrained(constrainedDemands, pair)) {
