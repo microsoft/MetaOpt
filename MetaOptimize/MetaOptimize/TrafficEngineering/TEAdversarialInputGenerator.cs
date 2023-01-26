@@ -366,9 +366,22 @@ namespace MetaOptimize
                     if (checkIfPairIsConstrained(constrainedDemands, pair)) {
                         continue;
                     }
-                    var poly = demandVar.Copy();
-                    poly.Add(new Term<TVar>(-1 * rndDemand[pair]));
-                    var constrName = solver.AddEqZeroConstraint(poly);
+                    var foundLvl = false;
+                    TVar demandLvlVariable = demandVar.GetTerms()[0].Variable.Value;
+                    foreach (var demandlvl in demandVar.GetTerms()) {
+                        if (Math.Abs(demandlvl.Coefficient - rndDemand[pair]) <= 0.0001) {
+                            foundLvl = true;
+                            demandLvlVariable = demandlvl.Variable.Value;
+                        }
+                    }
+                    var constrName = "";
+                    if (foundLvl) {
+                        var poly = new Polynomial<TVar>(new Term<TVar>(1, demandLvlVariable));
+                        poly.Add(new Term<TVar>(-1));
+                        constrName = solver.AddEqZeroConstraint(poly);
+                    } else {
+                        constrName = solver.AddLeqZeroConstraint(demandVar);
+                    }
                     pairNameToConstraintMapping[pair] = constrName;
                 }
             }
