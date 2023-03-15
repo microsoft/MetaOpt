@@ -107,10 +107,9 @@ namespace MetaOptimize
                     shortestPathUB.Add(new Term<TVar>(-1, shortestFlowVariables[pair]));
                     this.innerProblemEncoder.AddLeqZeroConstraint(shortestPathUB);
                 } else {
-                    // // non shortest path flows \leq quantized demand with coefficient greater than threshold
-                    // var nonShortestPathUB = this.NSPUpperBound[pair].Negate();
-                    // nonShortestPathUB.Add(this.sumNonShortest[pair]);
-                    // this.innerProblemEncoder.AddLeqZeroConstraint(nonShortestPathUB);
+                    // for scalability reasons, zero out the variables <= threshold
+                    var poly = this.DemandVariables[pair].GetTermsWithCoeffLeq(this.Threshold);
+                    this.Solver.AddEqZeroConstraint(poly);
                 }
             }
         }
