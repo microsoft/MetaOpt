@@ -306,18 +306,26 @@ namespace MetaOptimize
                 Debug.Assert(innerEncoding == InnerEncodingMethodChoice.PrimalDual);
                 var rng = new Random(Seed: 0);
                 rndDemand = new Dictionary<(string, string), double>();
-                rndDemand = getRandomDemand(rng, demandUB, demandList);
-                bool feasible = true;
-                do {
-                    feasible = true;
-                    try {
-                        (currGap, _) = GetGap(optimalEncoder, HeuisticDirectEncoder, rndDemand, disableStoreProgress: true);
-                    } catch (DemandPinningLinkNegativeException e) {
-                        feasible = false;
-                        Console.WriteLine("Infeasible input!");
-                        ReduceDemandsOnLink(rndDemand, e.Edge, e.Threshold, 0);
-                    }
-                } while (!feasible);
+                int numTrials = 10;
+                for (int i = 0; i < numTrials; i++) {
+                    bool feasible = true;
+                    var currRndDemand = getRandomDemand(rng, demandUB, demandList);
+                    double currRndGap = 0.0;
+                    do {
+                        feasible = true;
+                        try {
+                            (currRndGap, _) = GetGap(optimalEncoder, HeuisticDirectEncoder, currRndDemand, disableStoreProgress: true);
+                            if (currRndGap > currGap) {
+                                currGap = currRndGap;
+                                rndDemand = currRndDemand;
+                            }
+                        } catch (DemandPinningLinkNegativeException e) {
+                            feasible = false;
+                            Console.WriteLine("Infeasible input!");
+                            ReduceDemandsOnLink(currRndDemand, e.Edge, e.Threshold, 0);
+                        }
+                    } while (!feasible);
+                }
             }
             timer.Stop();
 

@@ -218,7 +218,11 @@ namespace MetaOptimize
                }
             }
 
-            var algorithm = new YenShortestPathsAlgorithm<string>(this.Graph, source, dest, k);
+            Func<EquatableTaggedEdge<string, double>, double> myfunc = delegate
+            {
+                return 1;
+            };
+            var algorithm = new YenShortestPathsAlgorithm<string>(this.Graph, source, dest, k, edgeWeights: myfunc);
 
             try
             {
@@ -239,6 +243,7 @@ namespace MetaOptimize
                     this.paths[k][(source, dest)] = new string[0][];
                 }
             }
+            // Utils.logger(Newtonsoft.Json.JsonConvert.SerializeObject(this.paths[k][(source, dest)], Newtonsoft.Json.Formatting.Indented), true);
             return this.paths[k][(source, dest)];
         }
 
@@ -256,8 +261,8 @@ namespace MetaOptimize
             var path_dict = new Dictionary<(string, string), string[][]>();
             Utils.logger("processor with pid " + pid + " starting to compute paths...", verbose);
             foreach (var pair in pairList) {
-                // Utils.logger("pid=" + pid + ": finding the paths between " + pair.Item1 + " and " + pair.Item2, verbose);
                 var paths = this.ShortestKPaths(k, pair.Item1, pair.Item2);
+                // Utils.logger("pid=" + pid + ": finding the paths between " + pair.Item1 + " and " + pair.Item2, verbose);
                 path_dict[pair] = paths;
             }
             path_dict.ToList().ForEach(pair => output[pair.Key] = pair.Value);

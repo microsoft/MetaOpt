@@ -513,10 +513,10 @@ namespace MetaOptimize
         public string AddEqZeroConstraint(IList<Polynomial<GRBVar>> coeffPolyList, IList<GRBVar> variableList, Polynomial<GRBVar> linearPoly)
         {
             string name = "ineq_index_" + this._constraintIneqCount++;
-            // GRBLinExpr quadConstraint = this.ConvertQEToLinear(coeffPolyList, variableList, linearPoly);
-            // this._model.AddConstr(quadConstraint, GRB.EQUAL, 0.0, name);
-            GRBLinExpr quadConstraint = this.ConvertQESOS(coeffPolyList, variableList, linearPoly);
+            GRBLinExpr quadConstraint = this.ConvertQEToLinear(coeffPolyList, variableList, linearPoly);
             this._model.AddConstr(quadConstraint, GRB.EQUAL, 0.0, name);
+            // GRBLinExpr quadConstraint = this.ConvertQESOS(coeffPolyList, variableList, linearPoly);
+            // this._model.AddConstr(quadConstraint, GRB.EQUAL, 0.0, name);
             // var quadConstraint = this.ConvertQEToQEExp(coeffPolyList, variableList, linearPoly);
             // this._model.AddQConstr(quadConstraint, GRB.EQUAL, 0.0, name);
             return name;
