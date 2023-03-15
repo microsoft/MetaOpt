@@ -14,7 +14,10 @@ print(nx.diameter(G))
 # demandFile = f"../logs/realistic_constraints/Cogentco_10_DemandPinning_0.5_0.05_4_2023_1_13_11_27_15_374/" + \
 #              f"primal_dual_DemandPinning_density_1_maxLargeDistance_1_maxSmallDistance-1_LargeDemandLB_0.25/demands.txt"
 
-demandFile = f"../logs/adversarial_demands/Cogentco_DemandPinning_4_0.5_0.05_1200";
+demandFile = f"../logs/realistic_constraints/Cogentco_10_DemandPinning_0.5_0.05_4_2023_1_13_11_27_15_374/" + \
+    "primal_dual_DemandPinning_density_1_maxLargeDistance_-1_maxSmallDistance-1_LargeDemandLB_0.25/demands.txt"
+
+# demandFile = f"../logs/adversarial_demands/Cogentco_DemandPinning_4_0.5_0.05_1200";
 
 with open(demandFile, "r") as fp:
     demands = dict(json.load(fp))
