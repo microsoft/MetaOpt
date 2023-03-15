@@ -15,10 +15,23 @@ print(nx.diameter(G))
 #              f"primal_dual_DemandPinning_density_1_maxLargeDistance_1_maxSmallDistance-1_LargeDemandLB_0.25/demands.txt"
 
 log_dir = "../logs/realistic_constraints/"
+# demandFile = f"../logs/realistic_constraints/Cogentco_10_DemandPinning_0.5_0.05_4_2023_1_13_11_27_15_374/" + \
+#     "primal_dual_DemandPinning_density_1_maxLargeDistance_-1_maxSmallDistance-1_LargeDemandLB_0.25/demands.txt"
+
+# demand_file_list = [
+#     "Cogentco_10_DemandPinning_0.5_0.05_4_2023_1_31_20_4_7_686/primal_dual_DemandPinning_density_1_maxLargeDistance_2_maxSmallDistance-1_LargeDemandLB_0.25/demands.txt",
+#     "Cogentco_10_DemandPinning_0.5_0.05_4_2023_2_1_12_21_16_516/primal_dual_DemandPinning_density_1_maxLargeDistance_-1_maxSmallDistance-1_LargeDemandLB_0.25/demands.txt",
+#     "Cogentco_10_DemandPinning_0.5_0.05_4_2023_2_1_12_21_16_516/primal_dual_DemandPinning_density_1_maxLargeDistance_4_maxSmallDistance-1_LargeDemandLB_0.25/demands.txt",
+# ]
+
 demand_file_list = [
-    "Cogentco_10_DemandPinning_0.5_0.05_4_2023_1_31_20_4_7_686/primal_dual_DemandPinning_density_1_maxLargeDistance_2_maxSmallDistance-1_LargeDemandLB_0.25/demands.txt",
-    "Cogentco_10_DemandPinning_0.5_0.05_4_2023_2_1_12_21_16_516/primal_dual_DemandPinning_density_1_maxLargeDistance_-1_maxSmallDistance-1_LargeDemandLB_0.25/demands.txt",
-    "Cogentco_10_DemandPinning_0.5_0.05_4_2023_2_1_12_21_16_516/primal_dual_DemandPinning_density_1_maxLargeDistance_4_maxSmallDistance-1_LargeDemandLB_0.25/demands.txt",
+    # "Cogentco_10_DemandPinning_0.5_0.05_4_2023_2_7_5_29_0_748/primal_dual_DemandPinning_density_1_maxLargeDistance_-1_maxSmallDistance-1_LargeDemandLB_0.25/demands.txt",
+    # "Cogentco_10_DemandPinning_0.5_0.05_4_2023_2_7_5_29_0_748/primal_dual_DemandPinning_density_1_maxLargeDistance_4_maxSmallDistance-1_LargeDemandLB_0.25/demands.txt",
+    # "Cogentco_10_DemandPinning_0.5_0.05_4_2023_2_8_1_25_49_822/primal_dual_DemandPinning_density_1_maxLargeDistance_5_maxSmallDistance-1_LargeDemandLB_0.25/demands.txt",
+    # "Cogentco_10_ExpectedPop_0.5_0.05_4_2023_2_8_10_59_35_421/primal_dual_ExpectedPop_density_1_maxLargeDistance_-1_maxSmallDistance-1_LargeDemandLB_0.25/demands.txt",
+    # "Cogentco_10_ExpectedPop_0.5_0.05_4_2023_2_8_10_59_35_421/primal_dual_ExpectedPop_density_1_maxLargeDistance_4_maxSmallDistance-1_LargeDemandLB_0.25/demands.txt",
+    "Cogentco_10_ExpectedPop_0.5_0.05_4_2023_2_10_23_19_7_953/primal_dual_ExpectedPop_density_1_maxLargeDistance_-1_maxSmallDistance-1_LargeDemandLB_0.25/demands.txt",
+    "Cogentco_10_ExpectedPop_0.5_0.05_4_2023_2_11_16_37_13_225/primal_dual_ExpectedPop_density_1_maxLargeDistance_4_maxSmallDistance-1_LargeDemandLB_0.25/demands.txt"
 ]
 
 for demand_file in demand_file_list:

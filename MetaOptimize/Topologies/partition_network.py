@@ -12,24 +12,27 @@ import os
 
 topo_name_list = [
     # ("GtsCe", 1), 
-    # ("Cogentco", 0),
-    ("Uninett2010", 0)
+    ("Cogentco", 0),
+    # ("Uninett2010", 0)
     # ("Kdl", 1)
     # ("b4-teavar", 0),
     # ("ring_200", 0),
     # ("ring_400", 0)
     ]
 num_partitions_list = [
-    # 2, 
+    2, 
     # 3,
-    # 5, 
+    4,
+    # 5,
+    # 6,
+    # 8, 
     # 10, 
-    12,
-    15, 
-    20, 
+    # 12,
+    16,
+    # 15, 
+    # 20, 
     # 25,
     # 50,
-    # 70,
     # 100,
 ]
 num_shortest_paths_list = [
@@ -44,7 +47,7 @@ log_dir = "./partition_log/{}_{}_{}/"
 # partitioning_method = SpectralClustering
 partitioning_method_list = [
     FMPartitioning,
-    # SpectralClustering,
+    SpectralClustering,
     # LeaderElection,
     # LeaderElectionUniform
 ]
