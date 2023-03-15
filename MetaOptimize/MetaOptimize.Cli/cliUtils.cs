@@ -295,16 +295,6 @@ namespace MetaOptimize.Cli {
                 Dictionary<(string, string), double> demands, double optimal)
         {
                 var newSolver = (ISolver<TVar, TSolution>)new GurobiBinary(timeout: 3600, verbose: 0, timeToTerminateNoImprovement: 60);
-                // Console.WriteLine($"gap for each sample for Expected Pop:");
-                // for (int i = 0; i < opts.NumRandom; i++) {
-                //     newSolver.CleanAll();
-                //     var demandMet = result.Item2.TotalDemmandMetSample[i];
-                //     var newOptimalEncoder = new OptimalEncoder<TVar, TSolution>(newSolver, topology, opts.Paths);
-                //     var newHeuristicEncoder = new PopEncoder<TVar, TSolution>(newSolver, topology, k: opts.Paths, numPartitions: opts.PopSlices, demandPartitions: partitionList[i]);
-                //     var nresult = adversarialInputGenerator.MaximizeOptimalityGap(newOptimalEncoder, (IEncoder<TVar, TSolution>)newHeuristicEncoder, opts.DemandUB);
-                //     var maxGap = nresult.Item1.TotalDemandMet - nresult.Item2.TotalDemandMet;
-                //     Console.WriteLine("sample" + i + "-->" + "total demand = " + demandMet + " gap = " + (optimal - demandMet) + " max gap = " + maxGap);
-                // }
                 Console.WriteLine("trying on some random partitions to see the quality;");
                 for (int i = 0; i < 100 - opts.NumRandom; i++) {
                     topology.RandomPartition(opts.PopSlices);

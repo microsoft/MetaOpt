@@ -254,6 +254,19 @@ namespace MetaOptimize
             return constrainedDemands.ContainsKey(pair) || this.LocalityConstrainedDemands.ContainsKey(pair);
         }
 
+        private double DiscoverMatchingDemandLvl(Polynomial<TVar> DemandVar, double demandValue)
+        {
+            if (demandValue <= 0.0001) {
+                return 0;
+            }
+            foreach (var demandlvl in DemandVar.GetTerms()) {
+                if (Math.Abs(demandlvl.Coefficient - demandValue) <= 0.0001) {
+                    return demandlvl.Coefficient;
+                }
+            }
+            throw new Exception(String.Format("does not match {0}", demandValue));
+        }
+
         /// <summary>
         /// Maximize optimality gap with clustering method used for scale up.
         /// </summary>
@@ -415,8 +428,9 @@ namespace MetaOptimize
                 var optimalSolution = (TEOptimizationSolution)optimalEncoder.GetSolution(solution);
                 var heuristicSolution = (TEOptimizationSolution)heuristicEncoder.GetSolution(solution);
                 foreach (var pair in consideredPairs) {
-                    demandMatrix[pair] = optimalSolution.Demands[pair];
-                    AddSingleDemandEquality(solver, pair, demandMatrix[pair]);
+                    var demandlvl = DiscoverMatchingDemandLvl(this.DemandVariables[pair], optimalSolution.Demands[pair]);
+                    demandMatrix[pair] = demandlvl;
+                    AddSingleDemandEquality(solver, pair, demandlvl);
                     // AddSingleDemandUB(solver, pair, demandMatrix[pair]);
                 }
 
@@ -491,8 +505,9 @@ namespace MetaOptimize
                     var optimalSolution = (TEOptimizationSolution)optimalEncoder.GetSolution(solution);
                     var heuristicSolution = (TEOptimizationSolution)heuristicEncoder.GetSolution(solution);
                     foreach (var pair in consideredPairs) {
-                        demandMatrix[pair] = optimalSolution.Demands[pair];
-                        AddSingleDemandEquality(solver, pair, demandMatrix[pair]);
+                        var demandlvl = DiscoverMatchingDemandLvl(this.DemandVariables[pair], optimalSolution.Demands[pair]);
+                        demandMatrix[pair] = demandlvl;
+                        AddSingleDemandEquality(solver, pair, demandlvl);
                         // AddSingleDemandUB(solver, pair, demandMatrix[pair]);
                     }
                 }
@@ -1140,10 +1155,10 @@ namespace MetaOptimize
                         }
                         if (atLeastOneValidLvl) {
                             solver.AddLeqZeroConstraint(axVariableConstraint);
-                            output[pair] = demandLvlEnforcement;
                         } else {
                             LocalityConstrainedDemands[pair] = 0.0;
                         }
+                        output[pair] = demandLvlEnforcement;
                         break;
                     default:
                         throw new Exception("wrong method for inner problem encoder!");
