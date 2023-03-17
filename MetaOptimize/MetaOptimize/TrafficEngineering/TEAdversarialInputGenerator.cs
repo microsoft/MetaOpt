@@ -371,7 +371,7 @@ namespace MetaOptimize
                     var foundLvl = false;
                     TVar demandLvlVariable = demandVar.GetTerms()[0].Variable.Value;
                     foreach (var demandlvl in demandVar.GetTerms()) {
-                        if (Math.Abs(demandlvl.Coefficient - rndDemand[pair]) <= 0.0001) {
+                        if (Math.Abs(demandlvl.Coefficient - rndDemand[pair]) <= 0.001) {
                             foundLvl = true;
                             demandLvlVariable = demandlvl.Variable.Value;
                         }
