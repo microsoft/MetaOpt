@@ -113,7 +113,7 @@ namespace MetaOptimize
             // for 8.1 and later
             GRBEnv env = new GRBEnv(true);
             env.Set("LogFile", "maxFlowSolver.log");
-            // env.TokenServer = "10.137.70.76"; // ishai-z420
+            env.TokenServer = "10.137.70.76"; // ishai-z420
             env.Start();
             return env;
         }
