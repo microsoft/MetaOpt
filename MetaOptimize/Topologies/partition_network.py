@@ -2,7 +2,7 @@ import imp
 import itertools
 import parse_and_convert_graphml
 from partitioning.spectral_clustering import SpectralClustering
-# from partitioning.fm_partitioning import FMPartitioning
+from partitioning.fm_partitioning import FMPartitioning
 from partitioning.leader_election import LeaderElection
 from partitioning.leader_election_uniform import LeaderElectionUniform
 import numpy as np
@@ -14,10 +14,11 @@ topo_name_list = [
     # ("GtsCe", 1), 
     # ("Cogentco", 0),
     # ("Uninett2010", 0)
-    ("Kdl", 1)
+    # ("Kdl", 1)
     # ("b4-teavar", 0),
     # ("ring_200", 0),
-    # ("ring_400", 0)
+    # ("ring_400", 0),
+    ("SWANTETopology", 0)
     ]
 num_partitions_list = [
     # 2, 
@@ -26,10 +27,10 @@ num_partitions_list = [
     # 10, 
     # 12,
     # 15, 
-    20, 
+    # 20, 
     # 25,
     50,
-    # 100,
+    100,
 ]
 num_shortest_paths_list = [
     2, 
@@ -38,12 +39,12 @@ num_shortest_paths_list = [
     16,
 ]
 
-log_dir = "./partition_log/{}_{}_{}/"
+log_dir = ".\\partition_log\\{}_{}_{}\\"
 
 # partitioning_method = SpectralClustering
 partitioning_method_list = [
-    # FMPartitioning,
-    SpectralClustering,
+    FMPartitioning,
+    # SpectralClustering,
     # LeaderElection,
     # LeaderElectionUniform
 ]
@@ -58,13 +59,13 @@ for partitioning_method in partitioning_method_list:
     for num_partitions in num_partitions_list:
         for topo_name, is_topo_zoo in topo_name_list:
             if is_topo_zoo:
-                fname = f'../../../ncflow/topologies/topology-zoo/{topo_name}.graphml'
+                fname = f'..\\..\\..\\ncflow\\topologies\\topology-zoo\\{topo_name}.graphml'
                 G = parse_and_convert_graphml.read_graph_graphml(fname)
             else:
                 fname = f'{topo_name}.json'
                 G = parse_and_convert_graphml.read_graph_json(fname)
             partition_obj = partitioning_method(num_partitions=num_partitions)
-            partition_vector = partition_obj.partition(G)
+            partition_vector = partition_obj.partition(G, topo_name=topo_name)
             print(topo_name, partition_vector, partition_obj.name)
             folder_path = log_dir.format(topo_name, num_partitions, partition_obj.name)
             if not os.path.isdir(folder_path):

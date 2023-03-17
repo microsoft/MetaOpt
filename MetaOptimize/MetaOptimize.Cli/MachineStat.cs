@@ -8,10 +8,10 @@ namespace MetaOptimize.Cli {
         /// <summary>
         /// num threads.
         /// </summary>
-        public static int numThreads = 48;
+        public static int numThreads = 56;
         /// <summary>
         /// num processors.
         /// </summary>
-        public static int numProcessors = 48;
+        public static int numProcessors = 56;
     }
 }
