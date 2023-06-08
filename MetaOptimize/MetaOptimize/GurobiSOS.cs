@@ -113,8 +113,17 @@ namespace MetaOptimize
             // for 8.1 and later
             GRBEnv env = new GRBEnv(true);
             env.Set("LogFile", "maxFlowSolver.log");
-            // env.TokenServer = "10.137.70.76"; // ishai-z420
-            env.Start();
+            File.WriteAllText(
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "gurobi.lic"),
+                "TOKENSERVER=10.137.59.115"); // ishai-z420, as of June 8th 2023
+            try
+            {
+                env.Start();
+            }
+            catch (GRBException e) when (e.Message.Contains("No Gurobi license found") || e.Message.Contains("Failed to connect"))
+            {
+                throw new Exception("Gurobi license error, please fix the IP above", e);
+            }
             return env;
         }
 
