@@ -18,7 +18,6 @@ namespace MetaOptimize
     /// </summary>
     public class GurobiSOS : ISolver<GRBVar, GRBModel>
     {
-        private GRBEnv _env = null;
         private double _bigM = Math.Pow(10, 4);
         private double _tolerance = Math.Pow(10, -8);
         /// <summary>
@@ -100,31 +99,6 @@ namespace MetaOptimize
         public void Delete()
         {
             this._model.Dispose();
-            this._env.Dispose();
-            this._env = null;
-        }
-
-        /// <summary>
-        /// Connects to Gurobi.
-        /// </summary>
-        /// <returns>an env.</returns>
-        public static GRBEnv SetupGurobi()
-        {
-            // for 8.1 and later
-            GRBEnv env = new GRBEnv(true);
-            env.Set("LogFile", "maxFlowSolver.log");
-            File.WriteAllText(
-                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "gurobi.lic"),
-                "TOKENSERVER=10.137.59.115"); // ishai-z420, as of June 8th 2023
-            try
-            {
-                env.Start();
-            }
-            catch (GRBException e) when (e.Message.Contains("No Gurobi license found") || e.Message.Contains("Failed to connect"))
-            {
-                throw new Exception("Gurobi license error, please fix the IP above", e);
-            }
-            return env;
         }
 
         private GurobiCallback guorbiCallback;
@@ -180,8 +154,7 @@ namespace MetaOptimize
         public GurobiSOS(double timeout = double.PositiveInfinity, int verbose = 0, int numThreads = 0, double timeToTerminateNoImprovement = -1,
                 bool recordProgress = false, string logPath = null, bool focusBstBd = false)
         {
-            this._env = SetupGurobi();
-            this._model = new GRBModel(this._env);
+            this._model = new GRBModel(GurobiEnvironment.Instance);
             this._timeout = timeout;
             this._verbose = verbose;
             this._numThreads = numThreads;
@@ -211,7 +184,7 @@ namespace MetaOptimize
         /// </summary>
         public void CleanAll(double timeout = -1, bool disableStoreProgress = false) {
             this._model.Dispose();
-            this._model = new GRBModel(this._env);
+            this._model = new GRBModel(GurobiEnvironment.Instance);
             if (timeout > 0) {
                 this._timeout = timeout;
             }
