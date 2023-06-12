@@ -111,28 +111,64 @@ namespace MetaOptimize
             }
         }
 
-        private void AddSingleDemandEquality(
-            ISolver<TVar, TSolution> solver,
-            int itemID,
-            List<double> demand)
-        {
-            for (int dim = 0; dim < this.NumDimensions; dim++) {
-                var poly = new Polynomial<TVar>();
-                poly.Add(new Term<TVar>(1, DemandVariables[itemID][dim]));
-                poly.Add(new Term<TVar>(-1 * demand[dim]));
-                solver.AddEqZeroConstraint(poly);
-            }
-        }
-
         private void EnsureDemandEquality(
             ISolver<TVar, TSolution> solver,
             IDictionary<int, List<double>> constrainedDemands)
         {
-            if (constrainedDemands == null) {
+            if (constrainedDemands == null)
+            {
                 return;
             }
-            foreach (var (itemID, demand) in constrainedDemands) {
-                AddSingleDemandEquality(solver, itemID, demand);
+            foreach (var (itemID, demand) in constrainedDemands)
+            {
+                for (int dim = 0; dim < this.NumDimensions; dim++)
+                {
+                    // DemandVar - demand == 0
+                    var poly = new Polynomial<TVar>();
+                    poly.Add(new Term<TVar>(1, DemandVariables[itemID][dim]));
+                    poly.Add(new Term<TVar>(-1 * demand[dim]));
+                    solver.AddEqZeroConstraint(poly);
+                }
+            }
+        }
+        private void EnsureDemandLowerBound(
+            ISolver<TVar, TSolution> solver,
+            IDictionary<int, List<double>> constrainedDemands)
+        {
+            if (constrainedDemands == null)
+            {
+                return;
+            }
+            foreach (var (itemID, demand) in constrainedDemands)
+            {
+                for (int dim = 0; dim < this.NumDimensions; dim++)
+                {
+                    // demand - DemandVar <= 0
+                    var poly = new Polynomial<TVar>();
+                    poly.Add(new Term<TVar>(1 * demand[dim]));
+                    poly.Add(new Term<TVar>(-1, DemandVariables[itemID][dim]));
+                    solver.AddLeqZeroConstraint(poly);
+                }
+            }
+        }
+        private void EnsureDemandUpperBound(
+            ISolver<TVar, TSolution> solver,
+            IDictionary<int, List<double>> constrainedDemands)
+        {
+            if (constrainedDemands == null)
+            {
+                return;
+            }
+            foreach (var (itemID, demand) in constrainedDemands)
+            {
+                for (int dim = 0; dim < this.NumDimensions; dim++)
+                {
+                    // DemandVar - demand <= 0
+                    var poly = new Polynomial<TVar>();
+                    poly.Add(new Term<TVar>(1, DemandVariables[itemID][dim]));
+                    poly.Add(new Term<TVar>(-1 * demand[dim]));
+                    solver.AddLeqZeroConstraint(poly);
+                }
             }
         }
 
@@ -206,7 +242,9 @@ namespace MetaOptimize
             FFDMethodChoice ffdMethod,
             double demandUB = -1,
             IList<IList<double>> demandList = null,
-            IDictionary<int, List<double>> constrainedDemands = null,
+            IDictionary<int, List<double>> demandEqs = null,
+            IDictionary<int, List<double>> demandUpperBounds = null,
+            IDictionary<int, List<double>> demandLowerBounds = null,
             bool simplify = false,
             bool verbose = false,
             bool cleanUpSolver = true,
