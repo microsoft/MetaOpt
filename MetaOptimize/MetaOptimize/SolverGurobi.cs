@@ -468,6 +468,15 @@ namespace MetaOptimize
         }
 
         /// <summary>
+        /// Maximize a quadratic objective with objective as input.
+        /// reset the callback timer.
+        /// </summary>
+        /// <returns>A solution.</returns>
+        public GRBModel MaximizeQuadPow2(IList<Polynomial<GRBVar>> quadObjective, IList<double> quadCoeff, Polynomial<GRBVar> linObjective, bool reset = false) {
+            throw new Exception("not implemented!");
+        }
+
+        /// <summary>
         /// Maximize the objective with objective as input.
         /// </summary>
         /// <returns>A solution.</returns>

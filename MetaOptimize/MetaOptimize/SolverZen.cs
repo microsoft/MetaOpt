@@ -323,6 +323,15 @@ namespace MetaOptimize
         }
 
         /// <summary>
+        /// Maximize a quadratic objective with objective as input.
+        /// reset the callback timer.
+        /// </summary>
+        /// <returns>A solution.</returns>
+        public ZenSolution MaximizeQuadPow2(IList<Polynomial<Zen<Real>>> quadObjective, IList<double> quadCoeff, Polynomial<Zen<Real>> linObjective, bool reset = false) {
+            throw new Exception("not implemented!");
+        }
+
+        /// <summary>
         /// Check feasibility.
         /// </summary>
         public ZenSolution CheckFeasibility(double objectiveValue)

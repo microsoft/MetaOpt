@@ -61,9 +61,14 @@ namespace MetaOptimize
         protected GRBModel _model = null;
 
         /// <summary>
-        /// This is the objective function.
+        /// This is the linear objective function.
         /// </summary>
         protected GRBLinExpr _objective = 0;
+
+        /// <summary>
+        /// This is the quadratic objective function.
+        /// </summary>
+        protected GRBQuadExpr _quadObjective = 0;
 
         /// <summary>
         /// this shows how many seconds should wait before terminating
@@ -315,7 +320,7 @@ namespace MetaOptimize
         }
 
         /// <summary>
-        /// Get the resulting value assigned to a variable.
+        /// set the objective.
         /// </summary>
         /// <param name="objective">The solver solution.</param>
         public void SetObjective(Polynomial<GRBVar> objective) {
@@ -323,11 +328,23 @@ namespace MetaOptimize
         }
 
         /// <summary>
-        /// Get the resulting value assigned to a variable.
+        /// set the objective.
         /// </summary>
         /// <param name="objective">The solver solution.</param>
         public void SetObjective(GRBVar objective) {
             this._objective = objective;
+        }
+
+        /// <summary>
+        /// Set the quadratic objective.
+        /// </summary>
+        public void SetQuadPow2Objective(IList<Polynomial<GRBVar>> quadObjective, IList<double> quadCoeff) {
+            this._quadObjective = 0;
+            var numQuadTerms = quadObjective.Count();
+            Debug.Assert(numQuadTerms == quadCoeff.Count());
+            for (int i = 0; i < numQuadTerms; i++) {
+                this._quadObjective += ConvertQPow2(quadObjective[i], quadCoeff[i]);
+            }
         }
 
         /// <summary>
@@ -352,6 +369,31 @@ namespace MetaOptimize
                         throw new Exception("non 0|1 exponent is not modeled");
                 }
             }
+            return obj;
+        }
+
+        /// <summary>
+        /// Converts polynomials to linear expressions.
+        /// </summary>
+        /// <returns>Linear expression.</returns>
+        protected internal GRBQuadExpr ConvertQPow2(Polynomial<GRBVar> quadPoly, double quadCoeff)
+        {
+            GRBLinExpr quadlin = this.Convert(quadPoly);
+            GRBQuadExpr obj = quadCoeff * quadlin * quadlin;
+            // foreach (var term in quadPoly.GetTerms())
+            // {
+            //     switch (term.Exponent)
+            //     {
+            //         case 0:
+            //             obj += quadCoeff * (term.Coefficient * term.Coefficient);
+            //             break;
+            //         case 1:
+            //             obj += quadCoeff * (term.Coefficient * term.Coefficient) * (term.Variable.Value * term.Variable.Value);
+            //             break;
+            //         default:
+            //             throw new Exception("non 0|1 exponent is not modeled");
+            //     }
+            // }
             return obj;
         }
 
@@ -709,6 +751,56 @@ namespace MetaOptimize
         {
             SetObjective(objective);
             return Maximize();
+        }
+
+        /// <summary>
+        /// Maximize a quadratic objective with objective as input.
+        /// reset the callback timer.
+        /// </summary>
+        /// <returns>A solution.</returns>
+        public GRBModel MaximizeQuadPow2(IList<Polynomial<GRBVar>> quadObjective, IList<double> quadCoeff, Polynomial<GRBVar> linObjective, bool reset = false)
+        {
+            if (reset) {
+                this.ResetCallbackTimer();
+            }
+
+            this.SetObjective(linObjective);
+            this.SetQuadPow2Objective(quadObjective, quadCoeff);
+            Console.WriteLine("in maximize call");
+            GRBLinExpr objective = 0;
+            foreach (var auxVar in auxPolyList) {
+                objective += this.Convert(auxVar);
+            }
+            this._model.SetObjective(objective + this._objective + this._quadObjective, GRB.MAXIMIZE);
+            if (this._focusBstBd) {
+                this._model.Parameters.MIPFocus = 3;
+                this._model.Parameters.Heuristics = 0.01;
+                this._model.Parameters.Cuts = 0;
+            } else {
+                this._model.Parameters.MIPFocus = 1;
+                this._model.Parameters.Heuristics = 0.99;
+                this._model.Parameters.RINS = GRB.MAXINT;
+            }
+
+            // string exhaust_dir_name = @"../logs/grbsos_exhaust/rand_" + (new Random()).Next(1000) + @"/";
+            // Directory.CreateDirectory(exhaust_dir_name);
+            // this._model.Write($"{exhaust_dir_name}/model_infeas_reduce_" + DateTime.Now.Millisecond + ".lp");
+
+            this._model.Optimize();
+            if (this._model.Status != GRB.Status.TIME_LIMIT & this._model.Status != GRB.Status.OPTIMAL & this._model.Status != GRB.Status.INTERRUPTED)
+            {
+                this._model.Parameters.DualReductions = 0;
+                this._model.Reset();
+                this._model.Optimize();
+                this._model.ComputeIIS();
+                // string exhaust_dir_name = @"../logs/grbsos_exhaust/rand_" + (new Random()).Next(1000) + @"/";
+                // Directory.CreateDirectory(exhaust_dir_name);
+                // this._model.Write($"{exhaust_dir_name}/model_infeas_reduce_" + DateTime.Now.Millisecond + ".lp");
+                throw new Exception($"model not optimal {ModelStatusToString(this._model.Status)}");
+                // throw new InfeasibleOrUnboundSolution();
+            }
+
+            return this._model;
         }
 
         /// <summary>

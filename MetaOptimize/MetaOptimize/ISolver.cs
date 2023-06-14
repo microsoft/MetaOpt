@@ -158,6 +158,13 @@ namespace MetaOptimize
         public TSolution Maximize(Polynomial<TVar> objective, bool reset);
 
         /// <summary>
+        /// Maximize a quadratic objective with objective as input.
+        /// reset the callback timer.
+        /// </summary>
+        /// <returns>A solution.</returns>
+        public TSolution MaximizeQuadPow2(IList<Polynomial<TVar>> quadObjective, IList<double> quadCoeff, Polynomial<TVar> linObjective, bool reset = false);
+
+        /// <summary>
         /// Maximize the objective with objective as input.
         /// </summary>
         /// <returns>A solution.</returns>
