@@ -13,9 +13,10 @@ namespace MetaOptimize
             {
                 if (_env == null)
                 {
-                    // for 8.1 and later
                     _env = new GRBEnv(true);
                     _env.Set("LogFile", "maxFlowSolver.log");
+                    // Gurobi defaults to a cap of 32, force it to use all threads
+                    _env.Threads = Environment.ProcessorCount;
                     File.WriteAllText(
                         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "gurobi.lic"),
                         "TOKENSERVER=10.137.59.115"); // ishai-z420, as of June 8th 2023

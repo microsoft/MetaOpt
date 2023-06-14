@@ -169,7 +169,11 @@ namespace MetaOptimize
             if (numThreads < 0) {
                 throw new Exception("num threads should be either 0 (automatic) or positive but got " + numThreads);
             }
-            this._model.Parameters.Threads = numThreads;
+            // 0 == do not override
+            if (numThreads > 0)
+            {
+                this._model.Parameters.Threads = numThreads;
+            }
             this._model.Parameters.OutputFlag = verbose;
             this._timeToTerminateIfNoImprovement = timeToTerminateNoImprovement;
             this._storeProgress = recordProgress;
@@ -200,7 +204,12 @@ namespace MetaOptimize
             this._variables = new Dictionary<string, GRBVar>();
             this._auxiliaryVars = new Dictionary<string, GRBVar>();
             this._objective = 0;
-            this._model.Parameters.Threads = this._numThreads;
+
+            // 0 == do not override
+            if (_numThreads > 0)
+            {
+                this._model.Parameters.Threads = this._numThreads;
+            }
             this._model.Parameters.OutputFlag = this._verbose;
             this.auxPolyList = new List<Polynomial<GRBVar>>();
             SetCallbacks(disableStoreProgress);
