@@ -6,7 +6,8 @@
 
     <IsPackable>false</IsPackable>
 
-    <Platforms>AnyCPU;x64</Platforms>
+	  <Platforms>x64</Platforms>
+	  <PlatformTarget>x64</PlatformTarget>
   </PropertyGroup>
 
   <ItemGroup>
@@ -16,6 +17,7 @@
     <PackageReference Include="coverlet.collector" Version="3.1.0" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
     <PackageReference Include="ZenLib" Version="2.2.4" />
+	<PackageReference Include="Gurobi.Optimizer" Version="9.5.2" />
   </ItemGroup>
 
   <Import Project="..\.stylecop\StyleCop.props" />
@@ -23,11 +25,4 @@
   <ItemGroup>
     <ProjectReference Include="..\MetaOptimize\MetaOptimize.csproj" />
   </ItemGroup>
-
-  <ItemGroup>
-    <Reference Include="gurobi95.netstandard20">
-      <HintPath>C:\gurobi951\win64\lib\gurobi95.netstandard20.dll</HintPath>
-    </Reference>
-  </ItemGroup>
-
 </Project>

@@ -28,10 +28,6 @@ namespace MetaOptimize
         /// </summary>
         public double _scaleFactor = Math.Pow(10, 3);
         /// <summary>
-        /// stashes guroubi environment so it can be reused.
-        /// </summary>
-        public GRBEnv _env = null;
-        /// <summary>
         /// The solver variables.
         /// </summary>
         public ISet<GRBVar> _variables = new HashSet<GRBVar>();
@@ -73,37 +69,13 @@ namespace MetaOptimize
         private bool _modelRun;
 
         /// <summary>
-        /// releases guroubi environment.
-        /// </summary>
-        public void Delete()
-        {
-            this._env.Dispose();
-            this._env = null;
-        }
-
-        /// <summary>
-        /// Connects to Ishai's guroubi license.
-        /// </summary>
-        /// <returns></returns>
-        public static GRBEnv SetupGurobi()
-        {
-            // for 8.1 and later
-            GRBEnv env = new GRBEnv(true);
-            env.Set("LogFile", "maxFlowSolver.log");
-            env.TokenServer = "10.137.70.76"; // ishai-z420
-            env.Start();
-            return env;
-        }
-
-        /// <summary>
         /// constructor with scalefactor.
         /// </summary>
         /// <param name="varbound"></param>
         public SolverGurobi(double varbound)
         {
             this._varBounds = varbound;
-            this._env = SetupGurobi();
-            this._model = new GRBModel(this._env);
+            this._model = new GRBModel(GurobiEnvironment.Instance);
             this._model.Parameters.Presolve = 2;
         }
 
@@ -112,7 +84,7 @@ namespace MetaOptimize
         /// </summary>
         public void CleanAll(double timeout = -1, bool disableStoreProgress = false) {
             this._model.Dispose();
-            this._model = new GRBModel(this._env);
+            this._model = new GRBModel(GurobiEnvironment.Instance);
             this._model.Parameters.Presolve = 2;
         }
 
@@ -135,14 +107,7 @@ namespace MetaOptimize
         /// </summary>
         public SolverGurobi()
         {
-            if (this._env == null)
-            {
-                this._env = SetupGurobi();
-            }
-            if (this._model == null)
-            {
-                this._model = new GRBModel(this._env);
-            }
+            this._model = new GRBModel(GurobiEnvironment.Instance);
         }
 
         /// <summary>
