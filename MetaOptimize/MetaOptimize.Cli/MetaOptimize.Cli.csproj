@@ -26,7 +26,7 @@
     <ProjectReference Include="..\MetaOptimize\MetaOptimize.csproj" />
   </ItemGroup>
 
-  <Target Condition="$(USERNAME) == 't-spirelli'" Name="PostBuild" AfterTargets="PostBuildEvent">
+  <Target Condition="$(USERNAME) == 't-spirellixxx'" Name="PostBuild" AfterTargets="PostBuildEvent">
 	<!-- /T means copy recursively, /E to create the hierarchy if needed, /I to assume the destination is a folder, /Y to overwrite without prompting -->
     <Exec Command="xcopy /E /I /Y C:\Users\t-spirelli\source\repos\wanrisk\MetaOptimize\MetaOptimize.Cli\bin \\GCR-SANDBOX-019\\C$\Users\t-spirelli\source\repos\wanrisk\MetaOptimize\MetaOptimize.Cli\bin" />
   </Target>
