@@ -30,10 +30,10 @@ namespace MetaOptimize.Test
             topology.AddEdge("a", "b", capacity: 10);
 
             var solver = CreateSolver();
-            var optimalEncoder = new TEOptimalEncoder<TVar, TSol>(solver, k: 1);
+            var optimalEncoder = new TEMaxFlowOptimalEncoder<TVar, TSol>(solver, k: 1);
             var encoding = optimalEncoder.Encoding(topology);
             var solverSolution = optimalEncoder.Solver.Maximize(encoding.GlobalObjective);
-            var optimizationSolution = (TEOptimizationSolution)optimalEncoder.GetSolution(solverSolution);
+            var optimizationSolution = (TEMaxFlowOptimizationSolution)optimalEncoder.GetSolution(solverSolution);
 
             // Debugging information.
             /* foreach (var c in solver.ConstraintExprs)
@@ -43,7 +43,7 @@ namespace MetaOptimize.Test
 
             Console.WriteLine(Newtonsoft.Json.JsonConvert.SerializeObject(optimizationSolution, Newtonsoft.Json.Formatting.Indented)); */
 
-            Assert.IsTrue(TestHelper.IsApproximately(10, optimizationSolution.TotalDemandMet));
+            Assert.IsTrue(TestHelper.IsApproximately(10, optimizationSolution.MaxObjective));
             Assert.IsTrue(10 <= optimizationSolution.Demands[("a", "b")]);
             Assert.IsTrue(TestHelper.IsApproximately(10, optimizationSolution.Flows[("a", "b")]));
             Assert.IsTrue(0 <= optimizationSolution.Demands[("b", "a")]);
@@ -62,12 +62,12 @@ namespace MetaOptimize.Test
             topology.AddEdge("a", "b", capacity: 10);
 
             var solver = CreateSolver();
-            var optimalEncoder = new TEOptimalEncoder<TVar, TSol>(solver, k: 1);
+            var optimalEncoder = new TEMaxFlowOptimalEncoder<TVar, TSol>(solver, k: 1);
             var encoding = optimalEncoder.Encoding(topology, noAdditionalConstraints: true);
             var solverSolution = optimalEncoder.Solver.Maximize(encoding.GlobalObjective);
-            var optimizationSolution = (TEOptimizationSolution)optimalEncoder.GetSolution(solverSolution);
+            var optimizationSolution = (TEMaxFlowOptimizationSolution)optimalEncoder.GetSolution(solverSolution);
 
-            Assert.IsTrue(TestHelper.IsApproximately(10, optimizationSolution.TotalDemandMet));
+            Assert.IsTrue(TestHelper.IsApproximately(10, optimizationSolution.MaxObjective));
             Assert.IsTrue(10 <= optimizationSolution.Demands[("a", "b")]);
             Assert.IsTrue(TestHelper.IsApproximately(10, optimizationSolution.Flows[("a", "b")]));
             Assert.IsTrue(0 <= optimizationSolution.Demands[("b", "a")]);
@@ -91,10 +91,10 @@ namespace MetaOptimize.Test
             topology.AddEdge("c", "d", capacity: 10);
 
             var solver = CreateSolver();
-            var optimalEncoder = new TEOptimalEncoder<TVar, TSol>(solver, k: 1);
+            var optimalEncoder = new TEMaxFlowOptimalEncoder<TVar, TSol>(solver, k: 1);
             var encoding = optimalEncoder.Encoding(topology);
             var solverSolution = optimalEncoder.Solver.Maximize(encoding.GlobalObjective);
-            var optimizationSolution = (TEOptimizationSolution)optimalEncoder.GetSolution(solverSolution);
+            var optimizationSolution = (TEMaxFlowOptimizationSolution)optimalEncoder.GetSolution(solverSolution);
 
             // Debugging information.
             /* foreach (var c in solver.ConstraintExprs)
@@ -104,7 +104,7 @@ namespace MetaOptimize.Test
 
             Console.WriteLine(Newtonsoft.Json.JsonConvert.SerializeObject(optimizationSolution, Newtonsoft.Json.Formatting.Indented)); */
 
-            Assert.IsTrue(TestHelper.IsApproximately(40, optimizationSolution.TotalDemandMet));
+            Assert.IsTrue(TestHelper.IsApproximately(40, optimizationSolution.MaxObjective));
             Assert.IsTrue(10 <= optimizationSolution.Demands[("a", "b")]);
             Assert.IsTrue(TestHelper.IsApproximately(10, optimizationSolution.Flows[("a", "b")]));
             Assert.IsTrue(10 <= optimizationSolution.Demands[("a", "c")]);
@@ -130,10 +130,10 @@ namespace MetaOptimize.Test
             topology.AddEdge("c", "d", capacity: 10);
 
             var solver = CreateSolver();
-            var optimalEncoder = new TEOptimalEncoder<TVar, TSol>(solver, k: 1);
+            var optimalEncoder = new TEMaxFlowOptimalEncoder<TVar, TSol>(solver, k: 1);
             var encoding = optimalEncoder.Encoding(topology, noAdditionalConstraints: true);
             var solverSolution = optimalEncoder.Solver.Maximize(encoding.GlobalObjective);
-            var optimizationSolution = (TEOptimizationSolution)optimalEncoder.GetSolution(solverSolution);
+            var optimizationSolution = (TEMaxFlowOptimizationSolution)optimalEncoder.GetSolution(solverSolution);
 
             // Debugging information.
             /* foreach (var c in solver.ConstraintExprs)
@@ -143,7 +143,7 @@ namespace MetaOptimize.Test
 
             Console.WriteLine(Newtonsoft.Json.JsonConvert.SerializeObject(optimizationSolution, Newtonsoft.Json.Formatting.Indented)); */
 
-            Assert.IsTrue(TestHelper.IsApproximately(40, optimizationSolution.TotalDemandMet));
+            Assert.IsTrue(TestHelper.IsApproximately(40, optimizationSolution.MaxObjective));
             Assert.IsTrue(10 <= optimizationSolution.Demands[("a", "b")]);
             Assert.IsTrue(TestHelper.IsApproximately(10, optimizationSolution.Flows[("a", "b")]));
             Assert.IsTrue(10 <= optimizationSolution.Demands[("a", "c")]);

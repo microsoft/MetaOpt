@@ -463,9 +463,9 @@ namespace MetaOptimize
 
             VerifyOutput(solution, demands, flows);
 
-            return new TEOptimizationSolution
+            return new TEMaxFlowOptimizationSolution
             {
-                TotalDemandMet = this.Solver.GetVariable(solution, this.TotalDemandMetVariable),
+                MaxObjective = this.Solver.GetVariable(solution, this.TotalDemandMetVariable),
                 Demands = demands,
                 Flows = flows,
                 FlowsPaths = flowPaths,

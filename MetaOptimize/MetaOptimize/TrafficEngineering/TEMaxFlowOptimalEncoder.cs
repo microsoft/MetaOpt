@@ -6,11 +6,12 @@ namespace MetaOptimize
 {
     using System;
     using System.Collections.Generic;
+    using System.Diagnostics;
 
     /// <summary>
     /// A class for the optimal encoding.
     /// </summary>
-    public class TEOptimalEncoder<TVar, TSolution> : IEncoder<TVar, TSolution>
+    public class TEMaxFlowOptimalEncoder<TVar, TSolution> : IEncoder<TVar, TSolution>
     {
         /// <summary>
         /// The solver being used.
@@ -68,11 +69,11 @@ namespace MetaOptimize
         private KktOptimizationGenerator<TVar, TSolution> innerProblemEncoder;
 
         /// <summary>
-        /// Create a new instance of the <see cref="TEOptimalEncoder{TVar, TSolution}"/> class.
+        /// Create a new instance of the <see cref="TEMaxFlowOptimalEncoder{TVar, TSolution}"/> class.
         /// </summary>
         /// <param name="solver">The solver.</param>
         /// <param name="k">The max number of paths between nodes.</param>
-        public TEOptimalEncoder(ISolver<TVar, TSolution>  solver, int k)
+        public TEMaxFlowOptimalEncoder(ISolver<TVar, TSolution>  solver, int k)
         {
             this.Solver = solver;
             this.K = k;
@@ -87,20 +88,24 @@ namespace MetaOptimize
             return true;
         }
 
-        private void InitializeVariables(Dictionary<(string, string), Polynomial<TVar>> preDemandVariables, Dictionary<(string, string), double> demandEqualityConstraints,
-                InnerEncodingMethodChoice encodingMethod, int numProcesses, bool verbose) {
+        private void InitializeVariables(Dictionary<(string, string), Polynomial<TVar>> preDemandVariables,
+                Dictionary<(string, string), double> demandEqualityConstraints, InnerEncodingMethodChoice encodingMethod,
+                PathType pathType, Dictionary<(string, string), string[][]> selectedPaths,
+                int numProcesses, bool verbose)
+        {
             this.variables = new HashSet<TVar>();
-            this.Paths = new Dictionary<(string, string), string[][]>();
             // establish the demand variables.
             this.DemandConstraints = demandEqualityConstraints ?? new Dictionary<(string, string), double>();
             this.DemandVariables = new Dictionary<(string, string), Polynomial<TVar>>();
             var demandVariables = new HashSet<TVar>();
 
-            if (preDemandVariables == null) {
+            if (preDemandVariables == null)
+            {
                 this.DemandVariables = new Dictionary<(string, string), Polynomial<TVar>>();
                 foreach (var pair in this.Topology.GetNodePairs())
                 {
-                    if (!IsDemandValid(pair)) {
+                    if (!IsDemandValid(pair))
+                    {
                         continue;
                     }
                     var variable = this.Solver.CreateVariable("demand_" + pair.Item1 + "_" + pair.Item2);
@@ -108,13 +113,18 @@ namespace MetaOptimize
                     this.variables.Add(variable);
                     demandVariables.Add(variable);
                 }
-            } else {
-                foreach (var (pair, variable) in preDemandVariables) {
-                    if (!IsDemandValid(pair)) {
+            }
+            else
+            {
+                foreach (var (pair, variable) in preDemandVariables)
+                {
+                    if (!IsDemandValid(pair))
+                    {
                         continue;
                     }
                     this.DemandVariables[pair] = variable;
-                    foreach (var term in variable.GetTerms()) {
+                    foreach (var term in variable.GetTerms())
+                    {
                         this.variables.Add(term.Variable.Value);
                         demandVariables.Add(term.Variable.Value);
                     }
@@ -127,10 +137,14 @@ namespace MetaOptimize
 
             this.FlowVariables = new Dictionary<(string, string), TVar>();
             this.FlowPathVariables = new Dictionary<string[], TVar>(new PathComparer());
-            this.Paths = this.Topology.AllPairsKShortestPathMultiProcessing(this.K, numProcesses: numProcesses, verbose: verbose);
+
+            // compute the paths
+            this.Paths = this.Topology.ComputePaths(pathType, selectedPaths, this.K, numProcesses, verbose);
+
             foreach (var pair in this.Topology.GetNodePairs())
             {
-                if (!IsDemandValid(pair)) {
+                if (!IsDemandValid(pair))
+                {
                     continue;
                 }
                 // establish the flow variable.
@@ -167,12 +181,15 @@ namespace MetaOptimize
         /// <returns>The constraints and maximization objective.</returns>
         public OptimizationEncoding<TVar, TSolution> Encoding(Topology topology, Dictionary<(string, string), Polynomial<TVar>> preDemandVariables = null,
             Dictionary<(string, string), double> demandEqualityConstraints = null, bool noAdditionalConstraints = false,
-            InnerEncodingMethodChoice innerEncoding = InnerEncodingMethodChoice.KKT, int numProcesses = -1, bool verbose = false)
+            InnerEncodingMethodChoice innerEncoding = InnerEncodingMethodChoice.KKT,
+            PathType pathType = PathType.KSP, Dictionary<(string, string), string[][]> selectedPaths = null,
+            int numProcesses = -1, bool verbose = false)
         {
             // Initialize Variables for the encoding
             Utils.logger("initializing variables", verbose);
             this.Topology = topology;
-            InitializeVariables(preDemandVariables, demandEqualityConstraints, innerEncoding, numProcesses, verbose);
+            InitializeVariables(preDemandVariables, demandEqualityConstraints,
+                innerEncoding, pathType, selectedPaths, numProcesses, verbose);
             // Compute the maximum demand M.
             // Since we don't know the demands we have to be very conservative.
             // var maxDemand = this.Topology.TotalCapacity() * 10;
@@ -347,9 +364,9 @@ namespace MetaOptimize
                 flowPaths[path] = this.Solver.GetVariable(solution, variable);
             }
 
-            return new TEOptimizationSolution
+            return new TEMaxFlowOptimizationSolution
             {
-                TotalDemandMet = this.Solver.GetVariable(solution, this.TotalDemandMetVariable),
+                MaxObjective = this.Solver.GetVariable(solution, this.TotalDemandMetVariable),
                 Demands = demands,
                 Flows = flows,
                 FlowsPaths = flowPaths,

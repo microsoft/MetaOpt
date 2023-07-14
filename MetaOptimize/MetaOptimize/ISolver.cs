@@ -87,8 +87,12 @@ namespace MetaOptimize
         /// <param name="coeffPolyList">The coefficent polynomial list (A).</param>
         /// <param name="variableList">The variable list (B).</param>
         /// <param name="linearPoly">The linear term (C).</param>
+        /// <param name="coeffVarType">type of variable in coeff polynomial list (C).</param>
+        /// <param name="varType">type of variable in variable list (E).</param>
         /// <returns>name of the constraint.</returns>
-        public string AddLeqZeroConstraint(IList<Polynomial<TVar>> coeffPolyList, IList<TVar> variableList, Polynomial<TVar> linearPoly);
+        public string AddLeqZeroConstraint(IList<Polynomial<TVar>> coeffPolyList, IList<TVar> variableList,
+            Polynomial<TVar> linearPoly, VariableType coeffVarType = VariableType.BINARY,
+            VariableType varType = VariableType.CONTINUOUS);
 
         /// <summary>
         /// Add a equal to zero constraint.
@@ -104,8 +108,12 @@ namespace MetaOptimize
         /// <param name="coeffPolyList">The coefficent polynomial list (A).</param>
         /// <param name="variableList">The variable list (B).</param>
         /// <param name="linearPoly">The linear term (C).</param>
+        /// <param name="coeffVarType">type of variable in coeff polynomial list (D).</param>
+        /// <param name="varType">type of variable in variable list (E).</param>
         /// <returns>name of the constraint.</returns>
-        public string AddEqZeroConstraint(IList<Polynomial<TVar>> coeffPolyList, IList<TVar> variableList, Polynomial<TVar> linearPoly);
+        public string AddEqZeroConstraint(IList<Polynomial<TVar>> coeffPolyList, IList<TVar> variableList,
+            Polynomial<TVar> linearPoly, VariableType coeffVarType = VariableType.BINARY,
+            VariableType varType = VariableType.CONTINUOUS);
 
         /// <summary>
         /// Add or equals zero.
@@ -118,6 +126,40 @@ namespace MetaOptimize
         /// Add a = max(b, c) constraint.
         /// </summary>
         public void AddMaxConstraint(TVar LHS, Polynomial<TVar> maxItem1, Polynomial<TVar> maxItem2);
+
+        /// <summary>
+        /// Add a = max(b, constant) constraint.
+        /// </summary>
+        public void AddMaxConstraint(TVar LHS, TVar var1, double constant);
+
+        /// <summary>
+        /// Add a = max(b, c) constraint.
+        /// </summary>
+        public void AddMaxConstraint(TVar LHS, TVar var1, TVar var2);
+
+        /// <summary>
+        /// Logistic constraint y = 1/(1 + exp(-x)).
+        /// </summary>
+        public void AddLogisticConstraint(TVar xVar, TVar yVar, string name, double FuncPieces = -1, double FuncPeiceError = 0.01,
+            double FuncPieceLength = 0.01, double FuncPieceRatio = -1.0);
+
+        /// <summary>
+        /// power constraint y = x^a.
+        /// </summary>
+        public void AddPowerConstraint(TVar xVar, TVar yVar, int a, string name, double FuncPieces = -1, double FuncPeiceError = 0.01,
+            double FuncPieceLength = 0.01, double FuncPieceRatio = -1.0);
+
+        /// <summary>
+        /// polynomial constraint y = p0 x^d + p1 x^{d-1} + ... + pd.
+        /// </summary>
+        public void AddPolynomialConstraint(TVar xVar, TVar yVar, double[] p, string name, double FuncPieces = -1, double FuncPeiceError = 0.01,
+            double FuncPieceLength = 0.01, double FuncPieceRatio = -1.0);
+
+        /// <summary>
+        /// polynomial constraint y = norm_d(x_1, ..., x_n).
+        /// </summary>
+        public void AddNormConstraint(TVar[] xVar, TVar yVar, double which, string name, double FuncPieces = -1, double FuncPeiceError = 0.01,
+            double FuncPieceLength = 0.01, double FuncPieceRatio = -1.0);
 
         /// <summary>
         /// Remove a constraint.
@@ -184,7 +226,7 @@ namespace MetaOptimize
         /// <summary>
         /// initialize some of the variables.
         /// </summary>
-        public void InitializeVariables(TVar variable, int value);
+        public void InitializeVariables(TVar variable, double value);
 
         /// <summary>
         /// adding some auxiliary term to be added to the global objective when maximized.
