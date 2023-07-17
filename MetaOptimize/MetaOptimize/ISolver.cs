@@ -130,6 +130,11 @@ namespace MetaOptimize
         /// <summary>
         /// Add a = max(b, constant) constraint.
         /// </summary>
+        public void AddMaxConstraint(TVar LHS, Polynomial<TVar> var1, double constant);
+
+        /// <summary>
+        /// Add a = max(b, constant) constraint.
+        /// </summary>
         public void AddMaxConstraint(TVar LHS, TVar var1, double constant);
 
         /// <summary>

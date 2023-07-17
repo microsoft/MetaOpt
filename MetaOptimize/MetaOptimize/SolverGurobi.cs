@@ -386,6 +386,13 @@ namespace MetaOptimize
         /// <summary>
         /// Add a = max(b, constant) constraint.
         /// </summary>
+        public void AddMaxConstraint(GRBVar LHS, Polynomial<GRBVar> var1, double constant) {
+            throw new Exception("Not implemented yet.");
+        }
+
+        /// <summary>
+        /// Add a = max(b, constant) constraint.
+        /// </summary>
         public void AddMaxConstraint(GRBVar LHS, GRBVar var1, double constant) {
             throw new Exception("Not implemented yet");
         }

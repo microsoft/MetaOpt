@@ -228,6 +228,13 @@ namespace MetaOptimize
         }
 
         /// <summary>
+        /// Add a = max(b, constant) constraint.
+        /// </summary>
+        public void AddMaxConstraint(Zen<Real> LHS, Polynomial<Zen<Real>> var1, double constant) {
+            throw new Exception("Not implemented yet.");
+        }
+
+        /// <summary>
         /// Logistic constraint y = 1/(1 + exp(-x)).
         /// </summary>
         public void AddLogisticConstraint(Zen<Real> xVar, Zen<Real> yVar, string name, double FuncPieces = -1, double FuncPeiceError = 0.01,
