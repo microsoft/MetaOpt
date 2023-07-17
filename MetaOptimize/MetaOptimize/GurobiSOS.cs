@@ -698,26 +698,36 @@ namespace MetaOptimize
         /// Add a = max(b, constant) constraint.
         /// </summary>
         public void AddMaxConstraint(GRBVar LHS, GRBVar var1, double constant) {
+            this._model.AddGenConstrMax(LHS, new GRBVar[] { var1 }, constant, "max_constraint");
+            // AddMaxConstraint(LHS, new Polynomial<GRBVar>(new Term<GRBVar>(1, var1)), constant);
+        }
+
+        /// <summary>
+        /// Add a = max(b, constant) constraint.
+        /// </summary>
+        public void AddMaxConstraint(GRBVar LHS, Polynomial<GRBVar> var1, double constant) {
             // this._model.AddGenConstrMax(LHS, new GRBVar[] { var1 }, constant, "max_constraint");
-            var bin = this.CreateBinaryVariable("aux_max");
-            // a >= b
-            this.AddLeqZeroConstraint(new Polynomial<GRBVar>(
-                new Term<GRBVar>(-1, LHS),
-                new Term<GRBVar>(1, var1)));
-            // a >= constant
-            this.AddLeqZeroConstraint(new Polynomial<GRBVar>(
-                new Term<GRBVar>(-1, LHS),
-                new Term<GRBVar>(constant)));
-            // a <= b + Mx
-            this.AddLeqZeroConstraint(new Polynomial<GRBVar>(
-                new Term<GRBVar>(1, LHS),
-                new Term<GRBVar>(-1, var1),
-                new Term<GRBVar>(-1 * this._bigM, bin)));
-            // a <= constant + M(1 - x)
-            this.AddLeqZeroConstraint(new Polynomial<GRBVar>(
-                new Term<GRBVar>(1, LHS),
-                new Term<GRBVar>(-1 * constant - this._bigM),
-                new Term<GRBVar>(this._bigM, bin)));
+            // var bin = this.CreateBinaryVariable("aux_max");
+            // // a >= b
+            // var constr1 = new Polynomial<GRBVar>(new Term<GRBVar>(-1, LHS));
+            // constr1.Add(var1.Copy());
+            // this.AddLeqZeroConstraint(constr1);
+            // // a >= constant
+            // this.AddLeqZeroConstraint(new Polynomial<GRBVar>(
+            //     new Term<GRBVar>(-1, LHS),
+            //     new Term<GRBVar>(constant)));
+            // // a <= b + Mx
+            // var constr3 = new Polynomial<GRBVar>(
+            //     new Term<GRBVar>(1, LHS),
+            //     new Term<GRBVar>(-1 * this._bigM, bin));
+            // constr3.Add(var1.Negate());
+            // this.AddLeqZeroConstraint(constr3);
+            // // a <= constant + M(1 - x)
+            // this.AddLeqZeroConstraint(new Polynomial<GRBVar>(
+            //     new Term<GRBVar>(1, LHS),
+            //     new Term<GRBVar>(-1 * constant - this._bigM),
+            //     new Term<GRBVar>(this._bigM, bin)));
+            throw new Exception("Not implemented yet.");
         }
 
         /// <summary>
@@ -780,9 +790,9 @@ namespace MetaOptimize
             if (this._focusBstBd) {
                 this._model.Parameters.MIPFocus = 3;
                 this._model.Parameters.Heuristics = 0.01;
-                this._model.Parameters.Cuts = 0;
+                this._model.Parameters.Cuts = 3;
             } else {
-                this._model.Parameters.MIPFocus = 1;
+                // this._model.Parameters.MIPFocus = 1;
                 // this._model.Parameters.Heuristics = 0.99;
                 // this._model.Parameters.RINS = GRB.MAXINT;
                 // this._model.Parameters.ConcurrentMIP = 4;
@@ -794,12 +804,14 @@ namespace MetaOptimize
             // this._model.Parameters.MIPFocus = 3;
             // this._model.Parameters.Cuts = 3;
             // this._model.Parameters.Heuristics = 0.5;
+            // this._model.Parameters.SubMIPNodes = GRB.MAXINT;
             // this._model.Parameters.NumericFocus = 3;
             // this._model.Parameters.Quad = 1;
             // this._model.Parameters.QCPDual = 1;
             // this._model.Set(GRB.DoubleParam.IntFeasTol, this._tolerance);
             // this._model.Set(GRB.DoubleParam.FeasibilityTol, this._tolerance);
             this._model.Parameters.PreSparsify = 2;
+            this._model.Parameters.Symmetry = 2;
             // string exhaust_dir_name = @"../logs/grbsos_exhaust/rand_" + (new Random()).Next(1000) + @"/";
             // Directory.CreateDirectory(exhaust_dir_name);
             // this._model.Write($"{exhaust_dir_name}/model_" + DateTime.Now.Millisecond + ".lp");
