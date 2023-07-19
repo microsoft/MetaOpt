@@ -875,7 +875,8 @@ namespace MetaOptimize
             {
                 string exhaust_dir_name = @"../logs/grbsos_exhaust/rand_" + (new Random()).Next(1000) + @"/";
                 Directory.CreateDirectory(exhaust_dir_name);
-                this._model.Write($"{exhaust_dir_name}/model_feas_reduce_" + DateTime.Now.Millisecond + ".lp");
+                this._model.Write($"{exhaust_dir_name}/model_feas_reduce.lp");
+                this._model.Write($"{exhaust_dir_name}/model_feas_reduce.sol");
             }
 
             return this._model;
