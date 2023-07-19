@@ -65,13 +65,13 @@ namespace MetaOptimize
             this.constantVariables = constVariables;
         }
 
-        /// <summary>
+        /*/// <summary>
         /// Add a variable to the set of constant variables.
         /// </summary>
         public void AddConstantVar(TVar variable)
         {
             this.constantVariables.Add(variable);
-        }
+        }*/
 
         /// <summary>
         /// Add a constraint that a polynomial is less than or equal to zero.
@@ -95,7 +95,7 @@ namespace MetaOptimize
         /// Get the constraints for the encoding.
         /// </summary>
         /// <returns>The result as a Zen boolean expression.</returns>
-        public void AddConstraints()
+        protected void AddConstraints()
         {
             foreach (var leqZeroConstraint in this.leqZeroConstraints)
             {
@@ -124,15 +124,7 @@ namespace MetaOptimize
         public virtual void AddMinimizationConstraints(Polynomial<TVar> objective, bool noKKT, bool verbose = false)
         {
             Utils.logger("using KKT encoding", verbose, Utils.LogState.WARNING);
-            foreach (var leqZeroConstraint in this.leqZeroConstraints)
-            {
-                this.solver.AddLeqZeroConstraint(leqZeroConstraint);
-            }
-
-            foreach (var eqZeroConstraint in this.eqZeroConstraints)
-            {
-                this.solver.AddEqZeroConstraint(eqZeroConstraint);
-            }
+            AddConstraints();
 
             if (!noKKT)
             {
