@@ -11,22 +11,21 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.11.0" />
-    <PackageReference Include="MSTest.TestAdapter" Version="2.2.7" />
-    <PackageReference Include="MSTest.TestFramework" Version="2.2.7" />
-    <PackageReference Include="coverlet.collector" Version="3.1.0" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.6.3" />
+    <PackageReference Include="MSTest.TestAdapter" Version="3.1.1" />
+    <PackageReference Include="MSTest.TestFramework" Version="3.1.1" />
+    <PackageReference Include="coverlet.collector" Version="6.0.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
     <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
     <PackageReference Include="ZenLib" Version="2.2.4" />
 	<PackageReference Include="Gurobi.Optimizer" Version="10.0.2" />
   </ItemGroup>
 
-  <Import Project="..\.stylecop\StyleCop.props" />
+  <!--<Import Project="..\.stylecop\StyleCop.props" />-->
 
   <ItemGroup>
     <ProjectReference Include="..\MetaOptimize\MetaOptimize.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Explainability\" />
   </ItemGroup>
 </Project>
