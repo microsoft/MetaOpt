@@ -25,4 +25,8 @@
   <ItemGroup>
     <ProjectReference Include="..\MetaOptimize\MetaOptimize.csproj" />
   </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Explainability\" />
+  </ItemGroup>
 </Project>
