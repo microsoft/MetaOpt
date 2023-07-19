@@ -861,7 +861,7 @@ namespace MetaOptimize
             this._model.Optimize();
             if (this._model.Status != GRB.Status.TIME_LIMIT & this._model.Status != GRB.Status.OPTIMAL & this._model.Status != GRB.Status.INTERRUPTED)
             {
-                this._model.Parameters.DualReductions = 0;
+/*                this._model.Parameters.DualReductions = 0;
                 this._model.Reset();
                 this._model.Optimize();
                 this._model.ComputeIIS();
