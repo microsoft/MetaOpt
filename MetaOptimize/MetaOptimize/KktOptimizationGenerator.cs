@@ -137,7 +137,7 @@ namespace MetaOptimize
                     {
                         continue;
                     }
-                    var lambda = this.solver.CreateVariable("lambda_" + i);
+                    var lambda = this.solver.CreateVariable("mu" + i);
                     haveLambda[i] = lambdaVariables.Count;
                     this.lambdaVariables.Add(lambda);
 
@@ -152,7 +152,7 @@ namespace MetaOptimize
                         continue;
                     }
                     haveNu[i] = this.nuVariables.Count;
-                    this.nuVariables.Add(this.solver.CreateVariable("nu_" + i));
+                    this.nuVariables.Add(this.solver.CreateVariable("lambda" + i));
                 }
 
                 foreach (var variable in this.Variables)

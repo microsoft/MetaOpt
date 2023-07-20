@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Transactions;
 using Gurobi;
 using ZenLib;
 
@@ -632,10 +633,18 @@ namespace MetaOptimize
             var vars = new List<GRBVar>();
             foreach (var expr in exprs)
             {
-                var v = this._model.AddVar(Double.NegativeInfinity, Double.PositiveInfinity, 0, GRB.CONTINUOUS, "aux_" + this._auxiliaryVars.Count);
-                this._auxiliaryVars.Add($"aux_{this._auxiliaryVars.Count}", v);
-                this._model.AddConstr(expr, GRB.EQUAL, v, "eq_index_" + this._constraintEqCount++);
-                vars.Add(v);
+                // Avoid creating a variable if it's not needed
+                if (expr.Size == 1 && expr.Constant == 0 && expr.GetCoeff(0) is 1 or -1)
+                {
+                    vars.Add(expr.GetVar(0));
+                }
+                else
+                {
+                    var v = this._model.AddVar(Double.NegativeInfinity, Double.PositiveInfinity, 0, GRB.CONTINUOUS, "aux_" + this._auxiliaryVars.Count);
+                    this._auxiliaryVars.Add($"aux_{this._auxiliaryVars.Count}", v);
+                    this._model.AddConstr(expr, GRB.EQUAL, v, "eq_index_" + this._constraintEqCount++);
+                    vars.Add(v);
+                }
             }
 
             // Add SOS constraint.
@@ -876,6 +885,7 @@ namespace MetaOptimize
                 string exhaust_dir_name = @"../logs/grbsos_exhaust/rand_" + (new Random()).Next(1000) + @"/";
                 Directory.CreateDirectory(exhaust_dir_name);
                 this._model.Write($"{exhaust_dir_name}/model_feas_reduce.lp");
+                this._model.Write($"{exhaust_dir_name}/model_feas_reduce.mps");
                 this._model.Write($"{exhaust_dir_name}/model_feas_reduce.sol");
             }
 
