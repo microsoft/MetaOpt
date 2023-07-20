@@ -51,13 +51,5 @@ namespace MetaOptimize.Test
             Assert.IsTrue(Utils.IsApproximately(0, solver.GetVariable(solution, x)));
             Assert.IsTrue(Utils.IsApproximately(5, solver.GetVariable(solution, y)));
         }
-
-        /// <summary>
-        /// Test that maximization works via the kkt conditions.
-        /// </summary>
-        [TestMethod]
-        public void TestMaximizeKkt2()
-        {
-        }
     }
 }
