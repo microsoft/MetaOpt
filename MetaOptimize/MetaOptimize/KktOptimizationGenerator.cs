@@ -5,6 +5,7 @@
 namespace MetaOptimize
 {
     using System.Collections.Generic;
+    using System.Diagnostics;
     using System.Linq;
     using ZenLib;
 
@@ -54,7 +55,7 @@ namespace MetaOptimize
         /// <param name="variables">The encoding variables.</param>
         /// <param name="constVariables">The variables to avoid the deriviatve for.</param>
         /// <param name="solver">The solver.</param>
-        public KktOptimizationGenerator(ISolver<TVar, TSolution>  solver, ISet<TVar> variables, ISet<TVar> constVariables)
+        public KktOptimizationGenerator(ISolver<TVar, TSolution> solver, ISet<TVar> variables, ISet<TVar> constVariables)
         {
             this.Variables = variables;
             this.solver = solver;
