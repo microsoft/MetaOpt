@@ -43,9 +43,9 @@ namespace MetaOptimize.Test
             Console.WriteLine(Newtonsoft.Json.JsonConvert.SerializeObject(optimizationSolution, Newtonsoft.Json.Formatting.Indented));
 
             // sk todo: AreEqual will fail due to doubles not matching; edit as below
-            Assert.IsTrue(TestHelper.IsApproximately(5, optimizationSolution.MaxObjective));
+            Assert.IsTrue(Utils.IsApproximately(5, optimizationSolution.MaxObjective));
             Assert.IsTrue(5 <= optimizationSolution.Demands[("a", "b")]);
-            Assert.IsTrue(TestHelper.IsApproximately(5, optimizationSolution.Flows[("a", "b")]));
+            Assert.IsTrue(Utils.IsApproximately(5, optimizationSolution.Flows[("a", "b")]));
             Assert.IsTrue(0 <= optimizationSolution.Demands[("b", "a")]);
             Assert.AreEqual(0, optimizationSolution.Flows[("b", "a")]);
         }

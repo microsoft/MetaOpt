@@ -158,7 +158,120 @@ namespace MetaOptimize
             var solution = solver.Maximize(objective, reset: true);
 
             solution = SimplifyAdversarialInputs(simplify, optimalEncoder, heuristicEncoder, solution, objective);
-            return ((TEOptimizationSolution)optimalEncoder.GetSolution(solution), (TEOptimizationSolution)heuristicEncoder.GetSolution(solution));
+
+            var optSol = (TEOptimizationSolution)optimalEncoder.GetSolution(solution);
+            var heuSol = (TEOptimizationSolution)heuristicEncoder.GetSolution(solution);
+            return (optSol, heuSol);
+        }
+
+        /// <summary>
+        /// Find an adversarial input that takes the value of the optimal as an input.
+        ///  Then, it maximizes the gap of the heuristic given the optimal value.
+        /// </summary>
+        public virtual List<(TEOptimizationSolution, TEOptimizationSolution)> MaximizeOptimalityGapGivenOpt(
+            IEncoder<TVar, TSolution> optimalEncoder,
+            IEncoder<TVar, TSolution> heuristicEncoder,
+            double optimalObj,
+            double demandUB = -1,
+            InnerEncodingMethodChoice innerEncoding = InnerEncodingMethodChoice.KKT,
+            IDemandList demandList = null,
+            IDictionary<(string, string), double> constrainedDemands = null,
+            bool simplify = false,
+            bool verbose = false,
+            bool cleanUpSolver = true,
+            IDictionary<(string, string), double> perDemandUB = null,
+            IDictionary<(string, string), double> demandInits = null,
+            double density = 1.0,
+            double LargeDemandLB = -1,
+            int LargeMaxDistance = -1,
+            int SmallMaxDistance = -1,
+            PathType pathType = PathType.KSP,
+            Dictionary<(string, string), string[][]> selectedPaths = null,
+            Dictionary<(int, string, string), double> historicDemandConstraints = null,
+            int solutionCount = 0)
+        {
+            if (optimalEncoder.Solver != heuristicEncoder.Solver)
+            {
+                throw new Exception("Solver mismatch between optimal and heuristic encoders.");
+            }
+            if (innerEncoding == InnerEncodingMethodChoice.PrimalDual & demandList == null)
+            {
+                throw new Exception("should provide the demand list if inner encoding method is primal dual.");
+            }
+            if (demandUB != -1 & perDemandUB != null)
+            {
+                throw new Exception("if global demand ub is enabled, then perDemandUB should be null");
+            }
+            if (pathType == PathType.Predetermined && selectedPaths == null)
+            {
+                throw new Exception("if path type is predetermined, the paths should not be null");
+            }
+            if (pathType != PathType.Predetermined && selectedPaths != null)
+            {
+                throw new Exception("if path type is not predetermined, the paths should be null");
+            }
+            if (solutionCount > 1 && simplify == true)
+            {
+                throw new Exception("simplify is not implemented yet when looking for more than one solution");
+            }
+            CheckDensityAndLocalityInputs(innerEncoding, density, LargeDemandLB, LargeMaxDistance, SmallMaxDistance);
+
+            var solver = optimalEncoder.Solver;
+            if (cleanUpSolver)
+            {
+                solver.CleanAll();
+            }
+
+            Utils.logger("creating demand variables.", verbose);
+            Utils.logger("max large demand distance: " + LargeMaxDistance, verbose);
+            Utils.logger("max small demand distance: " + SmallMaxDistance, verbose);
+            Utils.logger("large demand lb: " + LargeDemandLB, verbose);
+            (this.DemandVariables, this.LocalityConstrainedDemands) =
+                        CreateDemandVariables(solver, innerEncoding, demandList, demandInits, LargeDemandLB, LargeMaxDistance, SmallMaxDistance);
+            Utils.logger("generating optimal encoding.", verbose);
+            var optimalEncoding = optimalEncoder.Encoding(this.Topology, preDemandVariables: this.DemandVariables,
+                    innerEncoding: innerEncoding, numProcesses: this.NumProcesses, verbose: verbose,
+                    demandEqualityConstraints: LocalityConstrainedDemands, noAdditionalConstraints: true,
+                    pathType: pathType, selectedPaths: selectedPaths, historicDemandConstraints: historicDemandConstraints);
+            Utils.logger("generating heuristic encoding.", verbose);
+            var heuristicEncoding = heuristicEncoder.Encoding(this.Topology, preDemandVariables: this.DemandVariables,
+                    innerEncoding: innerEncoding, numProcesses: this.NumProcesses, verbose: verbose,
+                    demandEqualityConstraints: LocalityConstrainedDemands,
+                    pathType: pathType, selectedPaths: selectedPaths, historicDemandConstraints: historicDemandConstraints);
+
+            // ensures that demand in both problems is the same and lower than demand upper bound constraint.
+            Utils.logger("adding constraints for upper bound on demands.", verbose);
+            if (perDemandUB != null)
+            {
+                EnsureDemandUB(solver, perDemandUB);
+            }
+            else
+            {
+                EnsureDemandUB(solver, demandUB);
+            }
+            Utils.logger("adding equality constraints for specified demands.", verbose);
+            EnsureDemandEquality(solver, constrainedDemands);
+            Utils.logger("Adding density constraint: max density = " + density, verbose);
+            EnsureDensityConstraint(solver, density);
+
+            Utils.logger("setting the objective of OPT.", verbose);
+            var optPoly = optimalEncoding.MaximizationObjective.Negate();
+            optPoly.Add(new Term<TVar>(-optimalObj));
+            solver.AddEqZeroConstraint(optPoly);
+
+            Utils.logger("setting the objective of MetaOpt.", verbose);
+            var objective = heuristicEncoding.MaximizationObjective.Negate();
+            var solution = solver.Maximize(objective, reset: true, solutionCount: solutionCount);
+
+            solution = SimplifyAdversarialInputs(simplify, optimalEncoder, heuristicEncoder, solution, objective);
+
+            var solList = new List<(TEOptimizationSolution, TEOptimizationSolution)>();
+            for (int sNumber = 0; sNumber < solutionCount; sNumber++) {
+                var optSol = (TEOptimizationSolution)optimalEncoder.GetSolution(solution, sNumber);
+                var heuSol = (TEOptimizationSolution)heuristicEncoder.GetSolution(solution, sNumber);
+                solList.Add((optSol, heuSol));
+            }
+            return solList;
         }
 
         private static void CheckDensityAndLocalityInputs(

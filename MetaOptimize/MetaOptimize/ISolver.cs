@@ -37,8 +37,9 @@ namespace MetaOptimize
         /// </summary>
         /// <param name="solution">The solver solution.</param>
         /// <param name="variable">The variable.</param>
+        /// <param name="solutionNumber"> which solution to return (if multiple solutions). </param>
         /// <returns>The value as a double.</returns>
-        public double GetVariable(TSolution solution, TVar variable);
+        public double GetVariable(TSolution solution, TVar variable, int solutionNumber = 0);
 
         /// <summary>
         /// Get the resulting value assigned to a variable.
@@ -203,6 +204,11 @@ namespace MetaOptimize
         /// </summary>
         /// <returns>A solution.</returns>
         public TSolution Maximize(Polynomial<TVar> objective, bool reset);
+
+        /// <summary>
+        /// find the top $k$ solutions.
+        /// </summary>
+        public TSolution Maximize(Polynomial<TVar> objective, bool reset, int solutionCount);
 
         /// <summary>
         /// Maximize a quadratic objective with objective as input.

@@ -49,8 +49,8 @@ namespace MetaOptimize.Test
             Console.WriteLine(Newtonsoft.Json.JsonConvert.SerializeObject(optimalSolution, Newtonsoft.Json.Formatting.Indented));
             Console.WriteLine(Newtonsoft.Json.JsonConvert.SerializeObject(popSolution, Newtonsoft.Json.Formatting.Indented));
 
-            Assert.IsTrue(TestHelper.IsApproximately(40, ((TEMaxFlowOptimizationSolution)optimalSolution).MaxObjective));
-            Assert.IsTrue(TestHelper.IsApproximately(20, ((TEMaxFlowOptimizationSolution)popSolution).MaxObjective));
+            Assert.IsTrue(Utils.IsApproximately(40, ((TEMaxFlowOptimizationSolution)optimalSolution).MaxObjective));
+            Assert.IsTrue(Utils.IsApproximately(20, ((TEMaxFlowOptimizationSolution)popSolution).MaxObjective));
         }
     }
 }

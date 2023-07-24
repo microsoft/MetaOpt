@@ -516,7 +516,7 @@ namespace MetaOptimize
         /// </summary>
         public virtual GRBModel Maximize(Polynomial<GRBVar> objective, bool reset)
         {
-            throw new Exception("this part should be reimplemented based GurobiSoS");
+            throw new Exception("this part should be reimplemented based on GurobiSoS");
         }
 
         /// <summary>
@@ -528,6 +528,19 @@ namespace MetaOptimize
             SetObjective(objective);
             return Maximize();
         }
+
+        /// <summary>
+        /// find the top $k$ solutions.
+        /// </summary>
+        public virtual GRBModel Maximize(Polynomial<GRBVar> objective, bool reset, int solutionCount)
+        {
+            if (solutionCount > 1) {
+                this._model.Parameters.PoolSearchMode = 2;
+                this._model.Parameters.PoolSolutions = solutionCount;
+            }
+            return Maximize(objective, reset);
+        }
+
         /// <summary>
         /// check feasibility.
         /// </summary>
@@ -546,10 +559,8 @@ namespace MetaOptimize
         /// <summary>
         /// Get the resulting value assigned to a variable.
         /// </summary>
-        /// <param name="solution">The solver solution.</param>
-        /// <param name="variable">The variable.</param>
         /// <returns>The value as a double.</returns>
-        public double GetVariable(GRBModel solution, GRBVar variable)
+        public double GetVariable(GRBModel solution, GRBVar variable, int solutionNumber = 0)
         {
             if (!this._modelRun)
             {
@@ -558,22 +569,33 @@ namespace MetaOptimize
             int status = _model.Status;
             if (status == GRB.Status.INFEASIBLE || status == GRB.Status.INF_OR_UNBD)
             {
-                Console.WriteLine("The model cannot be solved because it is "
-                    + "infeasible");
-                Environment.Exit(1);
+                throw new Exception("The model cannot be solved because it is infeasible");
             }
             if (status == GRB.Status.UNBOUNDED)
             {
-                Console.WriteLine("The model cannot be solved because it is "
-                    + "unbounded");
-                Environment.Exit(1);
+                throw new Exception("The model cannot be solved because it is unbounded");
             }
             if (status != GRB.Status.OPTIMAL)
             {
-                Console.WriteLine("Optimization was stopped with status " + status);
-                Environment.Exit(1);
+                throw new Exception("Optimization was stopped with status " + status);
             }
-            return variable.X;
+            if (solutionNumber >= this._model.SolCount)
+            {
+                throw new Exception("solutionNumber should be less than or" +
+                    "to the number of available solutions");
+            }
+
+            double variableValue = 0.0;
+            if (solution.Status != GRB.Status.OPTIMAL) {
+                variableValue = variable.Xn;
+            } else if (solutionNumber > 0) {
+                this._model.Parameters.SolutionNumber = solutionNumber;
+                variableValue = variable.Xn;
+                this._model.Parameters.SolutionNumber = 0;
+            } else {
+                variableValue = variable.X;
+            }
+            return variableValue;
         }
 
         /// <summary>

@@ -43,11 +43,11 @@ namespace MetaOptimize.Test
 
             Console.WriteLine(Newtonsoft.Json.JsonConvert.SerializeObject(optimizationSolution, Newtonsoft.Json.Formatting.Indented)); */
 
-            Assert.IsTrue(TestHelper.IsApproximately(10, optimizationSolution.MaxObjective));
+            Assert.IsTrue(Utils.IsApproximately(10, optimizationSolution.MaxObjective));
             Assert.IsTrue(10 <= optimizationSolution.Demands[("a", "b")]);
-            Assert.IsTrue(TestHelper.IsApproximately(10, optimizationSolution.Flows[("a", "b")]));
+            Assert.IsTrue(Utils.IsApproximately(10, optimizationSolution.Flows[("a", "b")]));
             Assert.IsTrue(0 <= optimizationSolution.Demands[("b", "a")]);
-            Assert.IsTrue(TestHelper.IsApproximately(0, optimizationSolution.Flows[("b", "a")]));
+            Assert.IsTrue(Utils.IsApproximately(0, optimizationSolution.Flows[("b", "a")]));
         }
         /// <summary>
         /// Does not use KKT conditions, ensuring the
@@ -67,11 +67,11 @@ namespace MetaOptimize.Test
             var solverSolution = optimalEncoder.Solver.Maximize(encoding.GlobalObjective);
             var optimizationSolution = (TEMaxFlowOptimizationSolution)optimalEncoder.GetSolution(solverSolution);
 
-            Assert.IsTrue(TestHelper.IsApproximately(10, optimizationSolution.MaxObjective));
+            Assert.IsTrue(Utils.IsApproximately(10, optimizationSolution.MaxObjective));
             Assert.IsTrue(10 <= optimizationSolution.Demands[("a", "b")]);
-            Assert.IsTrue(TestHelper.IsApproximately(10, optimizationSolution.Flows[("a", "b")]));
+            Assert.IsTrue(Utils.IsApproximately(10, optimizationSolution.Flows[("a", "b")]));
             Assert.IsTrue(0 <= optimizationSolution.Demands[("b", "a")]);
-            Assert.IsTrue(TestHelper.IsApproximately(0, optimizationSolution.Flows[("b", "a")]));
+            Assert.IsTrue(Utils.IsApproximately(0, optimizationSolution.Flows[("b", "a")]));
         }
 
         /// <summary>
@@ -104,14 +104,14 @@ namespace MetaOptimize.Test
 
             Console.WriteLine(Newtonsoft.Json.JsonConvert.SerializeObject(optimizationSolution, Newtonsoft.Json.Formatting.Indented)); */
 
-            Assert.IsTrue(TestHelper.IsApproximately(40, optimizationSolution.MaxObjective));
+            Assert.IsTrue(Utils.IsApproximately(40, optimizationSolution.MaxObjective));
             Assert.IsTrue(10 <= optimizationSolution.Demands[("a", "b")]);
-            Assert.IsTrue(TestHelper.IsApproximately(10, optimizationSolution.Flows[("a", "b")]));
+            Assert.IsTrue(Utils.IsApproximately(10, optimizationSolution.Flows[("a", "b")]));
             Assert.IsTrue(10 <= optimizationSolution.Demands[("a", "c")]);
-            Assert.IsTrue(TestHelper.IsApproximately(10, optimizationSolution.Flows[("a", "c")]));
+            Assert.IsTrue(Utils.IsApproximately(10, optimizationSolution.Flows[("a", "c")]));
             Assert.IsTrue(10 <= optimizationSolution.Demands[("b", "d")]);
-            Assert.IsTrue(TestHelper.IsApproximately(10, optimizationSolution.Flows[("c", "d")]));
-            Assert.IsTrue(TestHelper.IsApproximately(0, optimizationSolution.Flows[("a", "d")]));
+            Assert.IsTrue(Utils.IsApproximately(10, optimizationSolution.Flows[("c", "d")]));
+            Assert.IsTrue(Utils.IsApproximately(0, optimizationSolution.Flows[("a", "d")]));
         }
         /// <summary>
         /// Test that the optimal encoder works with a diamond topology.
@@ -143,14 +143,14 @@ namespace MetaOptimize.Test
 
             Console.WriteLine(Newtonsoft.Json.JsonConvert.SerializeObject(optimizationSolution, Newtonsoft.Json.Formatting.Indented)); */
 
-            Assert.IsTrue(TestHelper.IsApproximately(40, optimizationSolution.MaxObjective));
+            Assert.IsTrue(Utils.IsApproximately(40, optimizationSolution.MaxObjective));
             Assert.IsTrue(10 <= optimizationSolution.Demands[("a", "b")]);
-            Assert.IsTrue(TestHelper.IsApproximately(10, optimizationSolution.Flows[("a", "b")]));
+            Assert.IsTrue(Utils.IsApproximately(10, optimizationSolution.Flows[("a", "b")]));
             Assert.IsTrue(10 <= optimizationSolution.Demands[("a", "c")]);
-            Assert.IsTrue(TestHelper.IsApproximately(10, optimizationSolution.Flows[("a", "c")]));
+            Assert.IsTrue(Utils.IsApproximately(10, optimizationSolution.Flows[("a", "c")]));
             Assert.IsTrue(10 <= optimizationSolution.Demands[("b", "d")]);
-            Assert.IsTrue(TestHelper.IsApproximately(10, optimizationSolution.Flows[("c", "d")]));
-            Assert.IsTrue(TestHelper.IsApproximately(0, optimizationSolution.Flows[("a", "d")]));
+            Assert.IsTrue(Utils.IsApproximately(10, optimizationSolution.Flows[("c", "d")]));
+            Assert.IsTrue(Utils.IsApproximately(0, optimizationSolution.Flows[("a", "d")]));
         }
     }
 }

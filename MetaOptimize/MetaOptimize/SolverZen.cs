@@ -127,11 +127,13 @@ namespace MetaOptimize
         /// <summary>
         /// Get the resulting value assigned to a variable.
         /// </summary>
-        /// <param name="solution">The solver solution.</param>
-        /// <param name="variable">The variable.</param>
         /// <returns>The value as a double.</returns>
-        public double GetVariable(ZenSolution solution, Zen<Real> variable)
+        public double GetVariable(ZenSolution solution, Zen<Real> variable, int solutionNumber = 0)
         {
+            if (solutionNumber != 0) {
+                throw new Exception("not implemented yet");
+            }
+
             var value = solution.Get(variable).ToString();
             var result = value.Split('/');
 
@@ -361,6 +363,14 @@ namespace MetaOptimize
             // }
             SetObjective(objective);
             return Maximize();
+        }
+
+        /// <summary>
+        /// find the top $k$ solutions.
+        /// </summary>
+        public virtual ZenSolution Maximize(Polynomial<Zen<Real>> objective, bool reset, int solutionCount)
+        {
+            throw new Exception("Not implemented yet.");
         }
 
         /// <summary>

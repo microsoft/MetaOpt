@@ -53,7 +53,7 @@
             Console.WriteLine($"optimalG={optimal}, heuristicG={heuristic}");
             // Assert.IsTrue(TestHelper.IsApproximately(40, optimal));
             // Assert.IsTrue(TestHelper.IsApproximately(35, heuristic));
-            Assert.IsTrue(TestHelper.IsApproximately(10, optimal - heuristic));
+            Assert.IsTrue(Utils.IsApproximately(10, optimal - heuristic));
         }
     }
 }

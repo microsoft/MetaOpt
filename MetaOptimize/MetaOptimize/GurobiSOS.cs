@@ -834,6 +834,18 @@ namespace MetaOptimize
         }
 
         /// <summary>
+        /// find the top $k$ solutions.
+        /// </summary>
+        public virtual GRBModel Maximize(Polynomial<GRBVar> objective, bool reset, int solutionCount)
+        {
+            if (solutionCount > 1) {
+                this._model.Parameters.PoolSearchMode = 2;
+                this._model.Parameters.PoolSolutions = solutionCount;
+            }
+            return Maximize(objective, reset);
+        }
+
+        /// <summary>
         /// Reset the timer and then maximize.
         /// </summary>
         public virtual GRBModel Maximize(Polynomial<GRBVar> objective, bool reset)
@@ -933,10 +945,8 @@ namespace MetaOptimize
         /// <summary>
         /// Get the resulting value assigned to a variable.
         /// </summary>
-        /// <param name="solution">The solver solution.</param>
-        /// <param name="variable">The variable.</param>
         /// <returns>The value as a double.</returns>
-        public double GetVariable(GRBModel solution, GRBVar variable)
+        public double GetVariable(GRBModel solution, GRBVar variable, int solutionNumber = 0)
         {
             // Maximize() above is a synchronous call; not sure if this check is needed
             if (solution.Status != GRB.Status.USER_OBJ_LIMIT & solution.Status != GRB.Status.TIME_LIMIT
@@ -945,10 +955,23 @@ namespace MetaOptimize
                 throw new Exception("can't read status since model is not optimal");
             }
 
-            if (solution.Status != GRB.Status.OPTIMAL) {
-                return variable.Xn;
+            if (solutionNumber >= this._model.SolCount)
+            {
+                throw new Exception($"solutionNumber (={solutionNumber}) should be less than or" +
+                    $"to the number of available solutions (={this._model.SolCount}).");
             }
-            return variable.X;
+
+            double variableValue = 0.0;
+            if (solution.Status != GRB.Status.OPTIMAL) {
+                variableValue = variable.Xn;
+            } else if (solutionNumber > 0) {
+                this._model.Parameters.SolutionNumber = solutionNumber;
+                variableValue = variable.Xn;
+                this._model.Parameters.SolutionNumber = 0;
+            } else {
+                variableValue = variable.X;
+            }
+            return variableValue;
         }
 
         /// <summary>
