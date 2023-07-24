@@ -1,16 +1,16 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <OutputType>Exe</OutputType>
-    <TargetFramework>net7.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>disable</Nullable>
-    <Platforms>x64</Platforms>
-	<PlatformTarget>x64</PlatformTarget>
-	<StartupObject>MetaOptimize.Cli.Program</StartupObject>
-  </PropertyGroup>
+	<PropertyGroup>
+		<OutputType>Exe</OutputType>
+		<TargetFramework>net7.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>disable</Nullable>
+		<Platforms>x64</Platforms>
+		<PlatformTarget>x64</PlatformTarget>
+		<StartupObject>MetaOptimize.Cli.Program</StartupObject>
+	</PropertyGroup>
 
-  <Import Project="..\.stylecop\StyleCop.props" />
+	<Import Project="..\.stylecop\StyleCop.props" />
 
   <ItemGroup>
     <PackageReference Include="CommandLineParser" Version="2.8.0" />
@@ -21,13 +21,19 @@
     <PackageReference Include="ZenLib" Version="2.2.4" />
   </ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\MetaOptimize.Test\MetaOptimize.Test.csproj" />
-    <ProjectReference Include="..\MetaOptimize\MetaOptimize.csproj" />
-  </ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\MetaOptimize.Test\MetaOptimize.Test.csproj" />
+		<ProjectReference Include="..\MetaOptimize\MetaOptimize.csproj" />
+	</ItemGroup>
 
-  <Target Condition="$(USERNAME) == 't-spirellixxx'" Name="PostBuild" AfterTargets="PostBuildEvent">
-	<!-- /T means copy recursively, /E to create the hierarchy if needed, /I to assume the destination is a folder, /Y to overwrite without prompting -->
-    <Exec Command="xcopy /E /I /Y C:\Users\t-spirelli\source\repos\wanrisk\MetaOptimize\MetaOptimize.Cli\bin \\GCR-SANDBOX-019\\C$\Users\t-spirelli\source\repos\wanrisk\MetaOptimize\MetaOptimize.Cli\bin" />
-  </Target>
+	<PropertyGroup>
+		<RemoteUser>t-spirelli</RemoteUser>
+		<RemoteMachine>GCR-SANDBOX-013</RemoteMachine>
+	</PropertyGroup>
+	<Target Condition="$(USERNAME) == $(RemoteUser)" Name="PostBuild" AfterTargets="PostBuildEvent">
+		<!-- Delete resource files so we don't spend time copying them -->
+		<Exec Command="del /S $(MSBuildProjectDirectory)\$(OutDir)\*.resources.dll" />
+		<!-- /T means copy recursively, /E to create the hierarchy if needed, /I to assume the destination is a folder, /Y to overwrite without prompting -->
+		<Exec Command="xcopy /E /I /Y $(MSBuildProjectDirectory)\$(OutDir) \\$(RemoteMachine)\\$(MSBuildProjectDirectory.Replace(':', '$'))\$(OutDir)" />
+	</Target>
 </Project>

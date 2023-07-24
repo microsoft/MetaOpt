@@ -102,14 +102,12 @@ namespace MetaOptimize
             this._model.Dispose();
         }
 
-        private bool _disableCallback;
         private GurobiCallback guorbiCallback;
         // private GurobiTerminationCallback gurobiTerminationCallback;
         // private GurobiStoreProgressCallback gurobiStoreProgressCallback;
         // private GurobiTimeoutCallback gurobiTimeoutCallback;
         private void SetCallbacks(bool disableStoreProgress = false)
         {
-            if (_disableCallback) return;
             var fileExtension = Path.GetExtension(this._logFileFilename);
             var filename = Path.GetFileNameWithoutExtension(this._logFileFilename);
             var progress = this._storeProgress;
@@ -140,7 +138,6 @@ namespace MetaOptimize
         /// </summary>
         protected void ResetCallbackTimer()
         {
-            if (_disableCallback) return;
             this.guorbiCallback.ResetAll();
             // if (this._timeToTerminateIfNoImprovement > 0 & this._storeProgress) {
             //     this.guorbiCallback.ResetTermination();
@@ -159,7 +156,7 @@ namespace MetaOptimize
         /// constructor.
         /// </summary>
         public GurobiSOS(double timeout = double.PositiveInfinity, int verbose = 0, int numThreads = 0, double timeToTerminateNoImprovement = -1,
-                bool recordProgress = false, string logPath = null, bool focusBstBd = false, bool disableCallback=false)
+                bool recordProgress = false, string logPath = null, bool focusBstBd = false)
         {
             this._model = new GRBModel(GurobiEnvironment.Instance);
             this._timeout = timeout;
@@ -192,7 +189,6 @@ namespace MetaOptimize
                     throw new Exception("logDirname and logFilename should be specified when recordProgress is true");
                 }
             }
-            this._disableCallback = disableCallback;
             SetCallbacks();
         }
 
