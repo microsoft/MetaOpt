@@ -831,7 +831,7 @@ namespace MetaOptimize
         /// <returns>A solution.</returns>
         public virtual GRBModel Maximize()
         {
-            Console.WriteLine("in maximize call");
+            // Console.WriteLine("in maximize call");
             GRBLinExpr objective = 0;
             foreach (var auxVar in auxPolyList)
             {
