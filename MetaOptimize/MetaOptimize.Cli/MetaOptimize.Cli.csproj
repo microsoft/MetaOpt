@@ -32,7 +32,10 @@
 	<Target Condition="$(USERNAME) == $(RemoteUser)" Name="PostBuild" AfterTargets="PostBuildEvent">
 		<!-- Delete resource files so we don't spend time copying them -->
 		<Exec Command="del /S $(MSBuildProjectDirectory)\$(OutDir)\*.resources.dll" />
-		<!-- /T means copy recursively, /E to create the hierarchy if needed, /I to assume the destination is a folder, /Y to overwrite without prompting -->
-		<Exec Command="xcopy /E /I /Y $(MSBuildProjectDirectory)\$(OutDir) \\$(RemoteMachine)\\$(MSBuildProjectDirectory.Replace(':', '$'))\$(OutDir)" />
+		<!-- Some error code trickery needed since robocopy has successful nonzero exit codes, see https://stackoverflow.com/a/39810469 -->
+		<Exec ContinueOnError="true" Command="robocopy $(MSBuildProjectDirectory)\$(OutDir) \\$(RemoteMachine)\\$(MSBuildProjectDirectory.Replace(':', '$'))\$(OutDir)">
+			<Output TaskParameter="ExitCode" PropertyName="ErrorCode"/>
+		</Exec>
+		<Error Condition="$(ErrorCode) &gt; 8" Message="Robocopy failed"/>
 	</Target>
 </Project>
