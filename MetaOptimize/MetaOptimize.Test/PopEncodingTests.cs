@@ -12,8 +12,7 @@ namespace MetaOptimize.Test
     /// <summary>
     /// Test that the pop encoding is working.
     /// </summary>
-    [TestClass]
-    public class PopEncodingTests<TVar, TSol>
+    public abstract class PopEncodingTests<TVar, TSol>
     {
         /// <summary>
         /// Function to create a new solver.

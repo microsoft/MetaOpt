@@ -11,8 +11,7 @@ namespace MetaOptimize.Test
     /// <summary>
     /// Some basic optimization tests.
     /// </summary>
-    [TestClass]
-    public class KktOptimizationTests<TVar, TSol>
+    public abstract class KktOptimizationTests<TVar, TSol>
     {
         /// <summary>
         /// Function to create a new solver.

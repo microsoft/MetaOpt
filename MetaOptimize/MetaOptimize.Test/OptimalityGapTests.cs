@@ -10,8 +10,7 @@ namespace MetaOptimize.Test
     /// <summary>
     /// Test that the optimiality gap maximization is working.
     /// </summary>
-    [TestClass]
-    public class OptimalityGapTests<TVar, TSol>
+    public abstract class OptimalityGapTests<TVar, TSol>
     {
         /// <summary>
         /// Function to create a new solver.

@@ -26,7 +26,7 @@ namespace MetaOptimize
                     }
                     catch (GRBException e) when (e.Message.Contains("No Gurobi license found") || e.Message.Contains("Failed to connect"))
                     {
-                        throw new Exception("Gurobi license error, please fix the IP above", e);
+                        throw new Exception("Gurobi license error, please make sure you're on the right network/VPN and possibly fix the IP above", e);
                     }
                 }
                 return _env;

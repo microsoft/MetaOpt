@@ -7,8 +7,7 @@
     /// <summary>
     /// tests demand pinning.
     /// </summary>
-    [TestClass]
-    public class DemandPinningTests<TVar, TSol>
+    public abstract class DemandPinningTests<TVar, TSol>
     {
         /// <summary>
         /// Function to create a new solver.
