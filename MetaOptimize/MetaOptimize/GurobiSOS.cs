@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -867,10 +868,17 @@ namespace MetaOptimize
             // Directory.CreateDirectory(exhaust_dir_name);
             // this._model.Write($"{exhaust_dir_name}/model_" + DateTime.Now.Millisecond + ".lp");
 
+            string exhaust_dir_name = Directory.CreateTempSubdirectory("gurobisos_").FullName;
+#if true
+            this._model.Write($"{exhaust_dir_name}/model.lp");
+            this._model.Write($"{exhaust_dir_name}/model.mps");
+            Trace.WriteLine("GurobiSOS model in: " + exhaust_dir_name);
+#endif
+
             this._model.Optimize();
             if (this._model.Status != GRB.Status.TIME_LIMIT & this._model.Status != GRB.Status.OPTIMAL & this._model.Status != GRB.Status.INTERRUPTED)
             {
-/*                this._model.Parameters.DualReductions = 0;
+                this._model.Parameters.DualReductions = 0;
                 this._model.Reset();
                 this._model.Optimize();
                 this._model.ComputeIIS();
@@ -882,13 +890,7 @@ namespace MetaOptimize
             }
             else
             {
-#if false
-                string exhaust_dir_name = @"../logs/grbsos_exhaust/rand_" + (new Random()).Next(1000) + @"/";
-                Directory.CreateDirectory(exhaust_dir_name);
-                this._model.Write($"{exhaust_dir_name}/model_feas_reduce.lp");
-                this._model.Write($"{exhaust_dir_name}/model_feas_reduce.mps");
-                this._model.Write($"{exhaust_dir_name}/model_feas_reduce.sol");
-#endif
+                this._model.Write($"{exhaust_dir_name}/model.sol");
             }
 
             return this._model;

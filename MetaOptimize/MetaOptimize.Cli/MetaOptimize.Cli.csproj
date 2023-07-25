@@ -22,7 +22,6 @@
   </ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\MetaOptimize.Test\MetaOptimize.Test.csproj" />
 		<ProjectReference Include="..\MetaOptimize\MetaOptimize.csproj" />
 	</ItemGroup>
 
