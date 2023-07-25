@@ -5,7 +5,6 @@
 namespace MetaOptimize
 {
     using System.Collections.Generic;
-    using System.Diagnostics;
     using System.Linq;
     using ZenLib;
 
@@ -55,7 +54,7 @@ namespace MetaOptimize
         /// <param name="variables">The encoding variables.</param>
         /// <param name="constVariables">The variables to avoid the deriviatve for.</param>
         /// <param name="solver">The solver.</param>
-        public KktOptimizationGenerator(ISolver<TVar, TSolution> solver, ISet<TVar> variables, ISet<TVar> constVariables)
+        public KktOptimizationGenerator(ISolver<TVar, TSolution>  solver, ISet<TVar> variables, ISet<TVar> constVariables)
         {
             this.Variables = variables;
             this.solver = solver;
@@ -66,13 +65,13 @@ namespace MetaOptimize
             this.constantVariables = constVariables;
         }
 
-        /*/// <summary>
+        /// <summary>
         /// Add a variable to the set of constant variables.
         /// </summary>
         public void AddConstantVar(TVar variable)
         {
             this.constantVariables.Add(variable);
-        }*/
+        }
 
         /// <summary>
         /// Add a constraint that a polynomial is less than or equal to zero.
@@ -96,7 +95,7 @@ namespace MetaOptimize
         /// Get the constraints for the encoding.
         /// </summary>
         /// <returns>The result as a Zen boolean expression.</returns>
-        protected void AddConstraints()
+        public void AddConstraints()
         {
             foreach (var leqZeroConstraint in this.leqZeroConstraints)
             {
@@ -125,7 +124,15 @@ namespace MetaOptimize
         public virtual void AddMinimizationConstraints(Polynomial<TVar> objective, bool noKKT, bool verbose = false)
         {
             Utils.logger("using KKT encoding", verbose, Utils.LogState.WARNING);
-            AddConstraints();
+            foreach (var leqZeroConstraint in this.leqZeroConstraints)
+            {
+                this.solver.AddLeqZeroConstraint(leqZeroConstraint);
+            }
+
+            foreach (var eqZeroConstraint in this.eqZeroConstraints)
+            {
+                this.solver.AddEqZeroConstraint(eqZeroConstraint);
+            }
 
             if (!noKKT)
             {
