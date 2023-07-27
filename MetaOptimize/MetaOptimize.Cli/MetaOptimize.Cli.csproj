@@ -25,12 +25,38 @@
 		<ProjectReference Include="..\MetaOptimize\MetaOptimize.csproj" />
 	</ItemGroup>
 
-	<PropertyGroup>
-		<RemoteUser>t-spirelli</RemoteUser>
-		<RemoteMachine>GCR-SANDBOX-013</RemoteMachine>
-	</PropertyGroup>
-	<Target Condition="$(USERNAME) == $(RemoteUser)" Name="PostBuild" AfterTargets="PostBuildEvent">
-		<!-- Some error code trickery needed since robocopy has successful nonzero exit codes, see https://stackoverflow.com/a/39810469 -->
+	<!-- The remainder of this file automatically runs 'robocopy' to mirror the project output if remote debugging is enabled -->
+	<UsingTask TaskName="LaunchSettingsParser" TaskFactory="CodeTaskFactory" AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.v4.0.dll">
+		<ParameterGroup>
+			<Enabled Output="true" />
+			<Machine Output="true" />
+		</ParameterGroup>
+		<Task>
+			<Using Namespace="System.IO" />
+			<Using Namespace="System.Linq" />
+			<Code Type="Fragment" Language="cs">
+<![CDATA[
+var path = "Properties/launchSettings.json";
+if (!File.Exists(path))
+{
+	Enabled = "false";
+	return true;
+}
+var lines = File.ReadAllLines(path);
+Enabled = lines.Single(l => l.Contains("remoteDebugEnabled")).Split(':')[1].Trim().TrimEnd(',').Trim();
+Machine = lines.Single(l => l.Contains("remoteDebugMachine")).Split(':')[1].Trim().TrimEnd(',').Trim().Replace("\"", "");
+]]>
+			</Code>
+		</Task>
+	</UsingTask>
+	<Target Name="ParseLaunchSettings" AfterTargets="PostBuildEvent">
+		<LaunchSettingsParser>
+			<Output PropertyName="RemoteDebugEnabled" TaskParameter="Enabled" />
+			<Output PropertyName="RemoteMachine" TaskParameter="Machine" />
+		</LaunchSettingsParser>
+	</Target>
+	<Target Condition="$(RemoteDebugEnabled)" Name="PostBuild" AfterTargets="PostBuildEvent">
+		<!-- Some error code trickery needed since robocopy has successful nonzero exit codes, see https://stackoverflow.com/a/39810469 --> 
 		<Exec ContinueOnError="true" Command="robocopy $(MSBuildProjectDirectory)\$(OutDir) \\$(RemoteMachine)\\$(MSBuildProjectDirectory.Replace(':', '$'))\$(OutDir)">
 			<Output TaskParameter="ExitCode" PropertyName="ErrorCode"/>
 		</Exec>
