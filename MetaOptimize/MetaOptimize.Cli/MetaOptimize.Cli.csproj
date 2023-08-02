@@ -56,10 +56,7 @@ Machine = lines.Single(l => l.Contains("remoteDebugMachine")).Split(':')[1].Trim
 		</LaunchSettingsParser>
 	</Target>
 	<Target Condition="$(RemoteDebugEnabled)" Name="PostBuild" AfterTargets="ParseLaunchSettings">
-		<!-- Some error code trickery needed since robocopy has successful nonzero exit codes, see https://stackoverflow.com/a/39810469 --> 
-		<Exec ContinueOnError="true" Command="robocopy $(MSBuildProjectDirectory)\$(OutDir) \\$(RemoteMachine)\\$(MSBuildProjectDirectory.Replace(':', '$'))\$(OutDir)">
-			<Output TaskParameter="ExitCode" PropertyName="ErrorCode"/>
-		</Exec>
-		<Error Condition="$(ErrorCode) &gt; 8" Message="Robocopy failed"/>
+		<!-- Some error code trickery needed since robocopy has successful nonzero exit codes -->
+		<Exec Command="robocopy $(MSBuildProjectDirectory)\$(OutDir) \\$(RemoteMachine)\\$(MSBuildProjectDirectory.Replace(':', '$'))\$(OutDir) &amp; if %errorlevel% leq 3 exit 0" />
 	</Target>
 </Project>
