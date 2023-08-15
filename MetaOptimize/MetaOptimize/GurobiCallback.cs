@@ -48,12 +48,15 @@ namespace MetaOptimize
                 } else if (where == GRB.Callback.MESSAGE) {
                     // nothing to do.
                 } else {
-                    if (where == GRB.Callback.MIP || where == GRB.Callback.MIPSOL) {
+                    if (where == GRB.Callback.MIP || where==GRB.Callback.MIPNODE || where == GRB.Callback.MIPSOL) {
                         double bnd = -1;
                         double obj = -1;
                         if (where == GRB.Callback.MIP) {
                             obj = GetDoubleInfo(GRB.Callback.MIP_OBJBST);
                             bnd = GetDoubleInfo(GRB.Callback.MIP_OBJBND);
+                        } else if (where == GRB.Callback.MIPNODE) { 
+                            obj = GetDoubleInfo(GRB.Callback.MIPNODE_OBJBST);
+                            bnd = GetDoubleInfo(GRB.Callback.MIPNODE_OBJBND);
                         } else {
                             obj = GetDoubleInfo(GRB.Callback.MIPSOL_OBJBST);
                             bnd = GetDoubleInfo(GRB.Callback.MIPSOL_OBJBND);
@@ -64,7 +67,7 @@ namespace MetaOptimize
                             this.storeProgressCallback.CallCallback(obj, bnd, currtime_ms, presolvetime_ms);
                         }
                         if (this.terminationCallbackEnabled) {
-                            this.terminationCallback.CallCallback(obj);
+                            this.terminationCallback.CallCallback(obj, currtime_ms);
                         }
                     }
                     if (this.timeoutCallbackEnabled) {

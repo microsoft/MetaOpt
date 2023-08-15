@@ -6,18 +6,19 @@ namespace MetaOptimize
 {
     using System;
     using System.Diagnostics;
+    using System.Threading;
+
     using Gurobi;
     class GurobiTerminationCallback : GRBCallback
     {
         private GRBModel model;
         private double prevObj;
-        private Stopwatch timer;
+        private double prevTime_ms;
         private double terminateNoImprovement_ms;
 
         public GurobiTerminationCallback(GRBModel model, double terminateNoImprovement_ms) {
             this.model = model;
             this.prevObj = double.NaN;
-            this.timer = null;
             this.terminateNoImprovement_ms = terminateNoImprovement_ms;
         }
 
@@ -26,7 +27,7 @@ namespace MetaOptimize
             try {
                 if (where == GRB.Callback.MIPNODE) {
                     var obj = GetDoubleInfo(GRB.Callback.MIPNODE_OBJBST);
-                    CallCallback(obj);
+                    CallCallback(obj, GetDoubleInfo(GRB.Callback.RUNTIME)*1000);
                 }
             } catch (GRBException e) {
                 Console.WriteLine("Error code: " + e.ErrorCode);
@@ -39,25 +40,30 @@ namespace MetaOptimize
             throw new Exception("Should not enter this function.");
         }
 
-        public void CallCallback(double obj)
+        public void CallCallback(double obj, double time_ms)
         {
-            if (this.timer == null || Double.IsNaN(prevObj)) {
+            if (Double.IsNaN(prevObj)) {
                 prevObj = obj;
-                this.timer = Stopwatch.StartNew();
+                return;
             }
-            if (Math.Abs(obj - prevObj) > 0.01) {
+
+            if (prevObj * (1 + MetaOptimize.Explainability.Expr.Epsilon) >= obj)
+            {
+                if (time_ms - prevTime_ms >= terminateNoImprovement_ms)
+                {
+                    model.Terminate();
+                }
+            }
+            else
+            {
                 prevObj = obj;
-                this.timer = Stopwatch.StartNew();
-            }
-            if (this.timer.ElapsedMilliseconds > terminateNoImprovement_ms) {
-                this.model.Terminate();
+                prevTime_ms = time_ms;
             }
         }
 
         public void ResetTermination()
         {
             this.prevObj = double.NaN;
-            this.timer = null;
         }
     }
 }
