@@ -20,15 +20,13 @@ namespace MetaOptimize
 
         public GurobiCallback(
             GRBModel model,
-            bool storeProgress = false,
-            String dirname = null,
-            String filename = null,
+            IProgress<MetaOptimize.Explainability.SolverProgress> progress = null,
             double terminateNoImprovement_ms = -1,
             double timeout = 0)
         {
-            if (storeProgress) {
+            if (progress != null) {
                 this.storeProgressEnabled = true;
-                this.storeProgressCallback = new GurobiStoreProgressCallback(model, dirname, filename);
+                this.storeProgressCallback = new GurobiStoreProgressCallback(model, progress);
             }
             if (terminateNoImprovement_ms > 0) {
                 this.terminationCallbackEnabled = true;
@@ -51,16 +49,19 @@ namespace MetaOptimize
                     // nothing to do.
                 } else {
                     if (where == GRB.Callback.MIP || where == GRB.Callback.MIPSOL) {
+                        double bnd = -1;
                         double obj = -1;
                         if (where == GRB.Callback.MIP) {
                             obj = GetDoubleInfo(GRB.Callback.MIP_OBJBST);
+                            bnd = GetDoubleInfo(GRB.Callback.MIP_OBJBND);
                         } else {
-                            obj = GetDoubleInfo(GRB.Callback.MIPSOL_OBJ);
+                            obj = GetDoubleInfo(GRB.Callback.MIPSOL_OBJBST);
+                            bnd = GetDoubleInfo(GRB.Callback.MIPSOL_OBJBND);
                         }
                         var currtime_ms = GetDoubleInfo(GRB.Callback.RUNTIME) * 1000;
                         // Utils.AppendToFile(@"../logs/logs.txt", "measured time = " + currtime_ms + " obj = " + obj);
                         if (this.storeProgressEnabled) {
-                            this.storeProgressCallback.CallCallback(obj, currtime_ms, presolvetime_ms);
+                            this.storeProgressCallback.CallCallback(obj, bnd, currtime_ms, presolvetime_ms);
                         }
                         if (this.terminationCallbackEnabled) {
                             this.terminationCallback.CallCallback(obj);
