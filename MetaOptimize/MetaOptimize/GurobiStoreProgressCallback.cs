@@ -51,7 +51,7 @@ namespace MetaOptimize
             this.bstObj = Math.Max(this.bstObj, objective);
             this.bstBnd = Math.Min(this.bstBnd, bound);
             double time = currtime_ms - presolvetime_ms;
-            if (time >= lastTime + 1000)
+            if (time >= lastTime + 100)
             {
                 progress.Report(new(bstObj, bound, TimeSpan.FromMilliseconds(time)));
                 this.lastTime = time;
