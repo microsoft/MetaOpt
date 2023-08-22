@@ -25,6 +25,7 @@ namespace MetaOptimize.Cli
         /// <summary>
         /// The heuristic encoder to use.
         /// </summary>
+        /// fixme: Is this specific to only the TE use-case? if so, is there a way to make a separate data structure for each heuristic example to make the code cleaner?
         [Option('h', "heuristic", Required = true, HelpText = "The heuristic encoder to use (Pop | DemandPinning | ExpectedPop).")]
         public Heuristic Heuristic { get; set; }
 
@@ -43,18 +44,21 @@ namespace MetaOptimize.Cli
         /// <summary>
         /// adversarial generator (Encoding or Benders).
         /// </summary>
+        /// TODO: the discription of this input is not clear, explain it more.
         [Option('e', "adversarialgen", Default = AdversarialGenMethodChoice.Encoding, HelpText = "Method to use for adversarial generator.")]
         public AdversarialGenMethodChoice AdversarialGen { get; set; }
 
         /// <summary>
         /// demand list (only applies for PrimalDual).
         /// </summary>
+        /// fixme: this terminology is too TE specific. Can you make it more general to apply to our other heuristics too? Also would be good to expand the comment. 
         [Option('d', "demandlist", Default = "0", HelpText = "quantized list of demands (only applies to PrimalDual -- should separate value with ',' no space).")]
         public String DemandList { get; set; }
 
         /// <summary>
         /// whether to simplify the final solution or not.
         /// </summary>
+        /// fixme: this is too vague. Explain what it means to simplify the solution.
         [Option('s', "simplify", Default = false, HelpText = "Whether to simplify the final solution or not")]
         public bool Simplify { get; set; }
 
@@ -73,30 +77,36 @@ namespace MetaOptimize.Cli
         /// <summary>
         /// The number of pop slices to use.
         /// </summary>
+        /// fixme: again this is specific to a particular heuristic, is there a way to separate inputs that are heuristic specific from those that are general?
+        /// One way may be to take a json as input that contains the inputs that are specific to the particular heuristic. 
         [Option('s', "slices", Default = 2, HelpText = "The number of pop slices to use.")]
         public int PopSlices { get; set; }
 
         /// <summary>
         /// The threshold for demand pinning.
         /// </summary>
+        /// fixme: same as other comments that are about being heuristic specific.
         [Option('t', "pinthreshold", Default = 5, HelpText = "The threshold for the demand pinning heuristic.")]
         public double DemandPinningThreshold { get; set; }
 
         /// <summary>
         /// The maximum number of paths to use for a demand.
         /// </summary>
+        /// fixme: same as others.
         [Option('p', "paths", Default = 2, HelpText = "The maximum number of paths to use for any demand.")]
         public int Paths { get; set; }
 
         /// <summary>
         /// The maximum shortest path length to pin in modified demandpinning.
         /// </summary>
+        /// fixme: same as others.
         [Option('p', "maxshortestlen", Default = -1, HelpText = "The maximum shortest path length to pin (only applied to ModifiedDp).")]
         public int MaxShortestPathLen { get; set; }
 
         /// <summary>
         /// method for finding gap [search or direct].
         /// </summary>
+        /// fixme: expand on the comment to describe what each option does. 
         [Option('m', "method", Default = MethodChoice.Direct, HelpText = "the method for finding the desirable gap [Direct | Search | FindFeas | Random | HillClimber | SimulatedAnnealing]")]
         public MethodChoice Method { get; set; }
 
@@ -115,12 +125,14 @@ namespace MetaOptimize.Cli
         /// <summary>
         /// an upper bound on all the demands to find more useful advers inputs.
         /// </summary>
+        /// fixme: is this also heuristic specific? if not, change the terminology to be general if yes, fix as stated above.
         [Option('u', "demandub", Default = -1, HelpText = "an upper bound on all the demands.")]
         public double DemandUB { get; set; }
 
         /// <summary>
         /// an upper bound on all the demands to find more useful advers inputs.
         /// </summary>
+        /// fixme: same as above.
         [Option('x', "partitionSensitivity", Default = -1, HelpText = "the difference of total demands in each partition.")]
         public double PartitionSensitivity { get; set; }
 
@@ -151,6 +163,7 @@ namespace MetaOptimize.Cli
         /// <summary>
         /// max density of final traffic matrix.
         /// </summary>
+        /// fixme: same as other comments.
         [Option('d', "maxdensity", Default = 1.0, HelpText = "maximum density of the final traffic demand.")]
         public double MaxDensity { get; set; }
 
