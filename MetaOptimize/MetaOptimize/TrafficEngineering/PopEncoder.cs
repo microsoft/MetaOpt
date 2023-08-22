@@ -52,7 +52,7 @@ namespace MetaOptimize
         /// <summary>
         /// The individual encoders for each partition.
         /// </summary>
-        public TEOptimalEncoder<TVar, TSolution>[] PartitionEncoders { get; set; }
+        public TEMaxFlowOptimalEncoder<TVar, TSolution>[] PartitionEncoders { get; set; }
 
         /// <summary>
         /// The demand variables for the network (d_k).
@@ -94,11 +94,11 @@ namespace MetaOptimize
             this.DemandPartitions = demandPartitions;
             this.PartitionSensitivity = partitionSensitivity;
 
-            this.PartitionEncoders = new TEOptimalEncoder<TVar, TSolution>[this.NumPartitions];
+            this.PartitionEncoders = new TEMaxFlowOptimalEncoder<TVar, TSolution>[this.NumPartitions];
 
             for (int i = 0; i < this.NumPartitions; i++)
             {
-                this.PartitionEncoders[i] = new TEOptimalEncoder<TVar, TSolution>(solver, this.K);
+                this.PartitionEncoders[i] = new TEMaxFlowOptimalEncoder<TVar, TSolution>(solver, this.K);
             }
         }
 
@@ -135,8 +135,13 @@ namespace MetaOptimize
         /// <returns>The constraints and maximization objective.</returns>
         public OptimizationEncoding<TVar, TSolution> Encoding(Topology topology, Dictionary<(string, string), Polynomial<TVar>> preDemandVariables = null,
             Dictionary<(string, string), double> demandEqualityConstraints = null, bool noAdditionalConstraints = false,
-            InnerEncodingMethodChoice innerEncoding = InnerEncodingMethodChoice.KKT, int numProcesses = -1, bool verbose = false)
+            InnerEncodingMethodChoice innerEncoding = InnerEncodingMethodChoice.KKT,
+            PathType pathType = PathType.KSP, Dictionary<(string, string), string[][]> selectedPaths = null,
+            int numProcesses = -1, bool verbose = false)
         {
+            if (pathType != PathType.KSP) {
+                throw new Exception("Only KSP works for now.");
+            }
             this.Topology = topology;
             this.ReducedTopology = topology.SplitCapacity(this.NumPartitions);
             InitializeVariables(preDemandVariables, demandEqualityConstraints);
@@ -230,7 +235,7 @@ namespace MetaOptimize
             var flows = new Dictionary<(string, string), double>();
             var flowPaths = new Dictionary<string[], double>(new PathComparer());
 
-            var solutions = this.PartitionEncoders.Select(e => (TEOptimizationSolution)e.GetSolution(solution)).ToList();
+            var solutions = this.PartitionEncoders.Select(e => (TEMaxFlowOptimizationSolution)e.GetSolution(solution)).ToList();
 
             // foreach (var pair in this.Topology.GetNodePairs())
             // {
@@ -269,9 +274,9 @@ namespace MetaOptimize
                 }
             }
 
-            return new TEOptimizationSolution
+            return new TEMaxFlowOptimizationSolution
             {
-                TotalDemandMet = solutions.Select(s => s.TotalDemandMet).Aggregate((a, b) => a + b),
+                MaxObjective = solutions.Select(s => s.MaxObjective).Aggregate((a, b) => a + b),
                 Demands = demands,
                 Flows = flows,
                 FlowsPaths = flowPaths,

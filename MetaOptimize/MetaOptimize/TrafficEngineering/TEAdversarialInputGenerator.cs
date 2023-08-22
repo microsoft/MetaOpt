@@ -57,8 +57,8 @@ namespace MetaOptimize
                 var solver = optimalEncoder.Solver;
                 Console.WriteLine("===== Going to simplify the solution....");
                 var simplifier = new AdversarialInputSimplifier<TVar, TSolution>(Topology, K, DemandVariables);
-                var optimalObj = ((TEOptimizationSolution)optimalEncoder.GetSolution(solution)).TotalDemandMet;
-                var heuristicObj = ((TEOptimizationSolution)heuristicEncoder.GetSolution(solution)).TotalDemandMet;
+                var optimalObj = ((TEOptimizationSolution)optimalEncoder.GetSolution(solution)).MaxObjective;
+                var heuristicObj = ((TEOptimizationSolution)heuristicEncoder.GetSolution(solution)).MaxObjective;
                 var gap = optimalObj - heuristicObj;
                 var simplifyObj = simplifier.AddDirectMinConstraintsAndObjectives(solver, objective, gap);
                 solution = solver.Maximize(simplifyObj, reset: true);
@@ -83,7 +83,10 @@ namespace MetaOptimize
             double density = 1.0,
             double LargeDemandLB = -1,
             int LargeMaxDistance = -1,
-            int SmallMaxDistance = -1)
+            int SmallMaxDistance = -1,
+            PathType pathType = PathType.KSP,
+            Dictionary<(string, string), string[][]> selectedPaths = null,
+            Dictionary<(int, string, string), double> historicDemandConstraints = null)
         {
             if (optimalEncoder.Solver != heuristicEncoder.Solver)
             {
@@ -96,6 +99,14 @@ namespace MetaOptimize
             if (demandUB != -1 & perDemandUB != null)
             {
                 throw new Exception("if global demand ub is enabled, then perDemandUB should be null");
+            }
+            if (pathType == PathType.Predetermined && selectedPaths == null)
+            {
+                throw new Exception("if path type is predetermined, the paths should not be null");
+            }
+            if (pathType != PathType.Predetermined && selectedPaths != null)
+            {
+                throw new Exception("if path type is not predetermined, the paths should be null");
             }
             CheckDensityAndLocalityInputs(innerEncoding, density, LargeDemandLB, LargeMaxDistance, SmallMaxDistance);
 
@@ -114,11 +125,13 @@ namespace MetaOptimize
             Utils.logger("generating optimal encoding.", verbose);
             var optimalEncoding = optimalEncoder.Encoding(this.Topology, preDemandVariables: this.DemandVariables,
                     innerEncoding: innerEncoding, numProcesses: this.NumProcesses, verbose: verbose,
-                    demandEqualityConstraints: LocalityConstrainedDemands, noAdditionalConstraints: true);
+                    demandEqualityConstraints: LocalityConstrainedDemands, noAdditionalConstraints: true,
+                    pathType: pathType, selectedPaths: selectedPaths, historicDemandConstraints: historicDemandConstraints);
             Utils.logger("generating heuristic encoding.", verbose);
             var heuristicEncoding = heuristicEncoder.Encoding(this.Topology, preDemandVariables: this.DemandVariables,
                     innerEncoding: innerEncoding, numProcesses: this.NumProcesses, verbose: verbose,
-                    demandEqualityConstraints: LocalityConstrainedDemands);
+                    demandEqualityConstraints: LocalityConstrainedDemands,
+                    pathType: pathType, selectedPaths: selectedPaths, historicDemandConstraints: historicDemandConstraints);
 
             // ensures that demand in both problems is the same and lower than demand upper bound constraint.
             Utils.logger("adding constraints for upper bound on demands.", verbose);
@@ -135,80 +148,130 @@ namespace MetaOptimize
             Utils.logger("Adding density constraint: max density = " + density, verbose);
             EnsureDensityConstraint(solver, density);
 
-            // var pairNameToConstraintMapping = new Dictionary<(string, string), string>();
-            // foreach (var (pair, demandVar) in this.DemandVariables) {
-            //     var constrName = solver.AddLeqZeroConstraint(demandVar);
-            //     pairNameToConstraintMapping[pair] = constrName;
-            // }
-            // var objectiveVariable = solver.CreateVariable("objective");
             Utils.logger("setting the objective.", verbose);
-            var objective = new Polynomial<TVar>(
-                        new Term<TVar>(1, optimalEncoding.GlobalObjective),
-                        new Term<TVar>(-1, heuristicEncoding.GlobalObjective));
+            // var objective = new Polynomial<TVar>(
+            //             new Term<TVar>(1, optimalEncoding.GlobalObjective),
+            //             new Term<TVar>(-1, heuristicEncoding.GlobalObjective));
+            var objective = new Polynomial<TVar>();
+            objective.Add(optimalEncoding.MaximizationObjective.Copy());
+            objective.Add(heuristicEncoding.MaximizationObjective.Negate());
             var solution = solver.Maximize(objective, reset: true);
 
-            // var allNodeNames = this.Topology.GetAllNodes();
-            // if (demandUB < 0) {
-            //     demandUB = this.K * this.Topology.MaxCapacity();
-            // }
-
-            // var newBstGapFound = false;
-            // var iterNo = 0;
-            // var currBstGap = 0.0;
-            // var rng = new Random();
-            // do {
-            //     var seenNodes = new HashSet<string>();
-            //     var prevBstGap = currBstGap;
-            //     newBstGapFound = false;
-            //     var randomized1 = allNodeNames.OrderBy(item => rng.Next()).ToList<string>();
-            //     var randomized2 = allNodeNames.OrderBy(item => rng.Next()).ToList<string>();
-            //     foreach (var id in Enumerable.Range(0, allNodeNames.Count())) {
-            //         var node1 = randomized1[id];
-            //         var node2 = randomized2[id];
-            //         Utils.logger("== greedy iteration " + iterNo + " demand from " + node1 + " and " + node2 + " curr bst gap=" + currBstGap + " prev bst gap=" + prevBstGap, verbose);
-            //         foreach (var (pair, demandVar) in this.DemandVariables) {
-            //             if (pair.Item1.Equals(node1) || pair.Item1.Equals(node2)) {
-            //                 // Console.WriteLine("[INFO] setting demand from " + pair.Item1 + " to " + pair.Item2 + " max!!");
-            //                 solver.ChangeConstraintRHS(pairNameToConstraintMapping[pair], demandUB);
-            //             }
-            //         }
-            //         solution = solver.Maximize(objective, reset: true);
-            //         // solution = SimplifyAdversarialInputs(simplify, optimalEncoder, heuristicEncoder, solution, objective);
-            //         var demands = optimalEncoder.GetSolution(solution).Demands;
-            //         var currGap = optimalEncoder.GetSolution(solution).TotalDemandMet - heuristicEncoder.GetSolution(solution).TotalDemandMet;
-            //         if (currGap >= currBstGap + 0.01) {
-            //             currBstGap = currGap;
-            //             newBstGapFound = true;
-            //         }
-            //         seenNodes.Add(node1);
-            //         seenNodes.Add(node2);
-            //         foreach (var (pair, rate) in demands) {
-            //             if (seenNodes.Contains(pair.Item1)) {
-            //                 // Console.WriteLine("[INFO] setting demand from " + pair.Item1 + " to " + pair.Item2 + " = " + rate + "!!");
-            //                 solver.ChangeConstraintRHS(pairNameToConstraintMapping[pair], rate);
-            //                 // var ratePoly = this.DemandVariables[pair].Copy();
-            //                 // ratePoly.Add(new Term<TVar>(-1 * rate));
-            //                 // solver.AddEqZeroConstraint(ratePoly);
-            //             }
-            //         }
-            //     }
-            //     iterNo += 1;
-            // } while (newBstGapFound);
-
             solution = SimplifyAdversarialInputs(simplify, optimalEncoder, heuristicEncoder, solution, objective);
-            return ((TEOptimizationSolution)optimalEncoder.GetSolution(solution), (TEOptimizationSolution)heuristicEncoder.GetSolution(solution));
 
-            /* if (!solution.IsSatisfiable())
+            var optSol = (TEOptimizationSolution)optimalEncoder.GetSolution(solution);
+            var heuSol = (TEOptimizationSolution)heuristicEncoder.GetSolution(solution);
+            return (optSol, heuSol);
+        }
+
+        /// <summary>
+        /// Find an adversarial input that takes the value of the optimal as an input.
+        ///  Then, it maximizes the gap of the heuristic given the optimal value.
+        /// </summary>
+        public virtual List<(TEOptimizationSolution, TEOptimizationSolution)> MaximizeOptimalityGapGivenOpt(
+            IEncoder<TVar, TSolution> optimalEncoder,
+            IEncoder<TVar, TSolution> heuristicEncoder,
+            double optimalObj,
+            double demandUB = -1,
+            InnerEncodingMethodChoice innerEncoding = InnerEncodingMethodChoice.KKT,
+            IDemandList demandList = null,
+            IDictionary<(string, string), double> constrainedDemands = null,
+            bool simplify = false,
+            bool verbose = false,
+            bool cleanUpSolver = true,
+            IDictionary<(string, string), double> perDemandUB = null,
+            IDictionary<(string, string), double> demandInits = null,
+            double density = 1.0,
+            double LargeDemandLB = -1,
+            int LargeMaxDistance = -1,
+            int SmallMaxDistance = -1,
+            PathType pathType = PathType.KSP,
+            Dictionary<(string, string), string[][]> selectedPaths = null,
+            Dictionary<(int, string, string), double> historicDemandConstraints = null,
+            int solutionCount = 0)
+        {
+            if (optimalEncoder.Solver != heuristicEncoder.Solver)
             {
-                Console.WriteLine($"No solution found!");
-                Environment.Exit(1);
+                throw new Exception("Solver mismatch between optimal and heuristic encoders.");
+            }
+            if (innerEncoding == InnerEncodingMethodChoice.PrimalDual & demandList == null)
+            {
+                throw new Exception("should provide the demand list if inner encoding method is primal dual.");
+            }
+            if (demandUB != -1 & perDemandUB != null)
+            {
+                throw new Exception("if global demand ub is enabled, then perDemandUB should be null");
+            }
+            if (pathType == PathType.Predetermined && selectedPaths == null)
+            {
+                throw new Exception("if path type is predetermined, the paths should not be null");
+            }
+            if (pathType != PathType.Predetermined && selectedPaths != null)
+            {
+                throw new Exception("if path type is not predetermined, the paths should be null");
+            }
+            if (solutionCount > 1 && simplify == true)
+            {
+                throw new Exception("simplify is not implemented yet when looking for more than one solution");
+            }
+            CheckDensityAndLocalityInputs(innerEncoding, density, LargeDemandLB, LargeMaxDistance, SmallMaxDistance);
+
+            var solver = optimalEncoder.Solver;
+            if (cleanUpSolver)
+            {
+                solver.CleanAll();
             }
 
-            Console.WriteLine("Optimal (Opt):");
-            optimalEncoder.DisplaySolution(solution);
-            Console.WriteLine();
-            Console.WriteLine("Optimal (Pop):");
-            heuristicEncoder.DisplaySolution(solution); */
+            Utils.logger("creating demand variables.", verbose);
+            Utils.logger("max large demand distance: " + LargeMaxDistance, verbose);
+            Utils.logger("max small demand distance: " + SmallMaxDistance, verbose);
+            Utils.logger("large demand lb: " + LargeDemandLB, verbose);
+            (this.DemandVariables, this.LocalityConstrainedDemands) =
+                        CreateDemandVariables(solver, innerEncoding, demandList, demandInits, LargeDemandLB, LargeMaxDistance, SmallMaxDistance);
+            Utils.logger("generating optimal encoding.", verbose);
+            var optimalEncoding = optimalEncoder.Encoding(this.Topology, preDemandVariables: this.DemandVariables,
+                    innerEncoding: innerEncoding, numProcesses: this.NumProcesses, verbose: verbose,
+                    demandEqualityConstraints: LocalityConstrainedDemands, noAdditionalConstraints: true,
+                    pathType: pathType, selectedPaths: selectedPaths, historicDemandConstraints: historicDemandConstraints);
+            Utils.logger("generating heuristic encoding.", verbose);
+            var heuristicEncoding = heuristicEncoder.Encoding(this.Topology, preDemandVariables: this.DemandVariables,
+                    innerEncoding: innerEncoding, numProcesses: this.NumProcesses, verbose: verbose,
+                    demandEqualityConstraints: LocalityConstrainedDemands,
+                    pathType: pathType, selectedPaths: selectedPaths, historicDemandConstraints: historicDemandConstraints);
+
+            // ensures that demand in both problems is the same and lower than demand upper bound constraint.
+            Utils.logger("adding constraints for upper bound on demands.", verbose);
+            if (perDemandUB != null)
+            {
+                EnsureDemandUB(solver, perDemandUB);
+            }
+            else
+            {
+                EnsureDemandUB(solver, demandUB);
+            }
+            Utils.logger("adding equality constraints for specified demands.", verbose);
+            EnsureDemandEquality(solver, constrainedDemands);
+            Utils.logger("Adding density constraint: max density = " + density, verbose);
+            EnsureDensityConstraint(solver, density);
+
+            Utils.logger("setting the objective of OPT.", verbose);
+            var optPoly = optimalEncoding.MaximizationObjective.Negate();
+            optPoly.Add(new Term<TVar>(-optimalObj));
+            solver.AddEqZeroConstraint(optPoly);
+
+            Utils.logger("setting the objective of MetaOpt.", verbose);
+            var objective = heuristicEncoding.MaximizationObjective.Negate();
+            var solution = solver.Maximize(objective, reset: true, solutionCount: solutionCount);
+
+            solution = SimplifyAdversarialInputs(simplify, optimalEncoder, heuristicEncoder, solution, objective);
+
+            var solList = new List<(TEOptimizationSolution, TEOptimizationSolution)>();
+            for (int sNumber = 0; sNumber < solutionCount; sNumber++) {
+                var optSol = (TEOptimizationSolution)optimalEncoder.GetSolution(solution, sNumber);
+                var heuSol = (TEOptimizationSolution)heuristicEncoder.GetSolution(solution, sNumber);
+                solList.Add((optSol, heuSol));
+            }
+            return solList;
         }
 
         private static void CheckDensityAndLocalityInputs(
@@ -1289,7 +1352,7 @@ namespace MetaOptimize
                     noAdditionalConstraints: true, numProcesses: this.NumProcesses, preDemandVariables: demandVariables);
             var solverSolutionOptimal = optimalEncoder.Solver.Maximize(encodingOptimal.MaximizationObjective);
             var optimizationSolutionOptimal = (TEOptimizationSolution)optimalEncoder.GetSolution(solverSolutionOptimal);
-            double currGap = optimizationSolutionOptimal.TotalDemandMet - optimizationSolutionHeuristic.TotalDemandMet;
+            double currGap = optimizationSolutionOptimal.MaxObjective - optimizationSolutionHeuristic.MaxObjective;
             return (currGap, (optimizationSolutionOptimal, optimizationSolutionHeuristic));
         }
 
@@ -1326,9 +1389,9 @@ namespace MetaOptimize
             }
             double currMaxGap = 0;
             TEOptimizationSolution zero_solution = new TEOptimizationSolution {
-                    TotalDemandMet = 0,
+                    MaxObjective = 0,
                     Demands = new Dictionary<(string, string), double> { },
-                    Flows = new Dictionary<(string, string), double> { },
+                    // Flows = new Dictionary<(string, string), double> { },
                     FlowsPaths = new Dictionary<string[], double> { },
                 };
             (TEOptimizationSolution, TEOptimizationSolution) worstResult = (zero_solution, zero_solution);
@@ -1425,9 +1488,9 @@ namespace MetaOptimize
 
             double currMaxGap = 0;
             TEOptimizationSolution zero_solution = new TEOptimizationSolution {
-                    TotalDemandMet = 0,
+                    MaxObjective = 0,
                     Demands = new Dictionary<(string, string), double> { },
-                    Flows = new Dictionary<(string, string), double> { },
+                    // Flows = new Dictionary<(string, string), double> { },
                     FlowsPaths = new Dictionary<string[], double> { },
                 };
             (TEOptimizationSolution, TEOptimizationSolution) worstResult = (zero_solution, zero_solution);
@@ -1681,9 +1744,9 @@ namespace MetaOptimize
             var timeout_ms = timeout * 1000;
             Stopwatch timer = Stopwatch.StartNew();
             TEOptimizationSolution zero_solution = new TEOptimizationSolution {
-                    TotalDemandMet = 0,
+                    MaxObjective = 0,
                     Demands = new Dictionary<(string, string), double> { },
-                    Flows = new Dictionary<(string, string), double> { },
+                    // Flows = new Dictionary<(string, string), double> { },
                     FlowsPaths = new Dictionary<string[], double> { },
                 };
             bool feasible = true;

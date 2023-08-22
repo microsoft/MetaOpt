@@ -1,6 +1,7 @@
 namespace MetaOptimize {
     using System;
     using System.Collections.Generic;
+    using System.Diagnostics;
     using System.IO;
     using System.Linq;
     using Newtonsoft.Json;
@@ -245,6 +246,77 @@ namespace MetaOptimize {
                 throw new Exception("File does not exist!");
             }
             return File.ReadLines(path).Last();
+        }
+
+        /// <summary>
+        /// assign zero demand the empty pairs.
+        /// </summary>
+        public static void FillEmptyPairsWithZeroDemand(Topology topology, Dictionary<(string, string), double> demands)
+        {
+            foreach (var pair in topology.GetNodePairs()) {
+                if (!demands.ContainsKey(pair)) {
+                    demands[pair] = 0;
+                } else if (demands[pair] <= 0) {
+                    demands[pair] = 0;
+                }
+            }
+        }
+
+        /// <summary>
+        /// assign zero demand the empty pairs.
+        /// </summary>
+        public static void FillEmptyHistoryWithZeroDemand(Topology topology, int historyLen, Dictionary<(int, string, string), double> historicDemands)
+        {
+            for (int h = 0; h < historyLen; h++) {
+                foreach (var pair in topology.GetNodePairs()) {
+                    if (!historicDemands.ContainsKey((h, pair.Item1, pair.Item2))) {
+                        historicDemands[(h, pair.Item1, pair.Item2)] = 0;
+                    } else if (historicDemands[(h, pair.Item1, pair.Item2)] <= 0) {
+                        historicDemands[(h, pair.Item1, pair.Item2)] = 0;
+                    }
+                }
+            }
+        }
+        /// <summary>
+        /// checks the subproblems' soltuion.
+        /// </summary>
+        public static void checkSolution<TVar, TSolution>(Topology topology, IEncoder<TVar, TSolution> heuristicEncoder,
+            IEncoder<TVar, TSolution> optimalEncoder, double hResult, double oResult,
+            Dictionary<(string, string), double> demands, string solverN = "", PathType pathType = PathType.KSP,
+            Dictionary<(string, string), string[][]> selectedPaths = null,
+            Dictionary<(int, string, string), double> historicDemands = null,
+            double sensitivity = 0.001)
+        {
+            heuristicEncoder.Solver.CleanAll();
+            var encodingHeuristic = heuristicEncoder.Encoding(topology, demandEqualityConstraints: demands,
+                noAdditionalConstraints: true, pathType: pathType, selectedPaths: selectedPaths, historicDemandConstraints: historicDemands);
+            var solverSolutionHeuristic = heuristicEncoder.Solver.Maximize(encodingHeuristic.MaximizationObjective);
+            var optimizationSolutionHeuristic = (TEOptimizationSolution)heuristicEncoder.GetSolution(solverSolutionHeuristic);
+
+            optimalEncoder.Solver.CleanAll();
+            var encodingOptimal = optimalEncoder.Encoding(topology, demandEqualityConstraints: demands,
+                noAdditionalConstraints: true, pathType: pathType, selectedPaths: selectedPaths, historicDemandConstraints: historicDemands);
+            var solverSolutionOptimal = optimalEncoder.Solver.Maximize(encodingOptimal.MaximizationObjective);
+            var optimizationSolutionOptimal = (TEOptimizationSolution)optimalEncoder.GetSolution(solverSolutionOptimal);
+            Console.WriteLine($"optimal-{solverN} = {optimizationSolutionOptimal.MaxObjective}, heuristic-{solverN}={optimizationSolutionHeuristic.MaxObjective}");
+            Debug.Assert(IsApproximately(hResult, optimizationSolutionHeuristic.MaxObjective, sensitivity));
+            Debug.Assert(IsApproximately(oResult, optimizationSolutionOptimal.MaxObjective, sensitivity));
+        }
+
+        /// <summary>
+        /// Determines if two values are approximately equal.
+        /// </summary>
+        /// <param name="expected">The expected value.</param>
+        /// <param name="actual">The actual value.</param>
+        /// <param name="threshold">A configurable threshold parameter.</param>
+        /// <returns>True if their difference is below the threshold.</returns>
+        public static bool IsApproximately(double expected, double actual, double threshold = 0.001)
+        {
+            if (actual == 0) {
+                return expected < threshold;
+            }
+            // Console.WriteLine(expected + " " + actual + " " + Math.Abs(expected - actual) / actual);
+            return Math.Abs(expected - actual) / Math.Abs(actual) < threshold;
         }
     }
 }

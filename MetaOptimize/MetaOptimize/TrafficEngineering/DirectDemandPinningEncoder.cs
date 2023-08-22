@@ -192,8 +192,14 @@ namespace MetaOptimize
         /// <returns>The constraints and maximization objective.</returns>
         public OptimizationEncoding<TVar, TSolution> Encoding(Topology topology, Dictionary<(string, string), Polynomial<TVar>> preDemandVariables = null,
             Dictionary<(string, string), double> demandEqualityConstraints = null, bool noAdditionalConstraints = false,
-            InnerEncodingMethodChoice innerEncoding = InnerEncodingMethodChoice.KKT, int numProcesses = -1, bool verbose = false)
+            InnerEncodingMethodChoice innerEncoding = InnerEncodingMethodChoice.KKT,
+            PathType pathType = PathType.KSP, Dictionary<(string, string), string[][]> selectedPaths = null,
+            int numProcesses = -1, bool verbose = false)
         {
+            if (pathType != PathType.KSP) {
+                throw new Exception("Only KSP works for now.");
+            }
+
             this.Topology = topology;
             InitializeVariables(demandEqualityConstraints, numProcesses, verbose);
             // Compute the maximum demand M.
@@ -333,9 +339,9 @@ namespace MetaOptimize
                 flowPaths[path] = this.Solver.GetVariable(solution, variable);
             }
 
-            return new TEOptimizationSolution
+            return new TEMaxFlowOptimizationSolution
             {
-                TotalDemandMet = this.Solver.GetVariable(solution, this.TotalDemandMetVariable) + this.totalDemandPinned,
+                MaxObjective = this.Solver.GetVariable(solution, this.TotalDemandMetVariable) + this.totalDemandPinned,
                 Demands = demands,
                 Flows = flows,
                 FlowsPaths = flowPaths,
