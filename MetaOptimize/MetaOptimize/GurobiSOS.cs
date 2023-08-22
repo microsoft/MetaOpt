@@ -611,9 +611,10 @@ namespace MetaOptimize
         public void AddLogisticConstraint(GRBVar xVar, GRBVar yVar, string name, double FuncPieces = -1, double FuncPeiceError = 0.01,
             double FuncPieceLength = 0.01, double FuncPieceRatio = -1.0)
         {
-            string options = String.Format("FuncPieces={0} FuncPieceError={1} FuncPieceLength={2} FuncPieceRatio={3}",
-                FuncPieces, FuncPeiceError, FuncPieceLength, FuncPieceRatio);
-            this._model.AddGenConstrLogistic(xVar, yVar, name, options);
+            // string options = String.Format("FuncPieces={0} FuncPieceError={1} FuncPieceLength={2} FuncPieceRatio={3}",
+            //     FuncPieces, FuncPeiceError, FuncPieceLength, FuncPieceRatio);
+            // this._model.AddGenConstrLogistic(xVar, yVar, name, options);
+            throw new Exception("Not implemented");
         }
 
         /// <summary>
