@@ -793,9 +793,9 @@ namespace MetaOptimize
                 this._model.Parameters.Heuristics = 0.01;
                 this._model.Parameters.Cuts = 3;
             } else {
-                // this._model.Parameters.MIPFocus = 1;
-                // this._model.Parameters.Heuristics = 0.99;
-                // this._model.Parameters.RINS = GRB.MAXINT;
+                this._model.Parameters.MIPFocus = 1;
+                this._model.Parameters.Heuristics = 0.99;
+                this._model.Parameters.RINS = GRB.MAXINT;
                 // this._model.Parameters.ConcurrentMIP = 4;
                 // this._model.Parameters.ImproveStartTime = 200;
                 // this._model.Parameters.Cuts = 0;
@@ -811,8 +811,8 @@ namespace MetaOptimize
             // this._model.Parameters.QCPDual = 1;
             // this._model.Set(GRB.DoubleParam.IntFeasTol, this._tolerance);
             // this._model.Set(GRB.DoubleParam.FeasibilityTol, this._tolerance);
-            this._model.Parameters.PreSparsify = 2;
-            this._model.Parameters.Symmetry = 2;
+            // this._model.Parameters.PreSparsify = 2;
+            // this._model.Parameters.Symmetry = 2;
             // string exhaust_dir_name = @"../logs/grbsos_exhaust/rand_" + (new Random()).Next(1000) + @"/";
             // Directory.CreateDirectory(exhaust_dir_name);
             // this._model.Write($"{exhaust_dir_name}/model_" + DateTime.Now.Millisecond + ".lp");
