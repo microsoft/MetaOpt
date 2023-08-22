@@ -12,6 +12,7 @@
   <Import Project="..\.stylecop\StyleCop.props" />
 
   <ItemGroup>
+    <PackageReference Include="Gurobi.Optimizer" Version="9.5.2" />
     <PackageReference Include="CommandLineParser" Version="2.8.0" />
     <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
