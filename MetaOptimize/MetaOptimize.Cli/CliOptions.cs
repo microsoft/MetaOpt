@@ -19,13 +19,13 @@ namespace MetaOptimize.Cli
         /// <summary>
         /// The topology file path.
         /// </summary>
-        [Option('f', "file", Required = true, HelpText = "Topology input file to be processed.")]
+        [Option('f', "file", Required = true, HelpText = "The location of the topology file.")]
         public string TopologyFile { get; set; }
 
         /// <summary>
         /// The heuristic encoder to use.
         /// </summary>
-        /// fixme: Is this specific to only the TE use-case? if so, is there a way to make a separate data structure for each heuristic example to make the code cleaner?
+        /// TODO: Is this specific to only the TE use-case? if so, is there a way to make a separate data structure for each heuristic example to make the code cleaner?
         [Option('h', "heuristic", Required = true, HelpText = "The heuristic encoder to use (Pop | DemandPinning | ExpectedPop).")]
         public Heuristic Heuristic { get; set; }
 
@@ -45,20 +45,20 @@ namespace MetaOptimize.Cli
         /// adversarial generator (Encoding or Benders).
         /// </summary>
         /// TODO: the discription of this input is not clear, explain it more.
-        [Option('e', "adversarialgen", Default = AdversarialGenMethodChoice.Encoding, HelpText = "Method to use for adversarial generator.")]
+        [Option('e', "adversarialgen", Default = AdversarialGenMethodChoice.Encoding, HelpText = "Method to use for adversarial generator. The benders decomposition approach currently does not work.")]
         public AdversarialGenMethodChoice AdversarialGen { get; set; }
 
         /// <summary>
         /// demand list (only applies for PrimalDual).
         /// </summary>
-        /// fixme: this terminology is too TE specific. Can you make it more general to apply to our other heuristics too? Also would be good to expand the comment. 
+        /// TODO: this terminology is too TE specific. Can you make it more general to apply to our other heuristics too? Also would be good to expand the comment. 
         [Option('d', "demandlist", Default = "0", HelpText = "quantized list of demands (only applies to PrimalDual -- should separate value with ',' no space).")]
         public String DemandList { get; set; }
 
         /// <summary>
         /// whether to simplify the final solution or not.
         /// </summary>
-        /// fixme: this is too vague. Explain what it means to simplify the solution.
+        /// TODO: this is too vague. Explain what it means to simplify the solution.
         [Option('s', "simplify", Default = false, HelpText = "Whether to simplify the final solution or not")]
         public bool Simplify { get; set; }
 
@@ -77,7 +77,7 @@ namespace MetaOptimize.Cli
         /// <summary>
         /// The number of pop slices to use.
         /// </summary>
-        /// fixme: again this is specific to a particular heuristic, is there a way to separate inputs that are heuristic specific from those that are general?
+        /// TODO: again this is specific to a particular heuristic, is there a way to separate inputs that are heuristic specific from those that are general?
         /// One way may be to take a json as input that contains the inputs that are specific to the particular heuristic. 
         [Option('s', "slices", Default = 2, HelpText = "The number of pop slices to use.")]
         public int PopSlices { get; set; }
@@ -85,28 +85,28 @@ namespace MetaOptimize.Cli
         /// <summary>
         /// The threshold for demand pinning.
         /// </summary>
-        /// fixme: same as other comments that are about being heuristic specific.
+        /// TODO: same as other comments that are about being heuristic specific.
         [Option('t', "pinthreshold", Default = 5, HelpText = "The threshold for the demand pinning heuristic.")]
         public double DemandPinningThreshold { get; set; }
 
         /// <summary>
         /// The maximum number of paths to use for a demand.
         /// </summary>
-        /// fixme: same as others.
+        /// TODO: same as others.
         [Option('p', "paths", Default = 2, HelpText = "The maximum number of paths to use for any demand.")]
         public int Paths { get; set; }
 
         /// <summary>
         /// The maximum shortest path length to pin in modified demandpinning.
         /// </summary>
-        /// fixme: same as others.
+        /// TODO: same as others.
         [Option('p', "maxshortestlen", Default = -1, HelpText = "The maximum shortest path length to pin (only applied to ModifiedDp).")]
         public int MaxShortestPathLen { get; set; }
 
         /// <summary>
         /// method for finding gap [search or direct].
         /// </summary>
-        /// fixme: expand on the comment to describe what each option does. 
+        /// TODO: expand on the comment to describe what each option does. 
         [Option('m', "method", Default = MethodChoice.Direct, HelpText = "the method for finding the desirable gap [Direct | Search | FindFeas | Random | HillClimber | SimulatedAnnealing]")]
         public MethodChoice Method { get; set; }
 
@@ -125,14 +125,14 @@ namespace MetaOptimize.Cli
         /// <summary>
         /// an upper bound on all the demands to find more useful advers inputs.
         /// </summary>
-        /// fixme: is this also heuristic specific? if not, change the terminology to be general if yes, fix as stated above.
+        /// TODO: is this also heuristic specific? if not, change the terminology to be general if yes, fix as stated above.
         [Option('u', "demandub", Default = -1, HelpText = "an upper bound on all the demands.")]
         public double DemandUB { get; set; }
 
         /// <summary>
         /// an upper bound on all the demands to find more useful advers inputs.
         /// </summary>
-        /// fixme: same as above.
+        /// TODO: same as above.
         [Option('x', "partitionSensitivity", Default = -1, HelpText = "the difference of total demands in each partition.")]
         public double PartitionSensitivity { get; set; }
 
@@ -163,37 +163,41 @@ namespace MetaOptimize.Cli
         /// <summary>
         /// max density of final traffic matrix.
         /// </summary>
-        /// fixme: same as other comments.
+        /// TODO: same as other comments.
         [Option('d', "maxdensity", Default = 1.0, HelpText = "maximum density of the final traffic demand.")]
         public double MaxDensity { get; set; }
 
         /// <summary>
         /// max distance for large demands.
         /// </summary>
+        /// TODO: same as other comments.
         [Option('m', "maxdistancelarge", Default = -1, HelpText = "maximum distance for large demands.")]
         public int maxLargeDistance { get; set; }
 
         /// <summary>
         /// max distance for small demands.
         /// </summary>
+        /// TODO: same as other comments.
         [Option('m', "maxdistancesmall", Default = -1, HelpText = "maximum distance for small demands.")]
         public int maxSmallDistance { get; set; }
 
         /// <summary>
         /// Lower bound for large demands.
         /// </summary>
+        /// TODO: same as other comments.
         [Option('m', "largedemandlb", Default = -1, HelpText = "to distinguish large demands from small demands.")]
         public double LargeDemandLB { get; set; }
 
         /// <summary>
         /// enable clustering breakdown.
         /// </summary>
-        [Option('c', "enableclustering", Default = false, HelpText = "enabling clustering for scale.")]
+        [Option('c', "enableclustering", Default = false, HelpText = "Use this input to enable clustering. Clustering is more scalable but does not find the best possible gap.")]
         public bool EnableClustering { get; set; }
 
         /// <summary>
         /// cluster directory.
         /// </summary>
+        /// TODO: not clear what this is doing, need a better user-visible and also private commment.
         [Option('j', "clusterdir", Default = null, HelpText = "cluster lvl topo directory")]
         public string ClusterDir { get; set; }
 
@@ -206,6 +210,7 @@ namespace MetaOptimize.Cli
         /// <summary>
         /// inter-cluster method version.
         /// </summary>
+        /// TODO: what are the options? what is the difference between the different options?
         [Option('j', "clusterversion", Default = 1, HelpText = "version of clustering for inter-cluster demands")]
         public int ClusterVersion { get; set; }
 
@@ -224,12 +229,14 @@ namespace MetaOptimize.Cli
         /// <summary>
         /// inter-cluster quantization lvls.
         /// </summary>
+        /// TODO: unclear how one should use this parameter.
         [Option('j', "numinterclusterquantization", Default = -1, HelpText = "inter-cluster demands number of quantizations [only works for v3].")]
         public int NumInterClusterQuantizations { get; set; }
 
         /// <summary>
         /// error analysis.
         /// </summary>
+        /// TODO: not fully clear what this does, needs a better comment both internally and user-visible.
         [Option('j', "fullopt", Default = false, HelpText = "after finding the demand, will run the full optimization with demands as init point.")]
         public bool FullOpt { get; set; }
 
@@ -254,6 +261,7 @@ namespace MetaOptimize.Cli
         /// <summary>
         /// num processes.
         /// </summary>
+        /// TODO: for what?
         [Option('s', "numProcesses", Default = -1, HelpText = "num processes to use for.")]
         public int NumProcesses { get; set; }
 
@@ -278,6 +286,7 @@ namespace MetaOptimize.Cli
         /// <summary>
         /// file to read paths.
         /// </summary>
+        /// TODO: heuristic specific. It would also be good to specify what format the file has to have.
         [Option('m', "pathfile", Default = null, HelpText = "file to read the paths from.")]
         public string PathFile { get; set; }
 
