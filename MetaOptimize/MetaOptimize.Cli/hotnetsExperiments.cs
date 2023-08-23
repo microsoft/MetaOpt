@@ -6,19 +6,25 @@ namespace MetaOptimize
 {
     using System;
     using System.Diagnostics;
-    using System.Linq.Expressions;
-    using System.Runtime.InteropServices;
     using Gurobi;
     using MetaOptimize.Cli;
     /// <summary>
-    /// Implements evaluations for Hotnets .
+    /// We use the functions in this class for our hotnets experiments.
     /// </summary>
-    public static class Experiment {
+    /// TODO: list the series of experiments that we run and what function does what.
+    public static class HotNetsExperiment
+    {
         /// <summary>
-        /// sweeping through different values of pinned demand for
-        /// B4, SWAN and Abilene topologies.
+        /// This function looks at the impact of one particular parameter
+        /// for the demand pinning heuristic: the threshold.
+        /// The demand pinning heuristic uses the threshold to decide whether to directly
+        /// send a demand on its shortest path or not---demands below the threshold go on the shortest path.
+        /// This function sweeps through different values of the threshold on three different topologies.
+        /// B4, SWAN and Abilene.
         /// </summary>
-        public static void gapThresholdDemandPinningForDifferentTopologies() {
+        /// TODO: rewrite to take the topology as an argument.
+        public static void impactOfDPThresholdOnGap()
+        {
             var topologies = new Dictionary<string, string>();
             topologies["B4"] = @"..\Topologies\b4-teavar.json";
             topologies["SWAN"] = @"..\Topologies\swan.json";
@@ -32,13 +38,15 @@ namespace MetaOptimize
             double end = 15;
             int numProcessors = 16;
             ISolver<GRBVar, GRBModel> solver = (ISolver<GRBVar, GRBModel>)new GurobiSOS(verbose: 1, timeToTerminateNoImprovement: timeToTerminate);
-            foreach (var (topoName, topoPath) in topologies) {
+            foreach (var (topoName, topoPath) in topologies)
+            {
                 var topology = Parser.ReadTopologyJson(topoPath);
                 var maxThreshold = topology.MinCapacity();
                 string logFile = topoName + @"_" + heuristicName + ".txt";
                 Utils.CreateFile(logDir, logFile, removeIfExist: true);
                 Utils.AppendToFile(logDir, logFile, maxThreshold.ToString());
-                for (double i = start; i <= end; i += step) {
+                for (double i = start; i <= end; i += step)
+                {
                     var threshold = i * maxThreshold / 100;
                     var (optimal, heuristic, demands) = CliUtils.maximizeOptimalityGapDemandPinning<GRBVar, GRBModel>(
                             solver: solver, topology: topology, numPaths: numPaths, threshold: threshold, numProcessors: numProcessors);
@@ -51,7 +59,8 @@ namespace MetaOptimize
         /// <summary>
         /// print paths between every pairs of topology.
         /// </summary>
-        public static void printPaths() {
+        public static void printPaths()
+        {
             var topologies = new Dictionary<string, string>();
             topologies["B4"] = @"..\Topologies\b4-teavar.json";
             topologies["SWAN"] = @"..\Topologies\swan.json";
@@ -59,16 +68,19 @@ namespace MetaOptimize
             int numPaths = 1;
             Dictionary<string, List<int>> splist = new Dictionary<string, List<int>>();
             string logDir = @"..\logs\path_stat\" + Utils.GetFID() + @"\";
-            foreach (var (topoName, topoPath) in topologies) {
+            foreach (var (topoName, topoPath) in topologies)
+            {
                 Console.WriteLine("================== " + topoName);
                 string logFile = topoName + @".txt";
                 Utils.CreateFile(logDir, logFile, removeIfExist: true);
                 var topology = Parser.ReadTopologyJson(topoPath);
                 splist[topoName] = new List<int>();
-                foreach (var pair in topology.GetNodePairs()) {
+                foreach (var pair in topology.GetNodePairs())
+                {
                     // Console.WriteLine("==== pair " + pair);
                     var paths = topology.ShortestKPaths(numPaths, pair.Item1, pair.Item2);
-                    foreach (var simplePath in paths) {
+                    foreach (var simplePath in paths)
+                    {
                         // Console.WriteLine(string.Join("_", simplePath));
                         splist[topoName].Add(simplePath.Count());
                     }
@@ -79,7 +91,8 @@ namespace MetaOptimize
                 Console.WriteLine("avg splt = " + topology.avgShortestPathLength());
                 Utils.AppendToFile(logDir, logFile, "aspl=" + topology.avgShortestPathLength());
                 splist[topoName].Sort();
-                foreach (var plen in splist[topoName]) {
+                foreach (var plen in splist[topoName])
+                {
                     Console.WriteLine(plen.ToString());
                     Utils.AppendToFile(logDir, logFile, plen.ToString());
                 }
@@ -105,19 +118,22 @@ namespace MetaOptimize
             int end = 6;
             int end_try = 6;
             ISolver<GRBVar, GRBModel> solver = (ISolver<GRBVar, GRBModel>)new GurobiSOS(verbose: 1, timeToTerminateNoImprovement: timeToTerminate);
-            foreach (var (topoName, topoPath) in topologies) {
+            foreach (var (topoName, topoPath) in topologies)
+            {
                 var topology = Parser.ReadTopologyJson(topoPath);
                 var maxThreshold = topology.MinCapacity();
                 string logFile = topoName + @"_" + heuristicName + ".txt";
                 Utils.CreateFile(logDir, logFile, removeIfExist: true);
                 Utils.AppendToFile(logDir, logFile, maxThreshold.ToString());
                 var threshold = thresholdPerc * maxThreshold / 100;
-                for (int i = start; i <= end; i += step) {
+                for (int i = start; i <= end; i += step)
+                {
                     int numPaths = i;
                     var (optimal, heuristic, demands) = CliUtils.maximizeOptimalityGapDemandPinning<GRBVar, GRBModel>(
                         solver: solver, topology: topology, numPaths: numPaths, threshold: threshold, numProcessors: numProcessors);
                     Console.WriteLine("trying the demands on the same topo with increased paths");
-                    for (int j = start; j <= end_try; j += step) {
+                    for (int j = start; j <= end_try; j += step)
+                    {
                         var (optimalG, heuristicG) = CliUtils.getOptimalDemandPinningTotalDemand(solver: solver,
                             demands: (Dictionary<(string, string), double>)demands, topology: topology, numPaths: j, threshold: threshold);
                         Console.WriteLine("=== try: numPaths=" + j + " optimal= " + optimal + " heuristic= " + heuristic + " gap= " + (optimal - heuristic));
@@ -153,9 +169,12 @@ namespace MetaOptimize
             int endRadix = 7;
 
             ISolver<GRBVar, GRBModel> solver = (ISolver<GRBVar, GRBModel>)new GurobiSOS(verbose: 1, timeToTerminateNoImprovement: timeToTerminate);
-            foreach (int seed in seedList) {
-                for (int sn = startNodes; sn <= endNodes; sn += stepNodes) {
-                    for (int sr = startRadix; sr <= endRadix; sr += stepRadix) {
+            foreach (int seed in seedList)
+            {
+                for (int sn = startNodes; sn <= endNodes; sn += stepNodes)
+                {
+                    for (int sr = startRadix; sr <= endRadix; sr += stepRadix)
+                    {
                         var topo = Topology.RandomRegularGraph(sn, sr, capacity, seed: seed);
                         var maxThreshold = topo.MinCapacity();
                         var threshold = thresholdPerc * maxThreshold / 100;
@@ -195,8 +214,10 @@ namespace MetaOptimize
             int endRadix = 8;
 
             ISolver<GRBVar, GRBModel> solver = (ISolver<GRBVar, GRBModel>)new GurobiSOS(verbose: 1, timeToTerminateNoImprovement: timeToTerminate);
-            for (int sn = startNodes; sn <= endNodes; sn += stepNodes) {
-                for (int sr = startRadix; sr <= endRadix; sr += stepRadix) {
+            for (int sn = startNodes; sn <= endNodes; sn += stepNodes)
+            {
+                for (int sr = startRadix; sr <= endRadix; sr += stepRadix)
+                {
                     var topo = Topology.SmallWordGraph(sn, sr, capacity);
                     var maxThreshold = topo.MinCapacity();
                     var threshold = thresholdPerc * maxThreshold / 100;
@@ -233,7 +254,8 @@ namespace MetaOptimize
             string fid = DateTime.Now.Year + "_" + DateTime.Now.Month + "_" + DateTime.Now.Day + "_" + DateTime.Now.Hour + "_" + DateTime.Now.Minute + "_" +
                 DateTime.Now.Second + "_" + DateTime.Now.Millisecond;
             string logDir = @"..\logs\pop_diff_paths_diff_partitions\" + heuristicName + "_";
-            switch (heuristicName) {
+            switch (heuristicName)
+            {
                 case Heuristic.Pop:
                     logDir = logDir + "_" + minPartition + "_" + maxPartition + "_" + partitionStep + "_" + minPaths + "_" + maxPaths + "_" + pathStep;
                     break;
@@ -249,10 +271,12 @@ namespace MetaOptimize
             int numPartitions = minPartition;
             ISolver<GRBVar, GRBModel> solver = (ISolver<GRBVar, GRBModel>)new GurobiBinary(10, 1, numThreads);
 
-            while (numPartitions <= maxPartition) {
+            while (numPartitions <= maxPartition)
+            {
                 IDictionary<(string, string), int> partition = topology.RandomPartition(numPartitions);
                 int numPaths = minPaths;
-                while (numPaths <= maxPaths) {
+                while (numPaths <= maxPaths)
+                {
                     // foreach (int i in Enumerable.Range(1, 20)) {
                     // int timeout = i * 6;
                     int timeout = 1800;
@@ -305,10 +329,11 @@ namespace MetaOptimize
             var gap = optimal - heuristic;
             solver = (ISolver<GRBVar, GRBModel>)new GurobiSOS(timeout, 0, numThreads, recordProgress: false);
             Console.WriteLine("==== KKT --> " + " gap=" + gap + " optimal=" + optimal + " heuristic=" + heuristic);
-            foreach (var seed in seedList) {
+            foreach (var seed in seedList)
+            {
                 string hillClimbingFile = @"hillclimbing_" + heuristicName + "_" + seed + ".txt";
-                string simulatedAnnealingFile = @"simulatedannealing_" + heuristicName + "_" + seed  + ".txt";
-                string randomSearchFile = @"randomSearch_" + heuristicName + "_" + seed  + ".txt";
+                string simulatedAnnealingFile = @"simulatedannealing_" + heuristicName + "_" + seed + ".txt";
+                string randomSearchFile = @"randomSearch_" + heuristicName + "_" + seed + ".txt";
 
                 int numNeighbors = 100;
                 double stddev = 500;
@@ -369,7 +394,8 @@ namespace MetaOptimize
             int numThreads = 1;
             double timeout = 1000;
             string logDir = @"..\logs\gap_vs_time\" + heuristicName + "_";
-            switch (heuristicName) {
+            switch (heuristicName)
+            {
                 case Heuristic.Pop:
                     logDir = logDir + numSlices + "_";
                     break;
@@ -396,10 +422,11 @@ namespace MetaOptimize
 
             List<int> seedList = new List<int>() { 2, 3 };
             solver = (ISolver<GRBVar, GRBModel>)new GurobiBinary(timeout, 0, numThreads, recordProgress: false);
-            foreach (var seed in seedList) {
+            foreach (var seed in seedList)
+            {
                 string hillClimbingFile = @"hillclimbing_" + heuristicName + "_" + seed + ".txt";
-                string simulatedAnnealingFile = @"simulatedannealing_" + heuristicName + "_" + seed  + ".txt";
-                string randomSearchFile = @"randomSearch_" + heuristicName + "_" + seed  + ".txt";
+                string simulatedAnnealingFile = @"simulatedannealing_" + heuristicName + "_" + seed + ".txt";
+                string randomSearchFile = @"randomSearch_" + heuristicName + "_" + seed + ".txt";
                 int numNeighbors = 100;
                 double stddev = 500;
                 int numDemands = 1000000;
@@ -450,7 +477,8 @@ namespace MetaOptimize
         /// <summary>
         /// compare problem size vs topo size and latency vs topo size.
         /// </summary>
-        public static void compareTopoSizeLatency() {
+        public static void compareTopoSizeLatency()
+        {
             Heuristic heuristicName = Heuristic.DemandPinning;
             var topoName = "B4";
             var topology = Parser.ReadTopologyJson(@"..\Topologies\b4-teavar.json");
@@ -489,7 +517,8 @@ namespace MetaOptimize
             // Console.WriteLine("=====metaoptimize " + outer_gurobi_time + " sos=" + outer_sos_constr + " lin " + outer_lin_constraints);
             Dictionary<(string, string), double> dic_demands = new Dictionary<(string, string), double>();
             var rng = new Random();
-            foreach (var pair in topology.GetNodePairs()) {
+            foreach (var pair in topology.GetNodePairs())
+            {
                 dic_demands[pair] = rng.NextDouble() * 5000 * 0.5;
             }
             solver.CleanAll();
@@ -498,14 +527,20 @@ namespace MetaOptimize
                 numPaths, demandPinningThreshold: threshold, DirectEncoder: true, numSlices: numPartitions, partition: partition);
 
             Stopwatch timer;
-            if (heuristicName == Heuristic.Pop) {
-                for (int i = 0; i < numPartitions; i++) {
+            if (heuristicName == Heuristic.Pop)
+            {
+                for (int i = 0; i < numPartitions; i++)
+                {
                     solver.CleanAll();
                     var partDemand = new Dictionary<(string, string), double>();
-                    foreach (var pair in topology.GetNodePairs()) {
-                        if (partition[pair] == i & dic_demands.ContainsKey(pair)) {
+                    foreach (var pair in topology.GetNodePairs())
+                    {
+                        if (partition[pair] == i & dic_demands.ContainsKey(pair))
+                        {
                             partDemand[pair] = dic_demands[pair];
-                        } else {
+                        }
+                        else
+                        {
                             partDemand[pair] = 0;
                         }
                     }
@@ -519,7 +554,9 @@ namespace MetaOptimize
                     Console.WriteLine("=====inner heuristic " + i + " " + inner_heuristic_time + " tot demand=" +
                                 ((TEOptimizationSolution)heuristicEncoder.GetSolution(solverSolutionHeuristic)).TotalDemandMet);
                 }
-            } else {
+            }
+            else
+            {
                 var heuristicEncoding = heuristicEncoder.Encoding(topology, demandEqualityConstraints: dic_demands, noAdditionalConstraints: true);
                 // gurobi heuristic inner
                 timer = Stopwatch.StartNew();
