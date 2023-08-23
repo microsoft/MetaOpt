@@ -13,7 +13,7 @@ namespace MetaOptimize.Cli
         /// Returns the heuristic encoder, partition and partitionlist
         /// based on inputs.
         /// </summary>
-        /// TODO: it would be helpful if you say when someone should use this. 
+        /// TODO: it would be helpful if you say when someone should use this.
         /// TODO: modify to have a heuristic interface potentially where you can get all the parameters of the heuristic. Right now, it has parameters for multiple different heuristics lumped together?
         /// TODO: add a comment that explains what the different heuristics are.
         public static (IEncoder<TVar, TSolution>, IDictionary<(string, string), int>, IList<IDictionary<(string, string), int>>) getHeuristic<TVar, TSolution>(
@@ -33,8 +33,8 @@ namespace MetaOptimize.Cli
                     }
                     if (DirectEncoder)
                     {
-                        //TODO: what is the directencoder, and how is it different from the others.
-                        //TODO: fix the code.
+                        // TODO: what is the directencoder, and how is it different from the others.
+                        // TODO: fix the code.
                         heuristicEncoder = new TEOptimalEncoder<TVar, TSolution>(solver, numPaths);
                         throw new Exception("should verify the above implementation...");
                     }
@@ -52,13 +52,13 @@ namespace MetaOptimize.Cli
                     }
                     else if (InnerEncoding == InnerEncodingMethodChoice.PrimalDual)
                     {
-                        //TODO: needs a comment that explains what indirect quantized DP is.
+                        // TODO: needs a comment that explains what indirect quantized DP is.
                         Console.WriteLine("Indirect Quantized DP");
                         heuristicEncoder = new DemandPinningQuantizedEncoder<TVar, TSolution>(solver, numPaths, demandPinningThreshold, scaleFactor: scaleFactor);
                     }
                     else
                     {
-                        //TODO: needs a comment that explains what indirect DP is. 
+                        // TODO: needs a comment that explains what indirect DP is.
                         Console.WriteLine("Indirect DP");
                         heuristicEncoder = new DemandPinningEncoder<TVar, TSolution>(solver, numPaths, demandPinningThreshold, scaleFactor: scaleFactor);
                     }
@@ -327,7 +327,7 @@ namespace MetaOptimize.Cli
         /// The function first encodes the demand pinning heuristic (it assumes we do not want to add any additional constraints).
         /// Then it solves the optimization and computes total amount of demand the heuristic is able satisfy.
         /// It then encodes the optimal form and solves the optimization and computes the total amount of demand the optimal is able to satisfy.
-        /// The function returns (optimal demand met, heuristic demand met)
+        /// The function returns (optimal demand met, heuristic demand met).
         /// </summary>
         public static (double, double) getOptimalDemandPinningTotalDemand<TVar, TSolution>(ISolver<TVar, TSolution> solver, Dictionary<(string, string), double> demands,
             Topology topology, int numPaths, double threshold)
@@ -350,7 +350,7 @@ namespace MetaOptimize.Cli
         /// <summary>
         /// find interesting gap for expected pop.
         /// </summary>
-        /// TODO: improve the comment for this function. What makes the gap interesting? Change the function name too to  be simpler. 
+        /// TODO: improve the comment for this function. What makes the gap interesting? Change the function name too to  be simpler.
         /// TODO: is this function in the right place? it seems like it should be in a different library?
         public static void findGapExpectedPopAdversarialDemandOnIndependentPartitions<TVar, TSolution>(CliOptions opts, Topology topology,
                 Dictionary<(string, string), double> demands, double optimal)
@@ -382,7 +382,7 @@ namespace MetaOptimize.Cli
                 Console.WriteLine("random sample" + i + "-->" + "total demand = " + demandMet + " gap = " + (optimal - demandMet));
                 sum_r += (optimal - demandMet);
             }
-            //TODO: remove dead code.
+            // TODO: remove dead code.
             Console.WriteLine("==================== avg gap on " + num_r + " random partitions: " + (sum_r / num_r));
             // Console.WriteLine("==================== trying all-to-all demand");
             // var all2allDemand = new Dictionary<(string, string), double>();
