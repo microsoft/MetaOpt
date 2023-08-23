@@ -51,7 +51,7 @@ namespace MetaOptimize.Cli
         /// <summary>
         /// demand list (only applies for PrimalDual).
         /// </summary>
-        /// TODO: this terminology is too TE specific. Can you make it more general to apply to our other heuristics too? Also would be good to expand the comment. 
+        /// TODO: this terminology is too TE specific. Can you make it more general to apply to our other heuristics too? Also would be good to expand the comment.
         [Option('d', "demandlist", Default = "0", HelpText = "quantized list of demands (only applies to PrimalDual -- should separate value with ',' no space).")]
         public String DemandList { get; set; }
 
@@ -78,7 +78,7 @@ namespace MetaOptimize.Cli
         /// The number of pop slices to use.
         /// </summary>
         /// TODO: again this is specific to a particular heuristic, is there a way to separate inputs that are heuristic specific from those that are general?
-        /// One way may be to take a json as input that contains the inputs that are specific to the particular heuristic. 
+        /// One way may be to take a json as input that contains the inputs that are specific to the particular heuristic.
         [Option('s', "slices", Default = 2, HelpText = "The number of pop slices to use.")]
         public int PopSlices { get; set; }
 
@@ -106,7 +106,7 @@ namespace MetaOptimize.Cli
         /// <summary>
         /// method for finding gap [search or direct].
         /// </summary>
-        /// TODO: expand on the comment to describe what each option does. 
+        /// TODO: expand on the comment to describe what each option does.
         [Option('m', "method", Default = MethodChoice.Direct, HelpText = "the method for finding the desirable gap [Direct | Search | FindFeas | Random | HillClimber | SimulatedAnnealing]")]
         public MethodChoice Method { get; set; }
 
