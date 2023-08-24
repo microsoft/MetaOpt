@@ -31,13 +31,19 @@ namespace MetaOptimize
             topologies["Abilene"] = @"..\Topologies\abilene.json";
             Heuristic heuristicName = Heuristic.DemandPinning;
             string logDir = @"..\logs\demand_pinning_sweep_thresh\" + Utils.GetFID() + @"\";
+
+            // TODO: these parameters should not be specific to this function. ideally take them as parameters?
+            // Problem parameters.
             double timeToTerminate = 1800;
             int numPaths = 2;
             double start = 0;
             double step = 2.5;
             double end = 15;
             int numProcessors = 16;
+
             ISolver<GRBVar, GRBModel> solver = (ISolver<GRBVar, GRBModel>)new GurobiSOS(verbose: 1, timeToTerminateNoImprovement: timeToTerminate);
+
+            // goes through topologies one by one and sweeps through the threshold.
             foreach (var (topoName, topoPath) in topologies)
             {
                 var topology = Parser.ReadTopologyJson(topoPath);
@@ -47,6 +53,7 @@ namespace MetaOptimize
                 Utils.AppendToFile(logDir, logFile, maxThreshold.ToString());
                 for (double i = start; i <= end; i += step)
                 {
+                    // TODO: fix the constant and replace it with a variable that tracks the value of the const.
                     var threshold = i * maxThreshold / 100;
                     var (optimal, heuristic, demands) = CliUtils.maximizeOptimalityGapDemandPinning<GRBVar, GRBModel>(
                             solver: solver, topology: topology, numPaths: numPaths, threshold: threshold, numProcessors: numProcessors);
@@ -59,12 +66,15 @@ namespace MetaOptimize
         /// <summary>
         /// print paths between every pairs of topology.
         /// </summary>
+        // TODO: comment is unclear.
+        // TODO: maybe re-write so that it takes the topology and its path as input?
         public static void printPaths()
         {
             var topologies = new Dictionary<string, string>();
             topologies["B4"] = @"..\Topologies\b4-teavar.json";
             topologies["SWAN"] = @"..\Topologies\swan.json";
             topologies["Abilene"] = @"..\Topologies\abilene.json";
+
             int numPaths = 1;
             Dictionary<string, List<int>> splist = new Dictionary<string, List<int>>();
             string logDir = @"..\logs\path_stat\" + Utils.GetFID() + @"\";
@@ -100,16 +110,22 @@ namespace MetaOptimize
         }
         /// <summary>
         /// impact of number of paths on gap of demand pinning
+        /// This function starts with numpaths = 1 on each topology
+        /// and increases the number of paths by 1 each time and recomputes the gap.
         /// for B4, Abilene and SWAN.
         /// </summary>
-        public static void ImpactNumPathsDemandPinning()
+        // TODO: what is threshold prec?
+        public static void impactNumPathsDP()
         {
             var topologies = new Dictionary<string, string>();
             topologies["B4"] = @"..\Topologies\b4-teavar.json";
             topologies["SWAN"] = @"..\Topologies\swan.json";
             topologies["Abilene"] = @"..\Topologies\abilene.json";
+
             Heuristic heuristicName = Heuristic.DemandPinning;
             string logDir = @"..\logs\demand_pinning_sweep_paths\" + Utils.GetFID() + @"\";
+
+            // TODO: ideally the problem parameters should be inputs to the function.
             double thresholdPerc = 5;
             double timeToTerminate = 1200;
             int numProcessors = 16;
@@ -117,15 +133,21 @@ namespace MetaOptimize
             int step = 1;
             int end = 6;
             int end_try = 6;
+
             ISolver<GRBVar, GRBModel> solver = (ISolver<GRBVar, GRBModel>)new GurobiSOS(verbose: 1, timeToTerminateNoImprovement: timeToTerminate);
+
             foreach (var (topoName, topoPath) in topologies)
             {
                 var topology = Parser.ReadTopologyJson(topoPath);
                 var maxThreshold = topology.MinCapacity();
                 string logFile = topoName + @"_" + heuristicName + ".txt";
+
                 Utils.CreateFile(logDir, logFile, removeIfExist: true);
                 Utils.AppendToFile(logDir, logFile, maxThreshold.ToString());
+
                 var threshold = thresholdPerc * maxThreshold / 100;
+
+                // TODO: shouldn't you check to see if the new number of paths actually exist?
                 for (int i = start; i <= end; i += step)
                 {
                     int numPaths = i;
@@ -149,8 +171,9 @@ namespace MetaOptimize
         /// Vaying the number of nodes in a random regular topology and seeing the
         /// gap vs num nodes effect.
         /// </summary>
-        public static void ImpactNumNodesRadixRandomRegularGraphDemandPinning()
+        public static void impactRandomRegularGraphParamsDP()
         {
+            // TODO: ideally these things should be inputs.
             double capacity = 5000;
             List<int> seedList = new List<int>() { 0, 1, 2, 3 };
             int thresholdPerc = 5;
@@ -169,6 +192,7 @@ namespace MetaOptimize
             int endRadix = 7;
 
             ISolver<GRBVar, GRBModel> solver = (ISolver<GRBVar, GRBModel>)new GurobiSOS(verbose: 1, timeToTerminateNoImprovement: timeToTerminate);
+
             foreach (int seed in seedList)
             {
                 for (int sn = startNodes; sn <= endNodes; sn += stepNodes)
@@ -195,7 +219,8 @@ namespace MetaOptimize
         /// <summary>
         /// Vaying the number of nodes and neighbors in small word topology.
         /// </summary>
-        public static void ImpactNumNodesRadixSmallWordTopoDemandPinning()
+        /// TODO: explain what a small world topology is.
+        public static void impactSmallWordGraphParamsDP()
         {
             double capacity = 5000;
             int thresholdPerc = 5;
@@ -237,8 +262,11 @@ namespace MetaOptimize
         /// <summary>
         /// evaluating impact of number of paths and partitions for pop.
         /// </summary>
-        public static void ImpactNumPathsPartitionsPop()
+        /// TODO: This says it evaluates the number of paths and partitions for pop but also contains
+        /// Code that references demand pinning? fix the comment and function title or separate them.
+        public static void impactNumPathsPartitionsPop()
         {
+            // TODO: same comment as before about function parameters.
             var topology = Parser.ReadTopologyJson(@"..\Topologies\b4-teavar.json");
             Heuristic heuristicName = Heuristic.Pop;
             int numProcessors = 16;
@@ -254,6 +282,7 @@ namespace MetaOptimize
             string fid = DateTime.Now.Year + "_" + DateTime.Now.Month + "_" + DateTime.Now.Day + "_" + DateTime.Now.Hour + "_" + DateTime.Now.Minute + "_" +
                 DateTime.Now.Second + "_" + DateTime.Now.Millisecond;
             string logDir = @"..\logs\pop_diff_paths_diff_partitions\" + heuristicName + "_";
+
             switch (heuristicName)
             {
                 case Heuristic.Pop:
@@ -265,16 +294,20 @@ namespace MetaOptimize
                 default:
                     throw new Exception("heuristic name not found!");
             }
+
             logDir = logDir + fid + @"\";
             string kktFile = @"kkt_" + heuristicName + ".txt";
             Utils.CreateFile(logDir, kktFile, true);
             int numPartitions = minPartition;
+            // TODO: the other functions are using GurobiSOS but this one uses GurobiBinary why?
             ISolver<GRBVar, GRBModel> solver = (ISolver<GRBVar, GRBModel>)new GurobiBinary(10, 1, numThreads);
 
             while (numPartitions <= maxPartition)
             {
                 IDictionary<(string, string), int> partition = topology.RandomPartition(numPartitions);
+
                 int numPaths = minPaths;
+
                 while (numPaths <= maxPaths)
                 {
                     // foreach (int i in Enumerable.Range(1, 20)) {
@@ -305,9 +338,12 @@ namespace MetaOptimize
         /// <summary>
         /// evaluating gap vs time for different methods on DP.
         /// </summary>
+        // TODO: add a comment to explain what the different methods are.
+        // I also see from the code that you are comparing to hillclimbing and others.
         public static void compareGapDelayDiffMethodsDP()
         {
             var topology = Parser.ReadTopologyJson(@"..\Topologies\b4-teavar.json");
+
             int numPaths = 2;
             int numThreads = 1;
             double timeout = 5000;
@@ -315,6 +351,7 @@ namespace MetaOptimize
             var heuristicName = Heuristic.DemandPinning;
             var demandUB = -1;
             var demandPinningThreshold = 250;
+
             List<int> seedList = new List<int>() { 0, 1, 2, 3 };
             string logDir = @"..\logs\gap_vs_time\" + heuristicName + "_";
             logDir = logDir + Utils.GetFID() + @"\";
@@ -385,6 +422,7 @@ namespace MetaOptimize
         public static void compareGapDelayDiffMethodsPop()
         {
             var topology = Parser.ReadTopologyJson(@"..\Topologies\b4-teavar.json");
+
             int numProcessors = 16;
             int numPaths = 2;
             Heuristic heuristicName = Heuristic.Pop;
@@ -394,6 +432,8 @@ namespace MetaOptimize
             int numThreads = 1;
             double timeout = 1000;
             string logDir = @"..\logs\gap_vs_time\" + heuristicName + "_";
+
+            // TODO: this seems pointless since your fixating on pop?
             switch (heuristicName)
             {
                 case Heuristic.Pop:
@@ -405,6 +445,7 @@ namespace MetaOptimize
                 default:
                     throw new Exception("heuristic name not found!");
             }
+
             logDir = logDir + Utils.GetFID() + @"\";
             string kktFile = @"kkt_" + heuristicName + ".txt";
             IDictionary<(string, string), int> partition = topology.RandomPartition(numSlices);
@@ -477,9 +518,15 @@ namespace MetaOptimize
         /// <summary>
         /// compare problem size vs topo size and latency vs topo size.
         /// </summary>
+        /// TODO: which approach is missing from the comment.
+        // TODO: remove commented out code.
+        // TODO: mention in the summary comment how the code does this.
+        // TODO: I think what you are really doing here is benchmarking the inner problems against each other and not really using metaopt?
+        // TODO: also i dont see hwo you are varying the topology? I think either remove this function or fix it to do explicitly what you are describing.
         public static void compareTopoSizeLatency()
         {
             Heuristic heuristicName = Heuristic.DemandPinning;
+
             var topoName = "B4";
             var topology = Parser.ReadTopologyJson(@"..\Topologies\b4-teavar.json");
             string logDir = @"..\logs\scale_latency_problem\" + Utils.GetFID() + @"\";
@@ -487,6 +534,7 @@ namespace MetaOptimize
             double timeToTerminate = 10;
             int numPaths = 2;
             int numPartitions = 2;
+
             var partition = topology.RandomPartition(numPartitions);
             ISolver<GRBVar, GRBModel> solver = (ISolver<GRBVar, GRBModel>)new GurobiSOS(verbose: 1, timeToTerminateNoImprovement: timeToTerminate);
             string logFile = topoName + "_" + heuristicName + @"_" + heuristicName;
