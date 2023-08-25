@@ -12,6 +12,7 @@
     {
         /// <summary>
         /// Function to create a new solver.
+        /// This uses a delegate method so that we can plug and play different solvers.
         /// </summary>
         internal Func<ISolver<TVar, TSol>> CreateSolver;
 
@@ -37,7 +38,7 @@
 
             // create the optimal encoder.
             var solver = CreateSolver();
-            var optimalEncoder = new TEOptimalEncoder<TVar, TSol>(solver, k: k);
+            var optimalEncoder = new TEOptimalEncoder<TVar, TSol>(solver, maxNumPaths: k);
             var heuristicEncoder = new DemandPinningEncoder<TVar, TSol>(solver, k: k, threshold: threshold);
             var adversarialInputGenerator = new TEAdversarialInputGenerator<TVar, TSol>(topology, k: k);
             var (optimalSolution, demandPinningSolution) = adversarialInputGenerator.MaximizeOptimalityGap(optimalEncoder, heuristicEncoder);

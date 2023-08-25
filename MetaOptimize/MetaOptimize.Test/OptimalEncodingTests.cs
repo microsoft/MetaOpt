@@ -30,7 +30,7 @@ namespace MetaOptimize.Test
             topology.AddEdge("a", "b", capacity: 10);
 
             var solver = CreateSolver();
-            var optimalEncoder = new TEOptimalEncoder<TVar, TSol>(solver, k: 1);
+            var optimalEncoder = new TEOptimalEncoder<TVar, TSol>(solver, maxNumPaths: 1);
             var encoding = optimalEncoder.Encoding(topology);
             var solverSolution = optimalEncoder.Solver.Maximize(encoding.GlobalObjective);
             var optimizationSolution = (TEOptimizationSolution)optimalEncoder.GetSolution(solverSolution);
@@ -62,7 +62,7 @@ namespace MetaOptimize.Test
             topology.AddEdge("a", "b", capacity: 10);
 
             var solver = CreateSolver();
-            var optimalEncoder = new TEOptimalEncoder<TVar, TSol>(solver, k: 1);
+            var optimalEncoder = new TEOptimalEncoder<TVar, TSol>(solver, maxNumPaths: 1);
             var encoding = optimalEncoder.Encoding(topology, noAdditionalConstraints: true);
             var solverSolution = optimalEncoder.Solver.Maximize(encoding.GlobalObjective);
             var optimizationSolution = (TEOptimizationSolution)optimalEncoder.GetSolution(solverSolution);
@@ -91,7 +91,7 @@ namespace MetaOptimize.Test
             topology.AddEdge("c", "d", capacity: 10);
 
             var solver = CreateSolver();
-            var optimalEncoder = new TEOptimalEncoder<TVar, TSol>(solver, k: 1);
+            var optimalEncoder = new TEOptimalEncoder<TVar, TSol>(solver, maxNumPaths: 1);
             var encoding = optimalEncoder.Encoding(topology);
             var solverSolution = optimalEncoder.Solver.Maximize(encoding.GlobalObjective);
             var optimizationSolution = (TEOptimizationSolution)optimalEncoder.GetSolution(solverSolution);
@@ -130,7 +130,7 @@ namespace MetaOptimize.Test
             topology.AddEdge("c", "d", capacity: 10);
 
             var solver = CreateSolver();
-            var optimalEncoder = new TEOptimalEncoder<TVar, TSol>(solver, k: 1);
+            var optimalEncoder = new TEOptimalEncoder<TVar, TSol>(solver, maxNumPaths: 1);
             var encoding = optimalEncoder.Encoding(topology, noAdditionalConstraints: true);
             var solverSolution = optimalEncoder.Solver.Maximize(encoding.GlobalObjective);
             var optimizationSolution = (TEOptimizationSolution)optimalEncoder.GetSolution(solverSolution);

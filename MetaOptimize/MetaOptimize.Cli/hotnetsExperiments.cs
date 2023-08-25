@@ -592,7 +592,7 @@ namespace MetaOptimize
                             partDemand[pair] = 0;
                         }
                     }
-                    var heuristicEncoding = heuristicEncoder.Encoding(topology, demandEqualityConstraints: partDemand, noAdditionalConstraints: true);
+                    var heuristicEncoding = heuristicEncoder.Encoding(topology, inputEqualityConstraints: partDemand, noAdditionalConstraints: true);
                     // gurobi heuristic inner
                     timer = Stopwatch.StartNew();
                     var solverSolutionHeuristic = heuristicEncoder.Solver.Maximize(heuristicEncoding.MaximizationObjective);
@@ -605,7 +605,7 @@ namespace MetaOptimize
             }
             else
             {
-                var heuristicEncoding = heuristicEncoder.Encoding(topology, demandEqualityConstraints: dic_demands, noAdditionalConstraints: true);
+                var heuristicEncoding = heuristicEncoder.Encoding(topology, inputEqualityConstraints: dic_demands, noAdditionalConstraints: true);
                 // gurobi heuristic inner
                 timer = Stopwatch.StartNew();
                 var solverSolutionHeuristic = heuristicEncoder.Solver.Maximize(heuristicEncoding.MaximizationObjective);

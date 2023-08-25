@@ -36,11 +36,11 @@ namespace MetaOptimize.Test
 
             // create the optimal encoder.
             var solver = CreateSolver();
-            var optimalEncoder = new TEOptimalEncoder<TVar, TSol>(solver, k: 1);
+            var optimalEncoder = new TEOptimalEncoder<TVar, TSol>(solver, maxNumPaths: 1);
 
             // create the pop encoder.
             var partition = topology.RandomPartition(2);
-            var popEncoder = new PopEncoder<TVar, TSol>(solver, k: 1, numPartitions: 2, demandPartitions: partition);
+            var popEncoder = new PopEncoder<TVar, TSol>(solver, maxNumPaths: 1, numPartitions: 2, demandPartitions: partition);
             var adversarialInputGenerator = new TEAdversarialInputGenerator<TVar, TSol>(topology, k: 1);
 
             var (optimalSolution, popSolution) = adversarialInputGenerator.MaximizeOptimalityGap(optimalEncoder, popEncoder);
