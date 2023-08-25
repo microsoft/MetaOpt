@@ -189,7 +189,7 @@ namespace MetaOptimize
             this.sumNonShortest = new Dictionary<(string, string), Polynomial<TVar>>();
             this.shortestFlowVariables = new Dictionary<(string, string), TVar>();
 
-            this.Paths = this.Topology.AllPairsKShortestPathMultiProcessing(this.K, numProcesses, verbose);
+            this.Paths = this.Topology.MultiProcessAllPairsKShortestPath(this.K, numProcesses, verbose);
             foreach (var pair in this.Topology.GetNodePairs())
             {
                 if (!IsDemandValid(pair))

@@ -143,7 +143,7 @@ namespace MetaOptimize
 
             this.FlowVariables = new Dictionary<(string, string), TVar>();
             this.FlowPathVariables = new Dictionary<string[], TVar>(new PathComparer());
-            this.Paths = this.Topology.AllPairsKShortestPathMultiProcessing(this.MaxNumPaths, numProcesses: numProcesses, verbose: verbose);
+            this.Paths = this.Topology.MultiProcessAllPairsKShortestPath(this.MaxNumPaths, numProcesses: numProcesses, verbose: verbose);
             foreach (var pair in this.Topology.GetNodePairs())
             {
                 if (!IsDemandValid(pair))

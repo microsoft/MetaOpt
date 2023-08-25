@@ -258,7 +258,7 @@ namespace MetaOptimize
         /// <param name="output">to store output.</param>
         /// <param name="pid">processor id for logging.</param>
         /// <param name="verbose">enables detailed logging.</param>
-        public void ShortestKPathsForListPairs(int k, IEnumerable<(string, string)> pairList,
+        public void ShortestKPathsForPairList(int k, IEnumerable<(string, string)> pairList,
                 IDictionary<(string, string), string[][]> output, int pid = -1, bool verbose = false)
         {
             var path_dict = new Dictionary<(string, string), string[][]>();
@@ -279,7 +279,8 @@ namespace MetaOptimize
         /// <param name="maxNumPaths">The maximum number of paths.</param>
         /// <param name="numProcesses">The number of processors to use.</param>
         /// <param name="verbose">To show detailed logs.</param>
-        public Dictionary<(string, string), string[][]> AllPairsKShortestPathMultiProcessing(int maxNumPaths,
+        /// TODO: add unit tests for this.
+        public Dictionary<(string, string), string[][]> MultiProcessAllPairsKShortestPath(int maxNumPaths,
                 int numProcesses = -1, bool verbose = false)
         {
             if (this.paths.ContainsKey(maxNumPaths))
@@ -295,7 +296,7 @@ namespace MetaOptimize
             var output = new ConcurrentDictionary<(string, string), string[][]>();
             if (numProcesses < 1)
             {
-                this.ShortestKPathsForListPairs(maxNumPaths, this.GetNodePairs(), output, verbose: verbose);
+                this.ShortestKPathsForPairList(maxNumPaths, this.GetNodePairs(), output, verbose: verbose);
                 this.paths[maxNumPaths] = output.ToDictionary(entry => entry.Key,
                                                 entry => entry.Value);
                 return output.ToDictionary(entry => entry.Key,
@@ -305,6 +306,7 @@ namespace MetaOptimize
             Utils.logger("dividing pairs among processes", verbose);
             var processToPairList = new Dictionary<int, List<(string, string)>>();
             int pid = 0;
+            // Round robin assigns a pair of nodes to a process.
             foreach (var pair in this.GetNodePairs())
             {
                 if (!processToPairList.ContainsKey(pid))
@@ -321,7 +323,7 @@ namespace MetaOptimize
                 Utils.logger(
                     string.Format("creating process {0} with {1} pairs", pid1, processToPairList[pid1].Count()),
                     verbose);
-                threadlist.Add(new Thread(() => ShortestKPathsForListPairs(maxNumPaths, processToPairList[pid1], output, pid: pid1, verbose: verbose)));
+                threadlist.Add(new Thread(() => ShortestKPathsForPairList(maxNumPaths, processToPairList[pid1], output, pid: pid1, verbose: verbose)));
                 Utils.logger(
                     string.Format("starting process {0} with {1} pairs", pid1, processToPairList[pid1].Count()),
                     verbose);
