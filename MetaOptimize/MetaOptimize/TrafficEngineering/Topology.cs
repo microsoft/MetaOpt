@@ -87,8 +87,10 @@ namespace MetaOptimize
         /// </summary>
         public bool ContaintsEdge(string source, string target)
         {
-            foreach (var edge in this.GetAllEdges()) {
-                if (edge.Source == source || edge.Target == target) {
+            foreach (var edge in this.GetAllEdges())
+            {
+                if (edge.Source == source || edge.Target == target)
+                {
                     return true;
                 }
             }
@@ -206,16 +208,17 @@ namespace MetaOptimize
         /// <param name="dest">The destination node.</param>
         public string[][] ShortestKPaths(int k, string source, string dest)
         {
-            if (this.paths.ContainsKey(k) && this.paths[k].ContainsKey((source, dest))) {
+            if (this.paths.ContainsKey(k) && this.paths[k].ContainsKey((source, dest)))
+            {
                 return this.paths[k][(source, dest)];
             }
 
             lock (this.paths)
             {
-               if (!this.paths.ContainsKey(k))
-               {
-                 this.paths[k] = new Dictionary<(string, string), string[][]>();
-               }
+                if (!this.paths.ContainsKey(k))
+                {
+                    this.paths[k] = new Dictionary<(string, string), string[][]>();
+                }
             }
 
             Func<EquatableTaggedEdge<string, double>, double> myfunc = delegate
@@ -260,7 +263,8 @@ namespace MetaOptimize
         {
             var path_dict = new Dictionary<(string, string), string[][]>();
             Utils.logger("processor with pid " + pid + " starting to compute paths...", verbose);
-            foreach (var pair in pairList) {
+            foreach (var pair in pairList)
+            {
                 var paths = this.ShortestKPaths(k, pair.Item1, pair.Item2);
                 // Utils.logger("pid=" + pid + ": finding the paths between " + pair.Item1 + " and " + pair.Item2, verbose);
                 path_dict[pair] = paths;
@@ -270,25 +274,29 @@ namespace MetaOptimize
         }
 
         /// <summary>
-        /// Compute the shortest k paths for all the pairs (multiprocessing).
+        /// Compute the shortest k paths for all the pairs. You can specify the number of processors to use.
         /// </summary>
-        /// <param name="k">The maximum number of paths.</param>
+        /// <param name="maxNumPaths">The maximum number of paths.</param>
         /// <param name="numProcesses">The number of processors to use.</param>
         /// <param name="verbose">To show detailed logs.</param>
-        public Dictionary<(string, string), string[][]> AllPairsKShortestPathMultiProcessing(int k,
+        public Dictionary<(string, string), string[][]> AllPairsKShortestPathMultiProcessing(int maxNumPaths,
                 int numProcesses = -1, bool verbose = false)
         {
-            if (this.paths.ContainsKey(k)) {
+            if (this.paths.ContainsKey(maxNumPaths))
+            {
                 Utils.logger("found paths in " + this.pathFile, verbose);
-                return this.paths[k];
-            } else {
+                return this.paths[maxNumPaths];
+            }
+            else
+            {
                 Utils.logger("did not found paths in " + this.pathFile, verbose);
-                this.paths[k] = new Dictionary<(string, string), string[][]>();
+                this.paths[maxNumPaths] = new Dictionary<(string, string), string[][]>();
             }
             var output = new ConcurrentDictionary<(string, string), string[][]>();
-            if (numProcesses < 1) {
-                this.ShortestKPathsForListPairs(k, this.GetNodePairs(), output, verbose: verbose);
-                this.paths[k] = output.ToDictionary(entry => entry.Key,
+            if (numProcesses < 1)
+            {
+                this.ShortestKPathsForListPairs(maxNumPaths, this.GetNodePairs(), output, verbose: verbose);
+                this.paths[maxNumPaths] = output.ToDictionary(entry => entry.Key,
                                                 entry => entry.Value);
                 return output.ToDictionary(entry => entry.Key,
                                            entry => entry.Value);
@@ -297,8 +305,10 @@ namespace MetaOptimize
             Utils.logger("dividing pairs among processes", verbose);
             var processToPairList = new Dictionary<int, List<(string, string)>>();
             int pid = 0;
-            foreach (var pair in this.GetNodePairs()) {
-                if (!processToPairList.ContainsKey(pid)) {
+            foreach (var pair in this.GetNodePairs())
+            {
+                if (!processToPairList.ContainsKey(pid))
+                {
                     processToPairList[pid] = new List<(string, string)>();
                 }
                 processToPairList[pid].Add(pair);
@@ -306,26 +316,29 @@ namespace MetaOptimize
             }
             // starting the processes;
             var threadlist = new List<Thread>();
-            foreach (var pid1 in processToPairList.Keys) {
+            foreach (var pid1 in processToPairList.Keys)
+            {
                 Utils.logger(
                     string.Format("creating process {0} with {1} pairs", pid1, processToPairList[pid1].Count()),
                     verbose);
-                threadlist.Add(new Thread(() => ShortestKPathsForListPairs(k, processToPairList[pid1], output, pid: pid1, verbose: verbose)));
+                threadlist.Add(new Thread(() => ShortestKPathsForListPairs(maxNumPaths, processToPairList[pid1], output, pid: pid1, verbose: verbose)));
                 Utils.logger(
                     string.Format("starting process {0} with {1} pairs", pid1, processToPairList[pid1].Count()),
                     verbose);
                 threadlist[pid1].Start();
                 Thread.Sleep(1000);
             }
-            foreach (var pid1 in processToPairList.Keys) {
+            foreach (var pid1 in processToPairList.Keys)
+            {
                 Utils.logger(
                     string.Format("waiting for process {0}", pid1),
                     verbose);
                 threadlist[pid1].Join();
             }
-            this.paths[k] = output.ToDictionary(entry => entry.Key,
+            this.paths[maxNumPaths] = output.ToDictionary(entry => entry.Key,
                                                 entry => entry.Value);
-            if (!String.IsNullOrEmpty(this.pathFile)) {
+            if (!String.IsNullOrEmpty(this.pathFile))
+            {
                 Utils.logger("storing the paths in the file " + this.pathFile, verbose);
                 Utils.writePathsToFile(this.pathFile, this.paths);
             }
@@ -340,7 +353,8 @@ namespace MetaOptimize
         {
             double sumLen = 0;
             double numPairs = 0;
-            foreach (var pair in this.GetNodePairs()) {
+            foreach (var pair in this.GetNodePairs())
+            {
                 var path = this.ShortestKPaths(1, pair.Item1, pair.Item2);
                 sumLen += path[0].Count();
                 numPairs += 1;
@@ -354,7 +368,8 @@ namespace MetaOptimize
         public int diameter()
         {
             int diameter = 0;
-            foreach (var pair in this.GetNodePairs()) {
+            foreach (var pair in this.GetNodePairs())
+            {
                 var path = this.ShortestKPaths(1, pair.Item1, pair.Item2);
                 diameter = Math.Max(diameter, path[0].Count());
             }
@@ -406,7 +421,8 @@ namespace MetaOptimize
         public double MaxCapacity()
         {
             double maxCapacity = 0;
-            foreach (var edge in this.GetAllEdges()) {
+            foreach (var edge in this.GetAllEdges())
+            {
                 maxCapacity = Math.Max(maxCapacity, edge.Capacity);
             }
             return maxCapacity;
@@ -419,7 +435,8 @@ namespace MetaOptimize
         public double MinCapacity()
         {
             double minCapacity = double.PositiveInfinity;
-            foreach (var edge in this.GetAllEdges()) {
+            foreach (var edge in this.GetAllEdges())
+            {
                 minCapacity = Math.Min(minCapacity, edge.Capacity);
             }
             return minCapacity;
@@ -484,71 +501,94 @@ namespace MetaOptimize
             //    Proceedings of the thirty-fifth ACM symposium on Theory of computing,
             //    San Diego, CA, USA, pp 213--222, 2003.
             //    http://portal.acm.org/citation.cfm?id=780542.780576.
-            if (radix >= numNodes) {
+            if (radix >= numNodes)
+            {
                 throw new Exception("radix should be less than numNodes");
             }
-            if (radix * numNodes % 2 != 0) {
+            if (radix * numNodes % 2 != 0)
+            {
                 throw new Exception("radix * numNodes should be event.");
             }
-            if (radix <= 0) {
+            if (radix <= 0)
+            {
                 throw new Exception("radix should be positive.");
             }
             Console.WriteLine("Creating random graph.");
             var rng = new Random(seed);
             bool found = false;
             Topology t = null;
-            do {
+            do
+            {
                 t = new Topology();
                 List<string> nodes = new List<string>();
                 Dictionary<string, int> remRadix = new Dictionary<string, int>();
-                for (int i = 0; i < numNodes; i++) {
+                for (int i = 0; i < numNodes; i++)
+                {
                     t.AddNode(i.ToString());
-                    for (int j = 0; j < radix; j++) {
+                    for (int j = 0; j < radix; j++)
+                    {
                         nodes.Add(i.ToString());
                     }
                 }
                 bool stop = false;
-                do {
-                    for (int i = 0; i < numNodes; i++) {
+                do
+                {
+                    for (int i = 0; i < numNodes; i++)
+                    {
                         remRadix[i.ToString()] = 0;
                     }
                     var shuffledNodes = nodes.OrderBy(a => rng.Next()).ToList();
-                    for (int i = 0; i < shuffledNodes.Count(); i += 2) {
+                    for (int i = 0; i < shuffledNodes.Count(); i += 2)
+                    {
                         var node1 = shuffledNodes[i];
                         var node2 = shuffledNodes[i + 1];
-                        if (node1.Equals(node2) | t.ContaintsEdge(node1, node2, capacity)) {
+                        if (node1.Equals(node2) | t.ContaintsEdge(node1, node2, capacity))
+                        {
                             remRadix[node1] += 1;
                             remRadix[node2] += 1;
-                        } else {
+                        }
+                        else
+                        {
                             t.AddEdge(node1, node2, capacity);
                             t.AddEdge(node2, node1, capacity);
                         }
                     }
                     bool infeas = true;
                     bool allZero = true;
-                    foreach (var (n1, r1) in remRadix) {
-                        foreach (var (n2, r2) in remRadix) {
-                            if (!n1.Equals(n2) & r1 > 0 & r2 > 0) {
+                    foreach (var (n1, r1) in remRadix)
+                    {
+                        foreach (var (n2, r2) in remRadix)
+                        {
+                            if (!n1.Equals(n2) & r1 > 0 & r2 > 0)
+                            {
                                 allZero = false;
-                                if (!t.ContaintsEdge(n1, n2, capacity)) {
+                                if (!t.ContaintsEdge(n1, n2, capacity))
+                                {
                                     infeas = false;
                                 }
                             }
                         }
                     }
                     nodes = new List<string>();
-                    foreach (var (node, remR) in remRadix) {
-                        for (int i = 0; i < remR; i++) {
+                    foreach (var (node, remR) in remRadix)
+                    {
+                        for (int i = 0; i < remR; i++)
+                        {
                             nodes.Add(node.ToString());
                         }
                     }
-                    if (allZero) {
+                    if (allZero)
+                    {
                         stop = true;
                         found = true;
-                    } else if (infeas) {
+                    }
+                    else if (infeas)
+                    {
                         stop = true;
                         found = false;
-                    } else {
+                    }
+                    else
+                    {
                         stop = false;
                         found = false;
                     }
@@ -560,30 +600,39 @@ namespace MetaOptimize
         /// <summary>
         /// create small world graph.
         /// </summary>
-        public static Topology SmallWordGraph(int numNodes, int k, double capacity) {
-            if (k >= numNodes) {
+        public static Topology SmallWordGraph(int numNodes, int k, double capacity)
+        {
+            if (k >= numNodes)
+            {
                 throw new Exception("k should be less than numNodes");
             }
-            if (k < 0) {
+            if (k < 0)
+            {
                 throw new Exception("k should be positive.");
             }
-            if (numNodes < 0) {
+            if (numNodes < 0)
+            {
                 throw new Exception("numNodes should be positive.");
             }
-            if (k % 2 != 0) {
+            if (k % 2 != 0)
+            {
                 throw new Exception("k should be even.");
             }
             var topo = new Topology();
-            for (int i = 0; i < numNodes; i++) {
+            for (int i = 0; i < numNodes; i++)
+            {
                 topo.AddNode(i.ToString());
             }
 
-            for (int i = 0; i < numNodes; i++) {
+            for (int i = 0; i < numNodes; i++)
+            {
                 var node1 = i.ToString();
                 var pos = k / 2;
-                for (int j = 1; j <= pos; j++) {
+                for (int j = 1; j <= pos; j++)
+                {
                     var node2 = ((i + j) % numNodes).ToString();
-                    if (!topo.ContaintsEdge(node1, node2, capacity)) {
+                    if (!topo.ContaintsEdge(node1, node2, capacity))
+                    {
                         topo.AddEdge(node1, node2, capacity);
                         topo.AddEdge(node2, node1, capacity);
                     }
