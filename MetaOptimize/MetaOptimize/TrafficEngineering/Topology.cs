@@ -203,29 +203,30 @@ namespace MetaOptimize
         /// <summary>
         /// Compute the shortest k paths from a source to a destination.
         /// </summary>
-        /// <param name="k">The maximum number of paths.</param>
+        /// <param name="maxNumPaths">The maximum number of paths.</param>
         /// <param name="source">The source node.</param>
         /// <param name="dest">The destination node.</param>
-        public string[][] ShortestKPaths(int k, string source, string dest)
+        public string[][] ShortestKPaths(int maxNumPaths, string source, string dest)
         {
-            if (this.paths.ContainsKey(k) && this.paths[k].ContainsKey((source, dest)))
+            if (this.paths.ContainsKey(maxNumPaths) && this.paths[maxNumPaths].ContainsKey((source, dest)))
             {
-                return this.paths[k][(source, dest)];
+                return this.paths[maxNumPaths][(source, dest)];
             }
 
             lock (this.paths)
             {
-                if (!this.paths.ContainsKey(k))
+                if (!this.paths.ContainsKey(maxNumPaths))
                 {
-                    this.paths[k] = new Dictionary<(string, string), string[][]>();
+                    this.paths[maxNumPaths] = new Dictionary<(string, string), string[][]>();
                 }
             }
 
+            // Returns the weith of the edge which the shortest path algorithm then uses to compute the shortest path.
             Func<EquatableTaggedEdge<string, double>, double> myfunc = delegate
             {
                 return 1;
             };
-            var algorithm = new YenShortestPathsAlgorithm<string>(this.Graph, source, dest, k, edgeWeights: myfunc);
+            var algorithm = new YenShortestPathsAlgorithm<string>(this.Graph, source, dest, maxNumPaths, edgeWeights: myfunc);
 
             try
             {
@@ -236,36 +237,36 @@ namespace MetaOptimize
                 });
                 lock (this.paths)
                 {
-                    this.paths[k][(source, dest)] = paths.ToArray();
+                    this.paths[maxNumPaths][(source, dest)] = paths.ToArray();
                 }
             }
             catch (QuikGraph.NoPathFoundException)
             {
                 lock (this.paths)
                 {
-                    this.paths[k][(source, dest)] = new string[0][];
+                    this.paths[maxNumPaths][(source, dest)] = new string[0][];
                 }
             }
             // Utils.logger(Newtonsoft.Json.JsonConvert.SerializeObject(this.paths[k][(source, dest)], Newtonsoft.Json.Formatting.Indented), true);
-            return this.paths[k][(source, dest)];
+            return this.paths[maxNumPaths][(source, dest)];
         }
 
         /// <summary>
         /// Compute the shortest k paths for a list of src-dst pairs.
         /// </summary>
-        /// <param name="k">The maximum number of paths.</param>
-        /// <param name="pairList">list of src-dst pairs.</param>
+        /// <param name="maxNumPaths">The maximum number of paths.</param>
+        /// <param name="nodePairList">list of src-dst pairs.</param>
         /// <param name="output">to store output.</param>
         /// <param name="pid">processor id for logging.</param>
         /// <param name="verbose">enables detailed logging.</param>
-        public void ShortestKPathsForPairList(int k, IEnumerable<(string, string)> pairList,
+        public void ShortestKPathsForPairList(int maxNumPaths, IEnumerable<(string, string)> nodePairList,
                 IDictionary<(string, string), string[][]> output, int pid = -1, bool verbose = false)
         {
             var path_dict = new Dictionary<(string, string), string[][]>();
             Utils.logger("processor with pid " + pid + " starting to compute paths...", verbose);
-            foreach (var pair in pairList)
+            foreach (var pair in nodePairList)
             {
-                var paths = this.ShortestKPaths(k, pair.Item1, pair.Item2);
+                var paths = this.ShortestKPaths(maxNumPaths, pair.Item1, pair.Item2);
                 // Utils.logger("pid=" + pid + ": finding the paths between " + pair.Item1 + " and " + pair.Item2, verbose);
                 path_dict[pair] = paths;
             }
