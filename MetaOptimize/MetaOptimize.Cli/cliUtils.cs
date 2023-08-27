@@ -35,7 +35,7 @@ namespace MetaOptimize.Cli
                     {
                         // TODO: what is the directencoder, and how is it different from the others.
                         // TODO: fix the code.
-                        heuristicEncoder = new TEOptimalEncoder<TVar, TSolution>(solver, numPaths);
+                        heuristicEncoder = new TEMaxFlowOptimalEncoder<TVar, TSolution>(solver, numPaths);
                         throw new Exception("should verify the above implementation...");
                     }
                     else
@@ -312,12 +312,12 @@ namespace MetaOptimize.Cli
             solver.CleanAll();
             var (heuristicEncoder, _, _) = getHeuristic<TVar, TSolution>(solver, topology, Heuristic.DemandPinning,
                 numPaths, demandPinningThreshold: threshold);
-            var optimalEncoder = new TEOptimalEncoder<TVar, TSolution>(solver, numPaths);
+            var optimalEncoder = new TEMaxFlowOptimalEncoder<TVar, TSolution>(solver, numPaths);
             var adversarialInputGenerator = new TEAdversarialInputGenerator<TVar, TSolution>(topology, numPaths, numProcessors);
             (TEOptimizationSolution, TEOptimizationSolution) result =
                 adversarialInputGenerator.MaximizeOptimalityGap(optimalEncoder, heuristicEncoder);
-            double optimal = result.Item1.TotalDemandMet;
-            double heuristic = result.Item2.TotalDemandMet;
+            double optimal = result.Item1.MaxObjective;
+            double heuristic = result.Item2.MaxObjective;
             var demands = result.Item1.Demands;
             return (optimal, heuristic, demands);
         }
@@ -338,12 +338,12 @@ namespace MetaOptimize.Cli
             var heuristicEncoding = heuristicEncoder.Encoding(topology, inputEqualityConstraints: demands, noAdditionalConstraints: true);
             var solverSolutionHeuristic = heuristicEncoder.Solver.Maximize(heuristicEncoding.MaximizationObjective);
             var optimizationSolutionHeuristic = (TEOptimizationSolution)heuristicEncoder.GetSolution(solverSolutionHeuristic);
-            var heuristicDemandMet = optimizationSolutionHeuristic.TotalDemandMet;
-            var optimalEncoder = new TEOptimalEncoder<TVar, TSolution>(solver, numPaths);
+            var heuristicDemandMet = optimizationSolutionHeuristic.MaxObjective;
+            var optimalEncoder = new TEMaxFlowOptimalEncoder<TVar, TSolution>(solver, numPaths);
             var optimalEncoding = optimalEncoder.Encoding(topology, demandEqualityConstraints: demands, noAdditionalConstraints: true);
             var solverSolutionOptimal = optimalEncoder.Solver.Maximize(optimalEncoding.MaximizationObjective);
             var optimizationSolutionOptimal = (TEOptimizationSolution)optimalEncoder.GetSolution(solverSolutionOptimal);
-            var optimalDemandMet = optimizationSolutionOptimal.TotalDemandMet;
+            var optimalDemandMet = optimizationSolutionOptimal.MaxObjective;
             return (optimalDemandMet, heuristicDemandMet);
         }
 
@@ -373,7 +373,7 @@ namespace MetaOptimize.Cli
                 var encodingHeuristic = newHeuristicEncoder.Encoding(topology, demandEqualityConstraints: demands, noAdditionalConstraints: true);
                 var solverSolutionHeuristic = newHeuristicEncoder.Solver.Maximize(encodingHeuristic.MaximizationObjective);
                 var optimizationSolutionHeuristic = (TEOptimizationSolution)newHeuristicEncoder.GetSolution(solverSolutionHeuristic);
-                var demandMet = optimizationSolutionHeuristic.TotalDemandMet;
+                var demandMet = optimizationSolutionHeuristic.MaxObjective;
                 // var newOptimalEncoder = new OptimalEncoder<TVar, TSolution>(newSolver, topology, opts.Paths);
                 // newHeuristicEncoder = new PopEncoder<TVar, TSolution>(newSolver, topology, k: opts.Paths, numPartitions: opts.PopSlices, demandPartitions: newPartition);
                 // var nresult = adversarialInputGenerator.MaximizeOptimalityGap(newOptimalEncoder, (IEncoder<TVar, TSolution>)newHeuristicEncoder, opts.DemandUB);

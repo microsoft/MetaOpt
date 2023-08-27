@@ -127,11 +127,13 @@ namespace MetaOptimize
         /// <summary>
         /// Get the resulting value assigned to a variable.
         /// </summary>
-        /// <param name="solution">The solver solution.</param>
-        /// <param name="variable">The variable.</param>
         /// <returns>The value as a double.</returns>
-        public double GetVariable(ZenSolution solution, Zen<Real> variable)
+        public double GetVariable(ZenSolution solution, Zen<Real> variable, int solutionNumber = 0)
         {
+            if (solutionNumber != 0) {
+                throw new Exception("not implemented yet");
+            }
+
             var value = solution.Get(variable).ToString();
             var result = value.Split('/');
 
@@ -166,7 +168,9 @@ namespace MetaOptimize
         /// Add a less than or equal to zero constraint (Quadratic).
         /// Following constraints; A * B + C \leq 0.
         /// </summary>
-        public string AddLeqZeroConstraint(IList<Polynomial<Zen<Real>>> coeffPolyList, IList<Zen<Real>> variableList, Polynomial<Zen<Real>> linearPoly)
+        public string AddLeqZeroConstraint(IList<Polynomial<Zen<Real>>> coeffPolyList, IList<Zen<Real>> variableList,
+            Polynomial<Zen<Real>> linearPoly, VariableType coeffVarType = VariableType.BINARY,
+            VariableType varType = VariableType.CONTINUOUS)
         {
             throw new Exception("not implemented yet!!!");
         }
@@ -185,7 +189,9 @@ namespace MetaOptimize
         /// Add a equal to zero constraint (Quadratic).
         /// Following constraints; A * B + C == 0.
         /// </summary>
-        public string AddEqZeroConstraint(IList<Polynomial<Zen<Real>>> coeffPolyList, IList<Zen<Real>> variableList, Polynomial<Zen<Real>> linearPoly)
+        public string AddEqZeroConstraint(IList<Polynomial<Zen<Real>>> coeffPolyList, IList<Zen<Real>> variableList,
+            Polynomial<Zen<Real>> linearPoly, VariableType coeffVarType = VariableType.BINARY,
+            VariableType varType = VariableType.CONTINUOUS)
         {
             throw new Exception("not implemented yet!!!");
         }
@@ -206,6 +212,63 @@ namespace MetaOptimize
         /// Add a = max(b, c) constraint.
         /// </summary>
         public void AddMaxConstraint(Zen<Real> LHS, Polynomial<Zen<Real>> maxItem1, Polynomial<Zen<Real>> maxItem2) {
+            throw new Exception("Not implemented yet....");
+        }
+
+        /// <summary>
+        /// Add a = max(b, constant) constraint.
+        /// </summary>
+        public void AddMaxConstraint(Zen<Real> LHS, Zen<Real> var1, double constant) {
+            throw new Exception("Not implemented yet");
+        }
+
+        /// <summary>
+        /// Add a = max(b, constant) constraint.
+        /// </summary>
+        public void AddMaxConstraint(Zen<Real> LHS, Zen<Real> var1, Zen<Real> var2) {
+            throw new Exception("Not implemented yet");
+        }
+
+        /// <summary>
+        /// Add a = max(b, constant) constraint.
+        /// </summary>
+        public void AddMaxConstraint(Zen<Real> LHS, Polynomial<Zen<Real>> var1, double constant) {
+            throw new Exception("Not implemented yet.");
+        }
+
+        /// <summary>
+        /// Logistic constraint y = 1/(1 + exp(-x)).
+        /// </summary>
+        public void AddLogisticConstraint(Zen<Real> xVar, Zen<Real> yVar, string name, double FuncPieces = -1, double FuncPeiceError = 0.01,
+            double FuncPieceLength = 0.01, double FuncPieceRatio = -1.0)
+        {
+            throw new Exception("Not implemented yet....");
+        }
+
+        /// <summary>
+        /// power constraint y = x^a.
+        /// </summary>
+        public void AddPowerConstraint(Zen<Real> xVar, Zen<Real> yVar, int a, string name, double FuncPieces = -1, double FuncPeiceError = 0.01,
+            double FuncPieceLength = 0.01, double FuncPieceRatio = -1.0)
+        {
+            throw new Exception("Not implemented yet....");
+        }
+
+        /// <summary>
+        /// polynomial constraint y = p0 x^d + p1 x^{d-1} + ... + pd.
+        /// </summary>
+        public void AddPolynomialConstraint(Zen<Real> xVar, Zen<Real> yVar, double[] p, string name, double FuncPieces = -1, double FuncPeiceError = 0.01,
+            double FuncPieceLength = 0.01, double FuncPieceRatio = -1.0)
+        {
+            throw new Exception("Not implemented yet....");
+        }
+
+        /// <summary>
+        /// polynomial constraint y = norm_d(x_1, ..., x_n).
+        /// </summary>
+        public void AddNormConstraint(Zen<Real>[] xVar, Zen<Real> yVar, double which, string name, double FuncPieces = -1, double FuncPeiceError = 0.01,
+            double FuncPieceLength = 0.01, double FuncPieceRatio = -1.0)
+        {
             throw new Exception("Not implemented yet....");
         }
 
@@ -303,6 +366,14 @@ namespace MetaOptimize
         }
 
         /// <summary>
+        /// find the top $k$ solutions.
+        /// </summary>
+        public virtual ZenSolution Maximize(Polynomial<Zen<Real>> objective, bool reset, int solutionCount)
+        {
+            throw new Exception("Not implemented yet.");
+        }
+
+        /// <summary>
         /// Maximize the objective with objective as input.
         /// </summary>
         /// <returns>A solution.</returns>
@@ -323,6 +394,15 @@ namespace MetaOptimize
         }
 
         /// <summary>
+        /// Maximize a quadratic objective with objective as input.
+        /// reset the callback timer.
+        /// </summary>
+        /// <returns>A solution.</returns>
+        public ZenSolution MaximizeQuadPow2(IList<Polynomial<Zen<Real>>> quadObjective, IList<double> quadCoeff, Polynomial<Zen<Real>> linObjective, bool reset = false) {
+            throw new Exception("not implemented!");
+        }
+
+        /// <summary>
         /// Check feasibility.
         /// </summary>
         public ZenSolution CheckFeasibility(double objectiveValue)
@@ -333,7 +413,7 @@ namespace MetaOptimize
         /// <summary>
         /// initialize some of the variables.
         /// </summary>
-        public void InitializeVariables(Zen<Real> variable, int value)
+        public void InitializeVariables(Zen<Real> variable, double value)
         {
             throw new Exception("Not implemented yet.");
         }

@@ -38,14 +38,14 @@ namespace MetaOptimize.Test
             var popEncoder = new PopEncoder<TVar, TSol>(CreateSolver(), maxNumPaths: 1, numPartitions: 2, demandPartitions: partition);
             var encoding = popEncoder.Encoding(topology);
             var solverSolution = popEncoder.Solver.Maximize(encoding.GlobalObjective);
-            var optimizationSolution = (TEOptimizationSolution)popEncoder.GetSolution(solverSolution);
+            var optimizationSolution = (TEMaxFlowOptimizationSolution)popEncoder.GetSolution(solverSolution);
 
             Console.WriteLine(Newtonsoft.Json.JsonConvert.SerializeObject(optimizationSolution, Newtonsoft.Json.Formatting.Indented));
 
             // sk todo: AreEqual will fail due to doubles not matching; edit as below
-            Assert.IsTrue(TestHelper.IsApproximately(5, optimizationSolution.TotalDemandMet));
+            Assert.IsTrue(Utils.IsApproximately(5, optimizationSolution.MaxObjective));
             Assert.IsTrue(5 <= optimizationSolution.Demands[("a", "b")]);
-            Assert.IsTrue(TestHelper.IsApproximately(5, optimizationSolution.Flows[("a", "b")]));
+            Assert.IsTrue(Utils.IsApproximately(5, optimizationSolution.Flows[("a", "b")]));
             Assert.IsTrue(0 <= optimizationSolution.Demands[("b", "a")]);
             Assert.AreEqual(0, optimizationSolution.Flows[("b", "a")]);
         }
@@ -69,7 +69,7 @@ namespace MetaOptimize.Test
             var partition = topology.RandomPartition(2);
             // create the optimal encoder.
             var solver = CreateSolver();
-            var optimalEncoder = new TEOptimalEncoder<TVar, TSol>(solver, maxNumPaths: 1);
+            var optimalEncoder = new TEMaxFlowOptimalEncoder<TVar, TSol>(solver, maxNumPaths: 1);
 
             var popEncoderG = new PopEncoder<TVar, TSol>(solver, maxNumPaths: 1, numPartitions: 2, demandPartitions: partition);
             var adversarialInputGenerator = new TEAdversarialInputGenerator<TVar, TSol>(topology, k: 1);
@@ -82,8 +82,8 @@ namespace MetaOptimize.Test
             Console.WriteLine(Newtonsoft.Json.JsonConvert.SerializeObject(popSolutionG, Newtonsoft.Json.Formatting.Indented));
             Console.WriteLine("****");
 
-            var optimal = optimalSolutionG.TotalDemandMet;
-            var heuristic = popSolutionG.TotalDemandMet;
+            var optimal = ((TEMaxFlowOptimizationSolution)optimalSolutionG).MaxObjective;
+            var heuristic = ((TEMaxFlowOptimizationSolution)popSolutionG).MaxObjective;
             Assert.IsTrue(Math.Abs(optimal - 40.0) < 0.01, $"Optimal is {optimal} != 40");
             Assert.IsTrue(Math.Abs(heuristic - 20.0) < 0.01, $"Heuristic is {heuristic} != 20");
 

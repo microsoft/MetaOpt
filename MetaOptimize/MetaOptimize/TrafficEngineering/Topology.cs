@@ -8,6 +8,7 @@ namespace MetaOptimize
     using System.Collections.Concurrent;
     using System.Collections.Generic;
     using System.Collections.Immutable;
+    using System.Diagnostics;
     using System.Linq;
     using System.Threading;
     using QuikGraph;
@@ -147,6 +148,51 @@ namespace MetaOptimize
                     }
                 }
             }
+        }
+
+        /// <summary>
+        /// compute the paths.
+        /// </summary>
+        public Dictionary<(string, string), string[][]> ComputePaths(PathType pathType,
+            Dictionary<(string, string), string[][]> selectedPaths,
+            int K,
+            int numProcesses, bool verbose)
+        {
+            var paths = new Dictionary<(string, string), string[][]>();
+            switch (pathType)
+            {
+                case PathType.KSP:
+                    Debug.Assert(selectedPaths == null);
+                    Utils.logger("Using K shortest paths with K = " + K, verbose);
+                    paths = this.AllPairsKShortestPathMultiProcessing(K, numProcesses: numProcesses, verbose: verbose);
+                    break;
+                case PathType.Predetermined:
+                    Debug.Assert(selectedPaths != null && selectedPaths.Count == this.GetNumNodePairs());
+                    Utils.logger("Using predetermined paths", verbose);
+                    paths = selectedPaths;
+                    break;
+                default:
+                    throw new Exception("path type does not match");
+            }
+            return paths;
+        }
+
+        /// <summary>
+        /// Get number of nodes.
+        /// </summary>
+        /// <returns>The number of nodes.</returns>
+        public int GetNumNodes()
+        {
+            return GetAllNodes().Count();
+        }
+
+        /// <summary>
+        /// Get number of node pairs.
+        /// </summary>
+        /// <returns>The number of node pairs.</returns>
+        public int GetNumNodePairs()
+        {
+            return GetNodePairs().Count();
         }
 
         /// <summary>

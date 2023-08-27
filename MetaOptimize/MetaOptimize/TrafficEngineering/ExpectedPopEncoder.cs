@@ -113,8 +113,13 @@ namespace MetaOptimize
         /// <returns>The constraints and maximization objective.</returns>
         public OptimizationEncoding<TVar, TSolution> Encoding(Topology topology, Dictionary<(string, string), Polynomial<TVar>> preDemandVariables = null,
             Dictionary<(string, string), double> demandEqualityConstraints = null, bool noAdditionalConstraints = false,
-            InnerRewriteMethodChoice innerEncoding = InnerRewriteMethodChoice.KKT, int numProcesses = -1, bool verbose = false)
+            InnerRewriteMethodChoice innerEncoding = InnerRewriteMethodChoice.KKT,
+            PathType pathType = PathType.KSP, Dictionary<(string, string), string[][]> selectedPaths = null,
+            int numProcesses = -1, bool verbose = false)
         {
+            if (pathType != PathType.KSP) {
+                throw new Exception("Only KSP works for now.");
+            }
             this.Topology = topology;
             Utils.logger("initializing variables for pop encoder.", verbose);
             InitializeVariables(preDemandVariables, demandEqualityConstraints);
@@ -161,7 +166,7 @@ namespace MetaOptimize
             var flows = new Dictionary<(string, string), double>();
             var flowPaths = new Dictionary<string[], double>(new PathComparer());
 
-            var solutions = this.PoPEncoders.Select(e => (TEOptimizationSolution)e.GetSolution(solution)).ToList();
+            var solutions = this.PoPEncoders.Select(e => (TEMaxFlowOptimizationSolution)e.GetSolution(solution)).ToList();
 
             foreach (var (pair, poly) in this.DemandVariables)
             {
@@ -175,12 +180,12 @@ namespace MetaOptimize
             var eachSampleTotalDemandMet = new List<double>();
             foreach (var instance in solutions)
             {
-                eachSampleTotalDemandMet.Add(instance.TotalDemandMet);
+                eachSampleTotalDemandMet.Add(instance.MaxObjective);
             }
 
-            return new TEOptimizationSolution
+            return new TEMaxFlowOptimizationSolution
             {
-                TotalDemandMet = solutions.Select(s => s.TotalDemandMet).Aggregate((a, b) => a + b) / this.NumSamples,
+                MaxObjective = solutions.Select(s => s.MaxObjective).Aggregate((a, b) => a + b) / this.NumSamples,
                 Demands = demands,
                 Flows = null,
                 FlowsPaths = null,

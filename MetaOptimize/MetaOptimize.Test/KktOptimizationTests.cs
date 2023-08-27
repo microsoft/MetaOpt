@@ -48,8 +48,8 @@ namespace MetaOptimize.Test
             var solution = solver.Maximize(obj);
             solver.GetVariable(solution, x);
 
-            Assert.IsTrue(TestHelper.IsApproximately(0, solver.GetVariable(solution, x)));
-            Assert.IsTrue(TestHelper.IsApproximately(5, solver.GetVariable(solution, y)));
+            Assert.IsTrue(Utils.IsApproximately(0, solver.GetVariable(solution, x)));
+            Assert.IsTrue(Utils.IsApproximately(5, solver.GetVariable(solution, y)));
         }
 
         /// <summary>

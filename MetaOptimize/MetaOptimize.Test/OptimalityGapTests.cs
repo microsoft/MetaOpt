@@ -36,7 +36,7 @@ namespace MetaOptimize.Test
 
             // create the optimal encoder.
             var solver = CreateSolver();
-            var optimalEncoder = new TEOptimalEncoder<TVar, TSol>(solver, maxNumPaths: 1);
+            var optimalEncoder = new TEMaxFlowOptimalEncoder<TVar, TSol>(solver, maxNumPaths: 1);
 
             // create the pop encoder.
             var partition = topology.RandomPartition(2);
@@ -49,8 +49,8 @@ namespace MetaOptimize.Test
             Console.WriteLine(Newtonsoft.Json.JsonConvert.SerializeObject(optimalSolution, Newtonsoft.Json.Formatting.Indented));
             Console.WriteLine(Newtonsoft.Json.JsonConvert.SerializeObject(popSolution, Newtonsoft.Json.Formatting.Indented));
 
-            Assert.IsTrue(TestHelper.IsApproximately(40, optimalSolution.TotalDemandMet));
-            Assert.IsTrue(TestHelper.IsApproximately(20, popSolution.TotalDemandMet));
+            Assert.IsTrue(Utils.IsApproximately(40, ((TEMaxFlowOptimizationSolution)optimalSolution).MaxObjective));
+            Assert.IsTrue(Utils.IsApproximately(20, ((TEMaxFlowOptimizationSolution)popSolution).MaxObjective));
         }
     }
 }

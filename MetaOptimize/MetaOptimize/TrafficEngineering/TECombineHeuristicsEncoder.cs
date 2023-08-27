@@ -93,8 +93,13 @@ namespace MetaOptimize
         /// <returns>The constraints and maximization objective.</returns>
         public OptimizationEncoding<TVar, TSolution> Encoding(Topology topology, Dictionary<(string, string), Polynomial<TVar>> preDemandVariables = null,
             Dictionary<(string, string), double> demandEqualityConstraints = null, bool noAdditionalConstraints = false,
-            InnerRewriteMethodChoice innerEncoding = InnerRewriteMethodChoice.KKT, int numProcesses = -1, bool verbose = false)
+            InnerRewriteMethodChoice innerEncoding = InnerRewriteMethodChoice.KKT,
+            PathType pathType = PathType.KSP, Dictionary<(string, string), string[][]> selectedPaths = null,
+            int numProcesses = -1, bool verbose = false)
         {
+            if (pathType != PathType.KSP) {
+                throw new Exception("Only KSP works for now.");
+            }
             this.Topology = topology;
             InitializeVariables(preDemandVariables, demandEqualityConstraints);
             this.HeuristicEncodingDict = new Dictionary<IEncoder<TVar, TSolution>, OptimizationEncoding<TVar, TSolution>>();
