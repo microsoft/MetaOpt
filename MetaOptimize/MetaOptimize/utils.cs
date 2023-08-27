@@ -251,12 +251,16 @@ namespace MetaOptimize {
         /// <summary>
         /// assign zero demand the empty pairs.
         /// </summary>
-        public static void FillEmptyPairsWithZeroDemand(Topology topology, Dictionary<(string, string), double> demands)
+        public static void setEmptyPairsToZero(Topology topology, Dictionary<(string, string), double> demands)
         {
-            foreach (var pair in topology.GetNodePairs()) {
-                if (!demands.ContainsKey(pair)) {
+            foreach (var pair in topology.GetNodePairs())
+            {
+                if (!demands.ContainsKey(pair))
+                {
                     demands[pair] = 0;
-                } else if (demands[pair] <= 0) {
+                }
+                else if (demands[pair] <= 0)
+                {
                     demands[pair] = 0;
                 }
             }
@@ -265,7 +269,7 @@ namespace MetaOptimize {
         /// <summary>
         /// assign zero demand the empty pairs.
         /// </summary>
-        public static void FillEmptyHistoryWithZeroDemand(Topology topology, int historyLen, Dictionary<(int, string, string), double> historicDemands)
+        public static void setEmptyHistoryToZero(Topology topology, int historyLen, Dictionary<(int, string, string), double> historicDemands)
         {
             for (int h = 0; h < historyLen; h++) {
                 foreach (var pair in topology.GetNodePairs()) {
@@ -277,9 +281,12 @@ namespace MetaOptimize {
                 }
             }
         }
+
         /// <summary>
-        /// checks the subproblems' soltuion.
+        /// Takes in the expected solution of the heuristic and the optimal problem and checks if the encoders return the same results.
         /// </summary>
+        /// TODO: seems like this is right now very specific to the TE problem. We should make it more general.
+        /// TODO: there is a lot of refactoring we need to do here.
         public static void checkSolution<TVar, TSolution>(Topology topology, IEncoder<TVar, TSolution> heuristicEncoder,
             IEncoder<TVar, TSolution> optimalEncoder, double hResult, double oResult,
             Dictionary<(string, string), double> demands, string solverN = "", PathType pathType = PathType.KSP,
@@ -288,13 +295,13 @@ namespace MetaOptimize {
             double sensitivity = 0.001)
         {
             heuristicEncoder.Solver.CleanAll();
-            var encodingHeuristic = heuristicEncoder.Encoding(topology, demandEqualityConstraints: demands,
+            var encodingHeuristic = heuristicEncoder.Encoding(topology, inputEqualityConstraints: demands,
                 noAdditionalConstraints: true, pathType: pathType, selectedPaths: selectedPaths, historicDemandConstraints: historicDemands);
             var solverSolutionHeuristic = heuristicEncoder.Solver.Maximize(encodingHeuristic.MaximizationObjective);
             var optimizationSolutionHeuristic = (TEOptimizationSolution)heuristicEncoder.GetSolution(solverSolutionHeuristic);
 
             optimalEncoder.Solver.CleanAll();
-            var encodingOptimal = optimalEncoder.Encoding(topology, demandEqualityConstraints: demands,
+            var encodingOptimal = optimalEncoder.Encoding(topology, inputEqualityConstraints: demands,
                 noAdditionalConstraints: true, pathType: pathType, selectedPaths: selectedPaths, historicDemandConstraints: historicDemands);
             var solverSolutionOptimal = optimalEncoder.Solver.Maximize(encodingOptimal.MaximizationObjective);
             var optimizationSolutionOptimal = (TEOptimizationSolution)optimalEncoder.GetSolution(solverSolutionOptimal);

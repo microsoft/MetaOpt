@@ -12,7 +12,7 @@ namespace MetaOptimize
     /// </summary>
     /// TODO: do you need the inheritance from the KKTRewritegenerator? if yes, maybe you need a different sub-class which is
     /// rewrite generator that both of these classes inherit from?
-    public class PrimalDualRewriteGenerator<TVar, TSolution> : kktRewriteGenerator<TVar, TSolution>
+    public class PrimalDualRewriteGenerator<TVar, TSolution> : KKTRewriteGenerator<TVar, TSolution>
     {
         private int NumProcesses = -1;
         /// <summary>

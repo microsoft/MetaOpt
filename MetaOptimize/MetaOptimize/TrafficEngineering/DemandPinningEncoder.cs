@@ -109,7 +109,7 @@ namespace MetaOptimize
         /// <summary>
         /// The kkt encoder used to construct the encoding.
         /// </summary>
-        protected kktRewriteGenerator<TVar, TSolution> innerProblemEncoder;
+        protected KKTRewriteGenerator<TVar, TSolution> innerProblemEncoder;
 
         /// <summary>
         /// Create a new instance of the <see cref="DemandPinningEncoder{TVar, TSolution}"/> class.
@@ -222,7 +222,7 @@ namespace MetaOptimize
             switch (innerEncoding)
             {
                 case InnerRewriteMethodChoice.KKT:
-                    this.innerProblemEncoder = new kktRewriteGenerator<TVar, TSolution>(this.Solver, this.variables, demandVariables);
+                    this.innerProblemEncoder = new KKTRewriteGenerator<TVar, TSolution>(this.Solver, this.variables, demandVariables);
                     break;
                 case InnerRewriteMethodChoice.PrimalDual:
                     this.innerProblemEncoder = new PrimalDualRewriteGenerator<TVar, TSolution>(this.Solver,

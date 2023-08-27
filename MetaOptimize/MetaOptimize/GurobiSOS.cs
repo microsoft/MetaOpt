@@ -378,7 +378,7 @@ namespace MetaOptimize
         /// <returns>Linear expression.</returns>
         protected internal GRBQuadExpr ConvertQPow2(Polynomial<GRBVar> quadPoly, double quadCoeff)
         {
-            GRBLinExpr quadlin = this.Convert(quadPoly);
+            GRBLinExpr quadlin = this.fromPolyToLinExpr(quadPoly);
             GRBQuadExpr obj = quadCoeff * quadlin * quadlin;
             // foreach (var term in quadPoly.GetTerms())
             // {
@@ -934,7 +934,7 @@ namespace MetaOptimize
             Console.WriteLine("in maximize call");
             GRBLinExpr objective = 0;
             foreach (var auxVar in auxPolyList) {
-                objective += this.Convert(auxVar);
+                objective += this.fromPolyToLinExpr(auxVar);
             }
             this._model.SetObjective(objective + this._objective + this._quadObjective, GRB.MAXIMIZE);
             if (this._focusBstBd) {

@@ -26,7 +26,7 @@ namespace MetaOptimize
         /// <summary>
         /// The maximum number of paths to use between any two nodes.
         /// </summary>
-        public int K { get; set; }
+        public int MaxNumPaths { get; set; }
 
         /// <summary>
         /// The enumeration of paths between all pairs of nodes.
@@ -66,17 +66,17 @@ namespace MetaOptimize
         /// <summary>
         /// The kkt encoder used to construct the encoding.
         /// </summary>
-        private KktOptimizationGenerator<TVar, TSolution> innerProblemEncoder;
+        private KKTRewriteGenerator<TVar, TSolution> innerProblemEncoder;
 
         /// <summary>
         /// Create a new instance of the <see cref="TEMaxFlowOptimalEncoder{TVar, TSolution}"/> class.
         /// </summary>
         /// <param name="solver">The solver.</param>
-        /// <param name="k">The max number of paths between nodes.</param>
-        public TEMaxFlowOptimalEncoder(ISolver<TVar, TSolution>  solver, int k)
+        /// <param name="maxNumPaths">The max number of paths between nodes.</param>
+        public TEMaxFlowOptimalEncoder(ISolver<TVar, TSolution>  solver, int maxNumPaths)
         {
             this.Solver = solver;
-            this.K = k;
+            this.MaxNumPaths = maxNumPaths;
         }
 
         private bool IsDemandValid((string, string) pair) {
@@ -89,7 +89,7 @@ namespace MetaOptimize
         }
 
         private void InitializeVariables(Dictionary<(string, string), Polynomial<TVar>> preDemandVariables,
-                Dictionary<(string, string), double> demandEqualityConstraints, InnerEncodingMethodChoice encodingMethod,
+                Dictionary<(string, string), double> demandEqualityConstraints, InnerRewriteMethodChoice encodingMethod,
                 PathType pathType, Dictionary<(string, string), string[][]> selectedPaths,
                 int numProcesses, bool verbose)
         {
@@ -139,7 +139,7 @@ namespace MetaOptimize
             this.FlowPathVariables = new Dictionary<string[], TVar>(new PathComparer());
 
             // compute the paths
-            this.Paths = this.Topology.ComputePaths(pathType, selectedPaths, this.K, numProcesses, verbose);
+            this.Paths = this.Topology.ComputePaths(pathType, selectedPaths, this.MaxNumPaths, numProcesses, verbose);
 
             foreach (var pair in this.Topology.GetNodePairs())
             {
@@ -161,14 +161,14 @@ namespace MetaOptimize
 
             switch (encodingMethod)
             {
-                case InnerEncodingMethodChoice.KKT:
-                    this.innerProblemEncoder = new KktOptimizationGenerator<TVar, TSolution>(this.Solver, this.variables, demandVariables);
+                case InnerRewriteMethodChoice.KKT:
+                    this.innerProblemEncoder = new KKTRewriteGenerator<TVar, TSolution>(this.Solver, this.variables, demandVariables);
                     break;
-                case InnerEncodingMethodChoice.PrimalDual:
-                    this.innerProblemEncoder = new PrimalDualOptimizationGenerator<TVar, TSolution>(this.Solver,
-                                                                                                    this.variables,
-                                                                                                    demandVariables,
-                                                                                                    numProcesses);
+                case InnerRewriteMethodChoice.PrimalDual:
+                    this.innerProblemEncoder = new PrimalDualRewriteGenerator<TVar, TSolution>(this.Solver,
+                                                                                               this.variables,
+                                                                                               demandVariables,
+                                                                                               numProcesses);
                     break;
                 default:
                     throw new Exception("invalid method for encoding the inner problem");
@@ -181,7 +181,7 @@ namespace MetaOptimize
         /// <returns>The constraints and maximization objective.</returns>
         public OptimizationEncoding<TVar, TSolution> Encoding(Topology topology, Dictionary<(string, string), Polynomial<TVar>> preDemandVariables = null,
             Dictionary<(string, string), double> demandEqualityConstraints = null, bool noAdditionalConstraints = false,
-            InnerEncodingMethodChoice innerEncoding = InnerEncodingMethodChoice.KKT,
+            InnerRewriteMethodChoice innerEncoding = InnerRewriteMethodChoice.KKT,
             PathType pathType = PathType.KSP, Dictionary<(string, string), string[][]> selectedPaths = null,
             int numProcesses = -1, bool verbose = false)
         {

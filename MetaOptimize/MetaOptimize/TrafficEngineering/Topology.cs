@@ -164,7 +164,7 @@ namespace MetaOptimize
                 case PathType.KSP:
                     Debug.Assert(selectedPaths == null);
                     Utils.logger("Using K shortest paths with K = " + K, verbose);
-                    paths = this.AllPairsKShortestPathMultiProcessing(K, numProcesses: numProcesses, verbose: verbose);
+                    paths = this.MultiProcessAllPairsKShortestPath(K, numProcesses: numProcesses, verbose: verbose);
                     break;
                 case PathType.Predetermined:
                     Debug.Assert(selectedPaths != null && selectedPaths.Count == this.GetNumNodePairs());

@@ -11,7 +11,7 @@ namespace MetaOptimize
     /// <summary>
     /// An optimization encoder that automatically derives the KKT conditions.
     /// </summary>
-    public class kktRewriteGenerator<TVar, TSolution>
+    public class KKTRewriteGenerator<TVar, TSolution>
     {
         /// <summary>
         /// The solver being used.
@@ -51,14 +51,14 @@ namespace MetaOptimize
         public ISet<TVar> constantVariables;
 
         /// <summary>
-        /// Creates a new instance of the <see cref="kktRewriteGenerator{TVar, TSolution}"/> class.
+        /// Creates a new instance of the <see cref="KKTRewriteGenerator{TVar, TSolution}"/> class.
         /// note that we currently only support linear objectives and constraints when we do kkt rewrites, but the concept is more
         /// general and in theory we can support other types as well.
         /// </summary>
         /// <param name="variables">The encoding variables.</param>
         /// <param name="constVariables">The variables to avoid the deriviatve for.</param>
         /// <param name="solver">The solver.</param>
-        public kktRewriteGenerator(ISolver<TVar, TSolution> solver, ISet<TVar> variables, ISet<TVar> constVariables)
+        public KKTRewriteGenerator(ISolver<TVar, TSolution> solver, ISet<TVar> variables, ISet<TVar> constVariables)
         {
             this.Variables = variables;
             this.solver = solver;
