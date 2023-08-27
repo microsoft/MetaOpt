@@ -318,7 +318,7 @@ namespace MetaOptimize
         /// <param name="objective">The solver solution.</param>
         public void SetObjective(Polynomial<GRBVar> objective)
         {
-            this._objective = Convert(objective);
+            this._objective = fromPolyToLinExpr(objective);
         }
 
         /// <summary>
@@ -335,7 +335,7 @@ namespace MetaOptimize
         /// </summary>
         /// <param name="poly"></param>
         /// <returns>Linear expression.</returns>
-        protected internal GRBLinExpr Convert(Polynomial<GRBVar> poly)
+        protected internal GRBLinExpr fromPolyToLinExpr(Polynomial<GRBVar> poly)
         {
             GRBLinExpr obj = 0;
             foreach (var term in poly.GetTerms())
@@ -371,7 +371,7 @@ namespace MetaOptimize
         {
             this._constraintIneqCount++;
             string name = "ineq_index_" + this._constraintIneqCount;
-            var constr = this._model.AddConstr(this.Convert(polynomial), GRB.LESS_EQUAL, 0.0, name);
+            var constr = this._model.AddConstr(this.fromPolyToLinExpr(polynomial), GRB.LESS_EQUAL, 0.0, name);
             return name;
         }
 
@@ -379,15 +379,22 @@ namespace MetaOptimize
         /// Converts quadratic to linear form for Gurobi.
         /// </summary>
         /// <returns>Linear expression.</returns>
+        /// TODO: add a better comment that describe how this function does this.
+        /// TODO: should we re-factor this function to go into a util's library partially?
+        /// So that both Zen and Gurobi can use it?
+        /// TODO: add a comment to describe the variables.
+        /// TODO: does this function assume the variable is binary in the polynomial? You should check for that then with an assertion somewhere?
+        /// TODO: is this function correct if they are not binary?
         private GRBLinExpr ConvertQEToLinear(IList<Polynomial<GRBVar>> coeffPolyList, IList<GRBVar> variableList, Polynomial<GRBVar> linearPoly)
         {
             Utils.logger("Using big-M QE to Linear Conversion.", this._verbose);
-            GRBLinExpr obj = this.Convert(linearPoly);
+            GRBLinExpr obj = this.fromPolyToLinExpr(linearPoly);
 
             for (int i = 0; i < coeffPolyList.Count; i++)
             {
                 Polynomial<GRBVar> coeffPoly = coeffPolyList[i];
                 GRBVar variable = variableList[i];
+
                 foreach (var term in coeffPoly.GetTerms())
                 {
                     switch (term.Exponent)
@@ -439,10 +446,10 @@ namespace MetaOptimize
         private GRBQuadExpr ConvertQEToQEExp(IList<Polynomial<GRBVar>> coeffPolyList, IList<GRBVar> variableList, Polynomial<GRBVar> linearPoly)
         {
             Utils.logger("Using QE expressions as they are.", this._verbose);
-            GRBQuadExpr quadConstraint = this.Convert(linearPoly);
+            GRBQuadExpr quadConstraint = this.fromPolyToLinExpr(linearPoly);
             for (int i = 0; i < coeffPolyList.Count; i++)
             {
-                var coeffPoly = this.Convert(coeffPolyList[i]);
+                var coeffPoly = this.fromPolyToLinExpr(coeffPolyList[i]);
                 GRBVar variable = variableList[i];
                 quadConstraint += coeffPoly * variable;
             }
@@ -455,7 +462,7 @@ namespace MetaOptimize
         private GRBLinExpr ConvertQESOS(IList<Polynomial<GRBVar>> coeffPolyList, IList<GRBVar> variableList, Polynomial<GRBVar> linearPoly)
         {
             Utils.logger("Using Indicator for QE Conversion.", this._verbose);
-            GRBLinExpr obj = this.Convert(linearPoly);
+            GRBLinExpr obj = this.fromPolyToLinExpr(linearPoly);
 
             for (int i = 0; i < coeffPolyList.Count; i++)
             {
@@ -509,7 +516,7 @@ namespace MetaOptimize
         public string AddEqZeroConstraint(Polynomial<GRBVar> polynomial)
         {
             string name = "eq_index_" + this._constraintEqCount++;
-            this._model.AddConstr(this.Convert(polynomial), GRB.EQUAL, 0.0, name);
+            this._model.AddConstr(this.fromPolyToLinExpr(polynomial), GRB.EQUAL, 0.0, name);
             return name;
         }
 
@@ -517,6 +524,7 @@ namespace MetaOptimize
         /// Add a equal to zero constraint (Quadratic).
         /// Following constraints; A * B + C \leq 0.
         /// </summary>
+        /// TODO: say add quadratic eq to zero constraint as the function name or something?
         public string AddEqZeroConstraint(IList<Polynomial<GRBVar>> coeffPolyList, IList<GRBVar> variableList, Polynomial<GRBVar> linearPoly)
         {
             string name = "ineq_index_" + this._constraintIneqCount++;
@@ -545,7 +553,7 @@ namespace MetaOptimize
         /// <param name="polynomial2"></param>
         public virtual void AddOrEqZeroConstraint(Polynomial<GRBVar> polynomial1, Polynomial<GRBVar> polynomial2)
         {
-            this.AddOrEqZeroConstraintV1(this.Convert(polynomial1), this.Convert(polynomial2));
+            this.AddOrEqZeroConstraintV1(this.fromPolyToLinExpr(polynomial1), this.fromPolyToLinExpr(polynomial2));
         }
 
         /// <summary>
@@ -582,8 +590,8 @@ namespace MetaOptimize
             var var_2 = this._model.AddVar(Double.NegativeInfinity, Double.PositiveInfinity, 0, GRB.CONTINUOUS, "aux_" + this._auxiliaryVars.Count);
             this._auxiliaryVars.Add($"aux_{this._auxiliaryVars.Count}", var_2);
 
-            this._model.AddConstr(this.Convert(maxItem1), GRB.EQUAL, var_1, "eq_index_" + this._constraintEqCount++);
-            this._model.AddConstr(this.Convert(maxItem2), GRB.EQUAL, var_2, "eq_index_" + this._constraintEqCount++);
+            this._model.AddConstr(this.fromPolyToLinExpr(maxItem1), GRB.EQUAL, var_1, "eq_index_" + this._constraintEqCount++);
+            this._model.AddConstr(this.fromPolyToLinExpr(maxItem2), GRB.EQUAL, var_2, "eq_index_" + this._constraintEqCount++);
             // Add Max Constraint
             this._model.AddGenConstrMax(LHS, new GRBVar[] { var_2, var_1 }, 0.0, "min_constraint");
         }
@@ -644,7 +652,7 @@ namespace MetaOptimize
             GRBLinExpr objective = 0;
             foreach (var auxVar in auxPolyList)
             {
-                objective += this.Convert(auxVar);
+                objective += this.fromPolyToLinExpr(auxVar);
             }
             this._model.SetObjective(objective + this._objective, GRB.MAXIMIZE);
             if (this._focusBstBd)

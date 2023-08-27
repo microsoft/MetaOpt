@@ -10,7 +10,7 @@ namespace MetaOptimize
     /// <summary>
     /// An optimization encoder that automatically adds the primal-dual conditions.
     /// </summary>
-    /// TODO: do you need the inheritance from the KKTRewritegenerator? if yes, maybe you need a different sub-class which is 
+    /// TODO: do you need the inheritance from the KKTRewritegenerator? if yes, maybe you need a different sub-class which is
     /// rewrite generator that both of these classes inherit from?
     public class PrimalDualRewriteGenerator<TVar, TSolution> : kktRewriteGenerator<TVar, TSolution>
     {
@@ -31,6 +31,9 @@ namespace MetaOptimize
         /// <summary>
         /// Get the primal dual constraints for minimal solution.
         /// </summary>
+        // TODO: in the kkt function we call the variables nu and lambda based on boyd's terminology.
+        // Here you have dualeq and dualleq variables, we should make the two functions consistant.
+        // TODO: add a test case that checks the results from primal dual match the kkt scenario.
         public override void AddMinimizationConstraints(Polynomial<TVar> objective, bool noPrimalDual, bool verbose = false)
         {
             Utils.logger("using primal dual encoding", verbose, Utils.LogState.WARNING);
@@ -42,6 +45,7 @@ namespace MetaOptimize
             {
                 Dictionary<int, TVar> leqDualVariables = new Dictionary<int, TVar>();
                 Dictionary<int, TVar> eqDualVariables = new Dictionary<int, TVar>();
+
                 IList<TVar> dualObjectiveTerms = new List<TVar>();
                 IList<Polynomial<TVar>> dualObjectiveCoeff = new List<Polynomial<TVar>>();
                 Utils.logger("computing dual objective coefficients for inequality constraints.", verbose);
@@ -53,6 +57,7 @@ namespace MetaOptimize
                         continue;
                     }
                     leqDualVariables[i] = this.solver.CreateVariable("dualleq_" + i);
+
                     var constraintRHS = leqConstraint.getRHS(this.constantVariables);
                     dualObjectiveTerms.Add(leqDualVariables[i]);
                     dualObjectiveCoeff.Add(constraintRHS.Negate());

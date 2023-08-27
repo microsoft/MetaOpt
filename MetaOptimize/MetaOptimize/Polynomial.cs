@@ -186,7 +186,7 @@ namespace MetaOptimize
         /// <summary>
         /// returns the constant of the polynomial.
         /// </summary>
-        /// TODO: maybe we should change the name of this function? since 
+        /// TODO: maybe we should change the name of this function? since
         /// it is based on the assumption that your going to always have the constants on the right hand side
         /// of the constraints, but you dont have to? maybe you should call it getConstants? or something?
         public Polynomial<TVar> getRHS(ISet<TVar> constVariables)
