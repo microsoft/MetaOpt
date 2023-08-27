@@ -3,7 +3,7 @@ namespace MetaOptimize
     /// <summary>
     /// The method for encoding inner problem.
     /// </summary>
-    public enum InnerEncodingMethodChoice
+    public enum InnerRewriteMethodChoice
     {
         /// <summary>
         /// use kkt encoding.

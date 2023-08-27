@@ -147,7 +147,7 @@ namespace MetaOptimize
         /// <returns>The constraints and maximization objective.</returns>
         public OptimizationEncoding<TVar, TSolution> Encoding(Topology topology, Dictionary<(string, string), Polynomial<TVar>> preDemandVariables = null,
             Dictionary<(string, string), double> demandEqualityConstraints = null, bool noAdditionalConstraints = false,
-            InnerEncodingMethodChoice innerEncoding = InnerEncodingMethodChoice.KKT, int numProcesses = -1, bool verbose = false)
+            InnerRewriteMethodChoice innerEncoding = InnerRewriteMethodChoice.KKT, int numProcesses = -1, bool verbose = false)
         {
             this.Topology = topology;
             this.ReducedTopology = topology.SplitCapacity(this.NumPartitions);

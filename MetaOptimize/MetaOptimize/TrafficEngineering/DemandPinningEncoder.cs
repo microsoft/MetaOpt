@@ -148,7 +148,7 @@ namespace MetaOptimize
         }
 
         private void InitializeVariables(Dictionary<(string, string), Polynomial<TVar>> preDemandVariables, Dictionary<(string, string), double> demandConstraints,
-                InnerEncodingMethodChoice innerEncoding = InnerEncodingMethodChoice.KKT, int numProcesses = -1, bool verbose = false)
+                InnerRewriteMethodChoice innerEncoding = InnerRewriteMethodChoice.KKT, int numProcesses = -1, bool verbose = false)
         {
             this.variables = new HashSet<TVar>();
             this.Paths = new Dictionary<(string, string), string[][]>();
@@ -221,11 +221,11 @@ namespace MetaOptimize
 
             switch (innerEncoding)
             {
-                case InnerEncodingMethodChoice.KKT:
+                case InnerRewriteMethodChoice.KKT:
                     this.innerProblemEncoder = new kktRewriteGenerator<TVar, TSolution>(this.Solver, this.variables, demandVariables);
                     break;
-                case InnerEncodingMethodChoice.PrimalDual:
-                    this.innerProblemEncoder = new PrimalDualOptimizationGenerator<TVar, TSolution>(this.Solver,
+                case InnerRewriteMethodChoice.PrimalDual:
+                    this.innerProblemEncoder = new PrimalDualRewriteGenerator<TVar, TSolution>(this.Solver,
                                                                                                     this.variables,
                                                                                                     demandVariables,
                                                                                                     numProcesses);
@@ -260,7 +260,7 @@ namespace MetaOptimize
         /// <returns>The constraints and maximization objective.</returns>
         public OptimizationEncoding<TVar, TSolution> Encoding(Topology topology, Dictionary<(string, string), Polynomial<TVar>> preDemandVariables = null,
             Dictionary<(string, string), double> demandConstraints = null, bool noAdditionalConstraints = false,
-            InnerEncodingMethodChoice innerEncoding = InnerEncodingMethodChoice.KKT, int numProcesses = -1, bool verbose = false)
+            InnerRewriteMethodChoice innerEncoding = InnerRewriteMethodChoice.KKT, int numProcesses = -1, bool verbose = false)
         {
             Utils.logger("Demand Pinning with threshold = " + this.Threshold, verbose);
             this.Topology = topology;

@@ -38,8 +38,8 @@ namespace MetaOptimize.Cli
         /// <summary>
         /// inner encoding (KKT or PrimalDual).
         /// </summary>
-        [Option('e', "innerencoding", Default = InnerEncodingMethodChoice.KKT, HelpText = "Method to use for inner encoding.")]
-        public InnerEncodingMethodChoice InnerEncoding { get; set; }
+        [Option('e', "innerencoding", Default = InnerRewriteMethodChoice.KKT, HelpText = "Method to use for inner encoding.")]
+        public InnerRewriteMethodChoice InnerEncoding { get; set; }
 
         /// <summary>
         /// adversarial generator (Encoding or Benders).

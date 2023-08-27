@@ -20,7 +20,7 @@ namespace MetaOptimize.Cli
                 ISolver<TVar, TSolution> solver, Topology topology, Heuristic h, int numPaths, int numSlices = -1, double demandPinningThreshold = -1,
                 IDictionary<(string, string), int> partition = null, int numSamples = -1, IList<IDictionary<(string, string), int>> partitionsList = null,
                 double partitionSensitivity = -1, bool DirectEncoder = false, double scaleFactor = 1.0,
-                InnerEncodingMethodChoice InnerEncoding = InnerEncodingMethodChoice.KKT, int maxShortestPathLen = -1)
+                InnerRewriteMethodChoice InnerEncoding = InnerRewriteMethodChoice.KKT, int maxShortestPathLen = -1)
         {
             IEncoder<TVar, TSolution> heuristicEncoder;
             switch (h)
@@ -50,7 +50,7 @@ namespace MetaOptimize.Cli
                         Console.WriteLine("Direct DP");
                         heuristicEncoder = new DirectDemandPinningEncoder<TVar, TSolution>(solver, numPaths, demandPinningThreshold);
                     }
-                    else if (InnerEncoding == InnerEncodingMethodChoice.PrimalDual)
+                    else if (InnerEncoding == InnerRewriteMethodChoice.PrimalDual)
                     {
                         // TODO: needs a comment that explains what indirect quantized DP is.
                         Console.WriteLine("Indirect Quantized DP");
@@ -82,7 +82,7 @@ namespace MetaOptimize.Cli
                     {
                         partition = topology.RandomPartition(numSlices);
                     }
-                    if (InnerEncoding == InnerEncodingMethodChoice.PrimalDual)
+                    if (InnerEncoding == InnerRewriteMethodChoice.PrimalDual)
                     {
                         Console.WriteLine("Indirect Quantized DP");
                         var heuristicEncoder1 = new DemandPinningQuantizedEncoder<TVar, TSolution>(solver, numPaths, demandPinningThreshold, scaleFactor: scaleFactor);
@@ -106,7 +106,7 @@ namespace MetaOptimize.Cli
                     {
                         partition = topology.RandomPartition(numSlices);
                     }
-                    if (InnerEncoding == InnerEncodingMethodChoice.PrimalDual)
+                    if (InnerEncoding == InnerRewriteMethodChoice.PrimalDual)
                     {
                         Console.WriteLine("Indirect Quantized DP");
                         var dpEncoder = new DemandPinningQuantizedEncoder<TVar, TSolution>(solver, numPaths, demandPinningThreshold, scaleFactor: scaleFactor);
@@ -158,7 +158,7 @@ namespace MetaOptimize.Cli
                         partition = topology.RandomPartition(numSlices);
                     }
                     Console.WriteLine("Adding DemandPinning.");
-                    if (InnerEncoding == InnerEncodingMethodChoice.PrimalDual)
+                    if (InnerEncoding == InnerRewriteMethodChoice.PrimalDual)
                     {
                         Console.WriteLine("Indirect Quantized DP");
                         var dpEncoder = new DemandPinningQuantizedEncoder<TVar, TSolution>(solver, numPaths, demandPinningThreshold, scaleFactor: scaleFactor);
@@ -194,7 +194,7 @@ namespace MetaOptimize.Cli
                         Console.WriteLine("Direct DP");
                         throw new Exception("Not implemented yet.");
                     }
-                    else if (InnerEncoding == InnerEncodingMethodChoice.PrimalDual)
+                    else if (InnerEncoding == InnerRewriteMethodChoice.PrimalDual)
                     {
                         Console.WriteLine("Indirect Quantized DP");
                         heuristicEncoder = new ModifiedDemandPinningQuantizedEncoder<TVar, TSolution>(solver,
@@ -243,7 +243,7 @@ namespace MetaOptimize.Cli
                 IEncoder<TVar, TSolution> optimalEncoder,
                 IEncoder<TVar, TSolution> heuristicEncoder,
                 double demandUB,
-                InnerEncodingMethodChoice innerEncoding,
+                InnerRewriteMethodChoice innerEncoding,
                 GenericDemandList demandList,
                 bool enableClustering,
                 int clusterVersion,

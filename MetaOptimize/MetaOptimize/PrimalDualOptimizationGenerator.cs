@@ -5,23 +5,24 @@
 namespace MetaOptimize
 {
     using System.Collections.Generic;
-    using System.Diagnostics;
     using System.Threading;
 
     /// <summary>
     /// An optimization encoder that automatically adds the primal-dual conditions.
     /// </summary>
-    public class PrimalDualOptimizationGenerator<TVar, TSolution> : kktRewriteGenerator<TVar, TSolution>
+    /// TODO: do you need the inheritance from the KKTRewritegenerator? if yes, maybe you need a different sub-class which is 
+    /// rewrite generator that both of these classes inherit from?
+    public class PrimalDualRewriteGenerator<TVar, TSolution> : kktRewriteGenerator<TVar, TSolution>
     {
         private int NumProcesses = -1;
         /// <summary>
-        /// Creates a new instance of the <see cref="kktRewriteGenerator{TVar, TSolution}"/> class.
+        /// Creates a new instance of the <see cref="PrimalDualRewriteGenerator{TVar, TSolution}"/> class.
         /// </summary>
         /// <param name="variables">The encoding variables.</param>
         /// <param name="constVariables">The variables to consider constant for the optimization.</param>
         /// <param name="solver">The solver.</param>
         /// <param name="numProcesses">number of processors to use for PrimalDual constraint computation.</param>
-        public PrimalDualOptimizationGenerator(ISolver<TVar, TSolution> solver, ISet<TVar> variables, ISet<TVar> constVariables, int numProcesses)
+        public PrimalDualRewriteGenerator(ISolver<TVar, TSolution> solver, ISet<TVar> variables, ISet<TVar> constVariables, int numProcesses)
             : base(solver, variables, constVariables)
         {
             this.NumProcesses = numProcesses;

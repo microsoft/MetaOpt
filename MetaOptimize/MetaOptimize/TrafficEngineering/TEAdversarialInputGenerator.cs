@@ -74,7 +74,7 @@ namespace MetaOptimize
             IEncoder<TVar, TSolution> optimalEncoder,
             IEncoder<TVar, TSolution> heuristicEncoder,
             double demandUB = -1,
-            InnerEncodingMethodChoice innerEncoding = InnerEncodingMethodChoice.KKT,
+            InnerRewriteMethodChoice innerEncoding = InnerRewriteMethodChoice.KKT,
             IDemandList demandList = null,
             IDictionary<(string, string), double> constrainedDemands = null,
             bool simplify = false,
@@ -91,7 +91,7 @@ namespace MetaOptimize
             {
                 throw new Exception("Solver mismatch between optimal and heuristic encoders.");
             }
-            if (innerEncoding == InnerEncodingMethodChoice.PrimalDual & demandList == null)
+            if (innerEncoding == InnerRewriteMethodChoice.PrimalDual & demandList == null)
             {
                 throw new Exception("should provide the demand list if inner encoding method is primal dual.");
             }
@@ -214,7 +214,7 @@ namespace MetaOptimize
         }
 
         private static void CheckDensityAndLocalityInputs(
-            InnerEncodingMethodChoice innerEncoding,
+            InnerRewriteMethodChoice innerEncoding,
             double density,
             double LargeDemandLB,
             int LargeMaxDistance,
@@ -239,7 +239,7 @@ namespace MetaOptimize
             }
             if (LargeMaxDistance >= 1 || SmallMaxDistance >= 1 || density < 1.0)
             {
-                if (innerEncoding == InnerEncodingMethodChoice.KKT)
+                if (innerEncoding == InnerRewriteMethodChoice.KKT)
                 {
                     throw new Exception("to apply locality or sparsity constraints, the encoding should be primal-dual.");
                 }
@@ -283,7 +283,7 @@ namespace MetaOptimize
             double demandUB = -1,
             int numInterClusterSamples = 0,
             int numNodePerCluster = 0,
-            InnerEncodingMethodChoice innerEncoding = InnerEncodingMethodChoice.KKT,
+            InnerRewriteMethodChoice innerEncoding = InnerRewriteMethodChoice.KKT,
             GenericDemandList demandList = null,
             IDictionary<(string, string), double> constrainedDemands = null,
             bool simplify = false,
@@ -329,7 +329,7 @@ namespace MetaOptimize
             double currGap = 0;
             if (randomInitialization)
             {
-                Debug.Assert(innerEncoding == InnerEncodingMethodChoice.PrimalDual);
+                Debug.Assert(innerEncoding == InnerRewriteMethodChoice.PrimalDual);
                 var rng = new Random(Seed: 0);
                 rndDemand = new Dictionary<(string, string), double>();
                 int numTrials = 10;
@@ -409,7 +409,7 @@ namespace MetaOptimize
             }
             else
             {
-                Debug.Assert(innerEncoding == InnerEncodingMethodChoice.PrimalDual);
+                Debug.Assert(innerEncoding == InnerRewriteMethodChoice.PrimalDual);
                 Utils.logger("Randomly Initialize Demands!", verbose);
                 foreach (var (pair, demandVar) in this.DemandVariables)
                 {
@@ -606,7 +606,7 @@ namespace MetaOptimize
             double demandUB = -1,
             int numInterClusterSamples = 0,
             int numNodePerCluster = 0,
-            InnerEncodingMethodChoice innerEncoding = InnerEncodingMethodChoice.KKT,
+            InnerRewriteMethodChoice innerEncoding = InnerRewriteMethodChoice.KKT,
             GenericDemandList demandList = null,
             IDictionary<(string, string), double> constrainedDemands = null,
             bool simplify = false,
@@ -815,7 +815,7 @@ namespace MetaOptimize
             double demandUB = -1,
             int numInterClusterSamples = 0,
             int numNodePerCluster = 0,
-            InnerEncodingMethodChoice innerEncoding = InnerEncodingMethodChoice.KKT,
+            InnerRewriteMethodChoice innerEncoding = InnerRewriteMethodChoice.KKT,
             GenericDemandList demandList = null,
             int numInterClusterQuantizations = -1,
             IDictionary<(string, string), double> constrainedDemands = null,
@@ -1072,7 +1072,7 @@ namespace MetaOptimize
             IEncoder<TVar, TSolution> heuristicEncoder,
             double minDifference,
             double demandUB = -1,
-            InnerEncodingMethodChoice innerEncoding = InnerEncodingMethodChoice.KKT,
+            InnerRewriteMethodChoice innerEncoding = InnerRewriteMethodChoice.KKT,
             GenericDemandList demandList = null,
             bool simplify = false)
         {
@@ -1080,7 +1080,7 @@ namespace MetaOptimize
             {
                 throw new System.Exception("Solver mismatch between optimal and heuristic encoders.");
             }
-            if (innerEncoding == InnerEncodingMethodChoice.PrimalDual & demandList == null)
+            if (innerEncoding == InnerRewriteMethodChoice.PrimalDual & demandList == null)
             {
                 throw new Exception("should provide the demand list if inner encoding method is primal dual.");
             }
@@ -1241,7 +1241,7 @@ namespace MetaOptimize
 
         private (Dictionary<(string, string), Polynomial<TVar>>, Dictionary<(string, string), double>) CreateDemandVariables(
                 ISolver<TVar, TSolution> solver,
-                InnerEncodingMethodChoice innerEncoding,
+                InnerRewriteMethodChoice innerEncoding,
                 IDemandList demandList,
                 IDictionary<(string, string), double> demandInits = null,
                 double LargeDemandLB = -1,
@@ -1252,7 +1252,7 @@ namespace MetaOptimize
             {
                 Debug.Assert(LargeMaxDistance >= 1);
                 Debug.Assert(LargeDemandLB > 0);
-                Debug.Assert(innerEncoding == InnerEncodingMethodChoice.PrimalDual);
+                Debug.Assert(innerEncoding == InnerRewriteMethodChoice.PrimalDual);
             }
             else
             {
@@ -1263,7 +1263,7 @@ namespace MetaOptimize
             {
                 Debug.Assert(SmallMaxDistance >= 1);
                 Debug.Assert(LargeDemandLB > 0);
-                Debug.Assert(innerEncoding == InnerEncodingMethodChoice.PrimalDual);
+                Debug.Assert(innerEncoding == InnerRewriteMethodChoice.PrimalDual);
             }
             else
             {
@@ -1278,10 +1278,10 @@ namespace MetaOptimize
             {
                 switch (innerEncoding)
                 {
-                    case InnerEncodingMethodChoice.KKT:
+                    case InnerRewriteMethodChoice.KKT:
                         output[pair] = new Polynomial<TVar>(new Term<TVar>(1, solver.CreateVariable("demand_" + pair.Item1 + "_" + pair.Item2)));
                         break;
-                    case InnerEncodingMethodChoice.PrimalDual:
+                    case InnerRewriteMethodChoice.PrimalDual:
                         // get demands lvls
                         var demands = demandList.GetDemandsForPair(pair.Item1, pair.Item2);
                         demands.Remove(0);
@@ -1359,7 +1359,7 @@ namespace MetaOptimize
             double intervalConf,
             double startGap,
             double demandUB = double.PositiveInfinity,
-            InnerEncodingMethodChoice innerEncoding = InnerEncodingMethodChoice.KKT,
+            InnerRewriteMethodChoice innerEncoding = InnerRewriteMethodChoice.KKT,
             GenericDemandList demandList = null)
         {
             if (optimalEncoder.Solver != heuristicEncoder.Solver)
@@ -1443,7 +1443,7 @@ namespace MetaOptimize
             IEncoder<TVar, TSolution> optimalEncoder,
             IEncoder<TVar, TSolution> heuristicEncoder,
             Dictionary<(string, string), double> demands,
-            InnerEncodingMethodChoice innerEncoding = InnerEncodingMethodChoice.KKT,
+            InnerRewriteMethodChoice innerEncoding = InnerRewriteMethodChoice.KKT,
             IDemandList demandList = null,
             bool disableStoreProgress = false)
         {
