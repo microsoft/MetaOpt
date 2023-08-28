@@ -447,7 +447,7 @@ namespace MetaOptimize
                     {
                         case 1:
                             GRBVar binaryVar = term.Variable.Value;
-                            GeneralConvertMultToLin(obj, variable, binaryVar, term.Coefficient);
+                            ConvertBinaryMultToLin(obj, variable, binaryVar, term.Coefficient);
                             break;
                         case 0:
                             obj.AddTerm(term.Coefficient, variable);
@@ -472,7 +472,7 @@ namespace MetaOptimize
         /// <param name="variable"></param>
         /// <param name="binaryVariable"></param>
         /// <param name="binaryCoef"></param>
-        private void GeneralConvertMultToLin(GRBLinExpr obj, GRBVar variable, GRBVar binaryVariable, double binaryCoef)
+        private void ConvertBinaryMultToLin(GRBLinExpr obj, GRBVar variable, GRBVar binaryVariable, double binaryCoef)
         {
             var auxVar = this.CreateVariable("aux_qe");
             // if (binary_variable.VType == GRB.BINARY) {
