@@ -338,11 +338,13 @@ namespace MetaOptimize
         /// <summary>
         /// Set the quadratic objective.
         /// </summary>
-        public void SetQuadPow2Objective(IList<Polynomial<GRBVar>> quadObjective, IList<double> quadCoeff) {
+        public void SetQuadPow2Objective(IList<Polynomial<GRBVar>> quadObjective, IList<double> quadCoeff)
+        {
             this._quadObjective = 0;
             var numQuadTerms = quadObjective.Count();
             Debug.Assert(numQuadTerms == quadCoeff.Count());
-            for (int i = 0; i < numQuadTerms; i++) {
+            for (int i = 0; i < numQuadTerms; i++)
+            {
                 this._quadObjective += ConvertQPow2(quadObjective[i], quadCoeff[i]);
             }
         }
@@ -427,6 +429,7 @@ namespace MetaOptimize
         /// TODO: add a comment to describe the variables.
         /// TODO: does this function assume the variable is binary in the polynomial? You should check for that then with an assertion somewhere?
         /// TODO: is this function correct if they are not binary?
+        /// TODO: should the variable type be a list too so that you support a mixed list of continueous/binary variables?
         private GRBLinExpr ConvertQEToLinear(IList<Polynomial<GRBVar>> coeffPolyList, IList<GRBVar> variableList,
             Polynomial<GRBVar> linearPoly, VariableType varType)
         {
@@ -457,21 +460,39 @@ namespace MetaOptimize
             return obj;
         }
 
+        /// <summary>
+        /// This function converts a quadratic term in a polynomial into a linear one
+        /// it assumes the quadratic term is a multiplication of a binary with a variable.
+        /// assume x_i is the binary variable and y_i the other.
+        /// the function replaces x_i * y_i with aux_i.
+        /// where it sandwitches aux_i such that -M x_i \le aux_i \le M x_i.
+        /// and aux_i >= y_i - M (1 - x_i) and aux_i \le y_i + M (1 - x_i).
+        /// </summary>
+        /// <param name="obj"></param>
+        /// <param name="variable"></param>
+        /// <param name="binaryVariable"></param>
+        /// <param name="binaryCoef"></param>
         private void GeneralConvertMultToLin(GRBLinExpr obj, GRBVar variable, GRBVar binaryVariable, double binaryCoef)
         {
             var auxVar = this.CreateVariable("aux_qe");
             // if (binary_variable.VType == GRB.BINARY) {
             obj.AddTerm(binaryCoef, auxVar);
+
+            // x_i = binary variable
+            // y_i = the other variable
+            // this constraint ensures that the minimum of aux is var when x_i = 1.
             // aux >= y_i - M (1 - x_i)
             var auxConst = new Polynomial<GRBVar>(new Term<GRBVar>(-1, variable));
             auxConst.Add(new Term<GRBVar>(1 * this._bigM));
             auxConst.Add(new Term<GRBVar>(-1 * this._bigM, binaryVariable));
             auxConst.Add(new Term<GRBVar>(1, auxVar));
             this.AddLeqZeroConstraint(auxConst.Negate());
+
             // aux >= - Mx_i
             var auxConst3 = new Polynomial<GRBVar>(new Term<GRBVar>(-1, auxVar));
             auxConst3.Add(new Term<GRBVar>(-1 * this._bigM, binaryVariable));
             this.AddLeqZeroConstraint(auxConst3);
+
             // aux <= y_i + (1 - x_i)M
             var auxConst1 = new Polynomial<GRBVar>(new Term<GRBVar>(-1, variable));
             auxConst1.Add(new Term<GRBVar>(-1 * this._bigM));
@@ -544,18 +565,22 @@ namespace MetaOptimize
         /// Add a less than or equal to zero constraint (Quadratic).
         /// Following constraints; A * B + C \leq 0.
         /// </summary>
+        /// TODO: need a better comment on how this function works.
         public string AddLeqZeroConstraint(IList<Polynomial<GRBVar>> coeffPolyList, IList<GRBVar> variableList,
             Polynomial<GRBVar> linearPoly, VariableType coeffVarType = VariableType.BINARY,
             VariableType varType = VariableType.CONTINUOUS)
         {
             // throw new Exception("not necessary");
             string name = "ineq_index_" + this._constraintIneqCount++;
-            if (coeffVarType == VariableType.BINARY) {
+            if (coeffVarType == VariableType.BINARY)
+            {
                 GRBLinExpr quadConstraint = this.ConvertQEToLinear(coeffPolyList, variableList, linearPoly, varType);
                 this._model.AddConstr(quadConstraint, GRB.LESS_EQUAL, 0.0, name);
                 // var quadConstraint = this.ConvertQEToQEExp(coeffPolyList, variableList, linearPoly);
                 // this._model.AddQConstr(quadConstraint, GRB.LESS_EQUAL, 0.0, name);
-            } else {
+            }
+            else
+            {
                 var quadConstraint = this.ConvertQEToQEExp(coeffPolyList, variableList, linearPoly);
                 this._model.AddQConstr(quadConstraint, GRB.LESS_EQUAL, 0.0, name);
                 this._model.Parameters.NonConvex = 2;
@@ -584,12 +609,15 @@ namespace MetaOptimize
             VariableType varType = VariableType.CONTINUOUS)
         {
             string name = "ineq_index_" + this._constraintIneqCount++;
-            if (coeffVarType == VariableType.BINARY) {
+            if (coeffVarType == VariableType.BINARY)
+            {
                 GRBLinExpr quadConstraint = this.ConvertQEToLinear(coeffPolyList, variableList, linearPoly, varType);
                 this._model.AddConstr(quadConstraint, GRB.EQUAL, 0.0, name);
                 // GRBLinExpr quadConstraint = this.ConvertQESOS(coeffPolyList, variableList, linearPoly);
                 // this._model.AddConstr(quadConstraint, GRB.EQUAL, 0.0, name);
-            } else {
+            }
+            else
+            {
                 var quadConstraint = this.ConvertQEToQEExp(coeffPolyList, variableList, linearPoly);
                 this._model.AddQConstr(quadConstraint, GRB.EQUAL, 0.0, name);
                 this._model.Parameters.NonConvex = 2;
@@ -705,7 +733,8 @@ namespace MetaOptimize
         /// <summary>
         /// Add a = max(b, c) constraint.
         /// </summary>
-        public void AddMaxConstraint(GRBVar LHS, GRBVar var1, GRBVar var2) {
+        public void AddMaxConstraint(GRBVar LHS, GRBVar var1, GRBVar var2)
+        {
             // this._model.AddGenConstrMax(LHS, new GRBVar[] { var1 }, constant, "max_constraint");
             var bin = this.CreateBinaryVariable("aux_max");
             // a >= b
@@ -732,7 +761,8 @@ namespace MetaOptimize
         /// <summary>
         /// Add a = max(b, constant) constraint.
         /// </summary>
-        public void AddMaxConstraint(GRBVar LHS, GRBVar var1, double constant) {
+        public void AddMaxConstraint(GRBVar LHS, GRBVar var1, double constant)
+        {
             this._model.AddGenConstrMax(LHS, new GRBVar[] { var1 }, constant, "max_constraint");
             // AddMaxConstraint(LHS, new Polynomial<GRBVar>(new Term<GRBVar>(1, var1)), constant);
         }
@@ -740,7 +770,8 @@ namespace MetaOptimize
         /// <summary>
         /// Add a = max(b, constant) constraint.
         /// </summary>
-        public void AddMaxConstraint(GRBVar LHS, Polynomial<GRBVar> var1, double constant) {
+        public void AddMaxConstraint(GRBVar LHS, Polynomial<GRBVar> var1, double constant)
+        {
             // this._model.AddGenConstrMax(LHS, new GRBVar[] { var1 }, constant, "max_constraint");
             // var bin = this.CreateBinaryVariable("aux_max");
             // // a >= b
@@ -879,7 +910,8 @@ namespace MetaOptimize
         /// </summary>
         public virtual GRBModel Maximize(Polynomial<GRBVar> objective, bool reset, int solutionCount)
         {
-            if (solutionCount > 1) {
+            if (solutionCount > 1)
+            {
                 this._model.Parameters.PoolSearchMode = 2;
                 this._model.Parameters.PoolSolutions = solutionCount;
             }
@@ -925,7 +957,8 @@ namespace MetaOptimize
         /// <returns>A solution.</returns>
         public GRBModel MaximizeQuadPow2(IList<Polynomial<GRBVar>> quadObjective, IList<double> quadCoeff, Polynomial<GRBVar> linObjective, bool reset = false)
         {
-            if (reset) {
+            if (reset)
+            {
                 this.ResetCallbackTimer();
             }
 
@@ -933,15 +966,19 @@ namespace MetaOptimize
             this.SetQuadPow2Objective(quadObjective, quadCoeff);
             Console.WriteLine("in maximize call");
             GRBLinExpr objective = 0;
-            foreach (var auxVar in auxPolyList) {
+            foreach (var auxVar in auxPolyList)
+            {
                 objective += this.fromPolyToLinExpr(auxVar);
             }
             this._model.SetObjective(objective + this._objective + this._quadObjective, GRB.MAXIMIZE);
-            if (this._focusBstBd) {
+            if (this._focusBstBd)
+            {
                 this._model.Parameters.MIPFocus = 3;
                 this._model.Parameters.Heuristics = 0.01;
                 this._model.Parameters.Cuts = 0;
-            } else {
+            }
+            else
+            {
                 this._model.Parameters.MIPFocus = 1;
                 this._model.Parameters.Heuristics = 0.99;
                 this._model.Parameters.RINS = GRB.MAXINT;
@@ -1004,13 +1041,18 @@ namespace MetaOptimize
             }
 
             double variableValue = 0.0;
-            if (solution.Status != GRB.Status.OPTIMAL) {
+            if (solution.Status != GRB.Status.OPTIMAL)
+            {
                 variableValue = variable.Xn;
-            } else if (solutionNumber > 0) {
+            }
+            else if (solutionNumber > 0)
+            {
                 this._model.Parameters.SolutionNumber = solutionNumber;
                 variableValue = variable.Xn;
                 this._model.Parameters.SolutionNumber = 0;
-            } else {
+            }
+            else
+            {
                 variableValue = variable.X;
             }
             return variableValue;
@@ -1032,7 +1074,8 @@ namespace MetaOptimize
         /// <summary>
         /// initialize some of the variables.
         /// </summary>
-        public void InitializeVariables(GRBVar variable, double value) {
+        public void InitializeVariables(GRBVar variable, double value)
+        {
             variable.Start = value;
         }
 
