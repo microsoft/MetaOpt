@@ -467,16 +467,17 @@ namespace MetaOptimize
         /// the function replaces x_i * y_i with aux_i.
         /// where it sandwitches aux_i such that -M x_i \le aux_i \le M x_i.
         /// and aux_i >= y_i - M (1 - x_i) and aux_i \le y_i + M (1 - x_i).
+        /// This multiplicative term can be part of a larger polynomial (constraint).
         /// </summary>
-        /// <param name="obj"></param>
-        /// <param name="variable"></param>
-        /// <param name="binaryVariable"></param>
-        /// <param name="binaryCoef"></param>
-        private void ConvertBinaryMultToLin(GRBLinExpr obj, GRBVar variable, GRBVar binaryVariable, double binaryCoef)
+        /// <param name="constraint">the original constraint that contains the multiplicative term</param>
+        /// <param name="variable">the variable that can be continuous, binary, or integer</param>
+        /// <param name="binaryVariable">the binary variable in the multiplication.</param>
+        /// <param name="constCoef">the constant coefficient of the multiplicative term.</param>
+        private void ConvertBinaryMultToLin(GRBLinExpr constraint, GRBVar variable, GRBVar binaryVariable, double constCoef)
         {
             var auxVar = this.CreateVariable("aux_qe");
             // if (binary_variable.VType == GRB.BINARY) {
-            obj.AddTerm(binaryCoef, auxVar);
+            constraint.AddTerm(constCoef, auxVar);
 
             // x_i = binary variable
             // y_i = the other variable
@@ -512,6 +513,7 @@ namespace MetaOptimize
         /// <summary>
         /// Converts Quadratic to Quadratic for gurobi.
         /// </summary>
+        /// TODO: add a detailed comment on how this function works.
         private GRBQuadExpr ConvertQEToQEExp(IList<Polynomial<GRBVar>> coeffPolyList, IList<GRBVar> variableList, Polynomial<GRBVar> linearPoly)
         {
             // Utils.logger("Using QE expressions as they are.", this._verbose);
