@@ -83,6 +83,7 @@ namespace MetaOptimize
                 Utils.logger("ensuring bound on dual variables.", verbose);
                 foreach (var (idx, var) in leqDualVariables)
                 {
+                    // TODO: check this, shouldn't it be >=0?
                     this.solver.AddLeqZeroConstraint(new Polynomial<TVar>(new Term<TVar>(1, var)));
                 }
                 // adding dual constraints
@@ -129,6 +130,8 @@ namespace MetaOptimize
             }
         }
 
+        // TODO: this function is missing a comment about how it works. Also the varialbe: variableToDualConstraints
+        // is not clear in terms of what it does. You need a better name and you need comments to define what each variable does.
         private void computeDualConstraints(Polynomial<TVar> objective, IDictionary<int, TVar> leqDualVariables,
                 IDictionary<int, TVar> eqDualVariables, IDictionary<TVar, Polynomial<TVar>> variableToDualConstraint,
                 bool verbose)

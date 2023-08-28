@@ -469,8 +469,8 @@ namespace MetaOptimize
         /// and aux_i >= y_i - M (1 - x_i) and aux_i \le y_i + M (1 - x_i).
         /// This multiplicative term can be part of a larger polynomial (constraint).
         /// </summary>
-        /// <param name="constraint">the original constraint that contains the multiplicative term</param>
-        /// <param name="variable">the variable that can be continuous, binary, or integer</param>
+        /// <param name="constraint">the original constraint that contains the multiplicative term.</param>
+        /// <param name="variable">the variable that can be continuous, binary, or integer.</param>
         /// <param name="binaryVariable">the binary variable in the multiplication.</param>
         /// <param name="constCoef">the constant coefficient of the multiplicative term.</param>
         private void ConvertBinaryMultToLin(GRBLinExpr constraint, GRBVar variable, GRBVar binaryVariable, double constCoef)
