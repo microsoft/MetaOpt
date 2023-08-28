@@ -73,15 +73,18 @@ namespace MetaOptimize
         /// </summary>
         /// <param name="solver">The solver.</param>
         /// <param name="maxNumPaths">The max number of paths between nodes.</param>
-        public TEMaxFlowOptimalEncoder(ISolver<TVar, TSolution>  solver, int maxNumPaths)
+        public TEMaxFlowOptimalEncoder(ISolver<TVar, TSolution> solver, int maxNumPaths)
         {
             this.Solver = solver;
             this.MaxNumPaths = maxNumPaths;
         }
 
-        private bool IsDemandValid((string, string) pair) {
-            if (this.DemandConstraints.ContainsKey(pair)) {
-                if (this.DemandConstraints[pair] <= 0) {
+        private bool IsDemandValid((string, string) pair)
+        {
+            if (this.DemandConstraints.ContainsKey(pair))
+            {
+                if (this.DemandConstraints[pair] <= 0)
+                {
                     return false;
                 }
             }
@@ -179,6 +182,7 @@ namespace MetaOptimize
         /// Encode the problem.
         /// </summary>
         /// <returns>The constraints and maximization objective.</returns>
+        /// TODO: need a better comment that describes the function and what each input variable is.
         public OptimizationEncoding<TVar, TSolution> Encoding(Topology topology, Dictionary<(string, string), Polynomial<TVar>> preDemandVariables = null,
             Dictionary<(string, string), double> demandEqualityConstraints = null, bool noAdditionalConstraints = false,
             InnerRewriteMethodChoice innerEncoding = InnerRewriteMethodChoice.KKT,
@@ -200,15 +204,22 @@ namespace MetaOptimize
             var polynomial = new Polynomial<TVar>();
             foreach (var pair in this.Topology.GetNodePairs())
             {
-                if (!IsDemandValid(pair)) {
+                if (!IsDemandValid(pair))
+                {
                     continue;
                 }
                 polynomial.Add(new Term<TVar>(1, this.FlowVariables[pair]));
             }
 
             polynomial.Add(new Term<TVar>(-1, this.TotalDemandMetVariable));
+
+            // TODO: we seem to re-use the kkt encoder when we don't want to do any rewrite (there is a condition in the KKT rewrite block that checks if
+            // we want to do a rewrite or not i think). We should probably seperate that into its on instance of the rewrite interface and initiate the inner problem
+            // encoder depending on whether we have an aligned follower or not.
+            // TODO: when we want to re-factor this we should first write a test case, then create a deprecated instance of this file and check they produce the same answer.
             this.innerProblemEncoder.AddEqZeroConstraint(polynomial);
 
+            // TODO: will commenting this out cause problems if/when someone wants to use Z3 for their solver? if yes, we should add it back properly.
             // Ensure that the demands are finite.
             // This is needed because Z3 can return any value if demands can be infinite.
             // foreach (var (_, variable) in this.DemandVariables)
@@ -220,7 +231,8 @@ namespace MetaOptimize
             Utils.logger("ensuring demand constraints are respected", verbose);
             foreach (var (pair, constant) in this.DemandConstraints)
             {
-                if (constant <= 0) {
+                if (constant <= 0)
+                {
                     continue;
                 }
                 var poly = this.DemandVariables[pair].Copy();
@@ -243,7 +255,8 @@ namespace MetaOptimize
             Utils.logger("ensuring sum_k f_k^p geq 0", verbose);
             foreach (var (pair, paths) in this.Paths)
             {
-                if (!IsDemandValid(pair)) {
+                if (!IsDemandValid(pair))
+                {
                     continue;
                 }
                 foreach (var path in paths)
@@ -257,7 +270,8 @@ namespace MetaOptimize
             Utils.logger("ensuring disconnected nodes do not have any flow", verbose);
             foreach (var (pair, paths) in this.Paths)
             {
-                if (!IsDemandValid(pair)) {
+                if (!IsDemandValid(pair))
+                {
                     continue;
                 }
                 if (paths.Length == 0)
@@ -271,7 +285,8 @@ namespace MetaOptimize
             Utils.logger("ensuring f_k = sum_p f_k^p", verbose);
             foreach (var (pair, paths) in this.Paths)
             {
-                if (!IsDemandValid(pair)) {
+                if (!IsDemandValid(pair))
+                {
                     continue;
                 }
                 var poly = new Polynomial<TVar>(new Term<TVar>(0));
@@ -295,7 +310,8 @@ namespace MetaOptimize
             Utils.logger("ensuring capacity constraints", verbose);
             foreach (var (pair, paths) in this.Paths)
             {
-                if (!IsDemandValid(pair)) {
+                if (!IsDemandValid(pair))
+                {
                     continue;
                 }
                 foreach (var path in paths)
@@ -306,7 +322,8 @@ namespace MetaOptimize
                         var target = path[i + 1];
                         var edge = this.Topology.GetEdge(source, target);
                         var term = new Term<TVar>(1, this.FlowPathVariables[path]);
-                        if (!sumPerEdge.ContainsKey(edge)) {
+                        if (!sumPerEdge.ContainsKey(edge))
+                        {
                             sumPerEdge[edge] = new Polynomial<TVar>(new Term<TVar>(0));
                         }
                         sumPerEdge[edge].Add(term);
@@ -349,7 +366,8 @@ namespace MetaOptimize
             foreach (var (pair, poly) in this.DemandVariables)
             {
                 demands[pair] = 0;
-                foreach (var term in poly.GetTerms()) {
+                foreach (var term in poly.GetTerms())
+                {
                     demands[pair] += this.Solver.GetVariable(solution, term.Variable.Value) * term.Coefficient;
                 }
             }

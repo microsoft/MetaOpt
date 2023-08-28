@@ -89,7 +89,7 @@ namespace MetaOptimize
                 // adding dual constraints
                 Utils.logger("adding dual constraints.", verbose);
                 var variableToDualConstraint = new Dictionary<TVar, Polynomial<TVar>>();
-                this.computeDualConstraints(objective, leqDualVariables, eqDualVariables, variableToDualConstraint, verbose);
+                this.distributeComputingDualConstraints(objective, leqDualVariables, eqDualVariables, variableToDualConstraint, verbose);
 
                 Utils.logger(
                     string.Format("Reading the output {0} entries.", variableToDualConstraint.Count),
@@ -132,7 +132,7 @@ namespace MetaOptimize
 
         // TODO: this function is missing a comment about how it works. Also the varialbe: variableToDualConstraints
         // is not clear in terms of what it does. You need a better name and you need comments to define what each variable does.
-        private void computeDualConstraints(Polynomial<TVar> objective, IDictionary<int, TVar> leqDualVariables,
+        private void distributeComputingDualConstraints(Polynomial<TVar> objective, IDictionary<int, TVar> leqDualVariables,
                 IDictionary<int, TVar> eqDualVariables, IDictionary<TVar, Polynomial<TVar>> variableToDualConstraint,
                 bool verbose)
         {
@@ -156,6 +156,7 @@ namespace MetaOptimize
                     eqDualVariables, variableToDualConstraint, verbose: verbose);
                 return;
             }
+            // TODO: need a comment here.
             var perProcessVariableToDualConstrintMapping = new Dictionary<int, Dictionary<TVar, Polynomial<TVar>>>();
             var perProcessLeqZeroConstraints = new Dictionary<int, List<Polynomial<TVar>>>();
             var perProcessLeqDualVariables = new Dictionary<int, Dictionary<int, TVar>>();
@@ -230,6 +231,8 @@ namespace MetaOptimize
                 }
             }
         }
+
+        // TODO: needs a comment that describes the input variables and what this function is doing.
         private void computeDualConstraints(IList<Polynomial<TVar>> leqZeroConstraints,
                 IList<Polynomial<TVar>> eqZeroConstraints, IDictionary<int, TVar> leqDualVariables,
                 IDictionary<int, TVar> eqDualVariables, IDictionary<TVar, Polynomial<TVar>> variableToDualConstraint,

@@ -145,18 +145,23 @@ namespace MetaOptimize
         /// Encode the problem.
         /// </summary>
         /// <returns>The constraints and maximization objective.</returns>
+        /// TODO: need a better comment here to describe what this function does.
+        /// TODO: define each variable, KSP == k shortest path for example.
         public OptimizationEncoding<TVar, TSolution> Encoding(Topology topology, Dictionary<(string, string), Polynomial<TVar>> preDemandVariables = null,
             Dictionary<(string, string), double> demandEqualityConstraints = null, bool noAdditionalConstraints = false,
             InnerRewriteMethodChoice innerEncoding = InnerRewriteMethodChoice.KKT,
             PathType pathType = PathType.KSP, Dictionary<(string, string), string[][]> selectedPaths = null,
             int numProcesses = -1, bool verbose = false)
         {
-            if (pathType != PathType.KSP) {
+            if (pathType != PathType.KSP)
+            {
                 throw new Exception("Only KSP works for now.");
             }
             this.Topology = topology;
             this.ReducedTopology = topology.SplitCapacity(this.NumPartitions);
             InitializeVariables(preDemandVariables, demandEqualityConstraints);
+
+            // Create a new instance of the optimization encoding class for each partition.
             var encodings = new OptimizationEncoding<TVar, TSolution>[NumPartitions];
 
             // get all the separate encodings.
@@ -167,6 +172,7 @@ namespace MetaOptimize
                 partitionPreDemandVariables = new Dictionary<(string, string), Polynomial<TVar>>();
                 foreach (var (pair, partitionID) in this.DemandPartitions)
                 {
+                    // TODO: is the second condition necessary? for pop aren't all nodes guaranteed to be in all topologies?
                     if (partitionID == i & this.Topology.GetAllNodes().Contains(pair.Item1) & this.Topology.GetAllNodes().Contains(pair.Item2))
                     {
                         partitionPreDemandVariables[pair] = this.DemandVariables[pair];
