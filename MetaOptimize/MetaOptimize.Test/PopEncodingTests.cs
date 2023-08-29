@@ -72,7 +72,7 @@ namespace MetaOptimize.Test
             var optimalEncoder = new TEMaxFlowOptimalEncoder<TVar, TSol>(solver, maxNumPaths: 1);
 
             var popEncoderG = new PopEncoder<TVar, TSol>(solver, maxNumPaths: 1, numPartitions: 2, demandPartitions: partition);
-            var adversarialInputGenerator = new TEAdversarialInputGenerator<TVar, TSol>(topology, k: 1);
+            var adversarialInputGenerator = new TEAdversarialInputGenerator<TVar, TSol>(topology, maxNumPaths: 1);
 
             var (optimalSolutionG, popSolutionG) = adversarialInputGenerator.MaximizeOptimalityGap(optimalEncoder, popEncoderG);
             Console.WriteLine("Optimal:");
