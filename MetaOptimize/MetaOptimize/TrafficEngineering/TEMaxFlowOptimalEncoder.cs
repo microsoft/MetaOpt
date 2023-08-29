@@ -201,23 +201,23 @@ namespace MetaOptimize
 
             // Ensure that sum_k f_k = total_demand.
             Utils.logger("ensuring sum_k f_k = total demand", verbose);
-            var polynomial = new Polynomial<TVar>();
+            var total_flow_equality = new Polynomial<TVar>();
             foreach (var pair in this.Topology.GetNodePairs())
             {
                 if (!IsDemandValid(pair))
                 {
                     continue;
                 }
-                polynomial.Add(new Term<TVar>(1, this.FlowVariables[pair]));
+                total_flow_equality.Add(new Term<TVar>(1, this.FlowVariables[pair]));
             }
 
-            polynomial.Add(new Term<TVar>(-1, this.TotalDemandMetVariable));
+            total_flow_equality.Add(new Term<TVar>(-1, this.TotalDemandMetVariable));
 
             // TODO: we seem to re-use the kkt encoder when we don't want to do any rewrite (there is a condition in the KKT rewrite block that checks if
             // we want to do a rewrite or not i think). We should probably seperate that into its on instance of the rewrite interface and initiate the inner problem
             // encoder depending on whether we have an aligned follower or not.
             // TODO: when we want to re-factor this we should first write a test case, then create a deprecated instance of this file and check they produce the same answer.
-            this.innerProblemEncoder.AddEqZeroConstraint(polynomial);
+            this.innerProblemEncoder.AddEqZeroConstraint(total_flow_equality);
 
             // TODO: will commenting this out cause problems if/when someone wants to use Z3 for their solver? if yes, we should add it back properly.
             // Ensure that the demands are finite.
@@ -235,9 +235,9 @@ namespace MetaOptimize
                 {
                     continue;
                 }
-                var poly = this.DemandVariables[pair].Copy();
-                poly.Add(new Term<TVar>(-1 * constant));
-                this.innerProblemEncoder.AddEqZeroConstraint(poly);
+                var demandConstraint = this.DemandVariables[pair].Copy();
+                demandConstraint.Add(new Term<TVar>(-1 * constant));
+                this.innerProblemEncoder.AddEqZeroConstraint(demandConstraint);
             }
 
             // Ensure that f_k geq 0.
@@ -246,9 +246,9 @@ namespace MetaOptimize
             foreach (var (pair, variable) in this.FlowVariables)
             {
                 // this.kktEncoder.AddLeqZeroConstraint(new Polynomial<TVar>(new Term<TVar>(-1, variable)));
-                var poly = this.DemandVariables[pair].Negate();
-                poly.Add(new Term<TVar>(1, variable));
-                this.innerProblemEncoder.AddLeqZeroConstraint(poly);
+                var flowSizeConstraints = this.DemandVariables[pair].Negate();
+                flowSizeConstraints.Add(new Term<TVar>(1, variable));
+                this.innerProblemEncoder.AddLeqZeroConstraint(flowSizeConstraints);
             }
 
             // Ensure that f_k^p geq 0.
@@ -289,14 +289,14 @@ namespace MetaOptimize
                 {
                     continue;
                 }
-                var poly = new Polynomial<TVar>(new Term<TVar>(0));
+                var computeFlow = new Polynomial<TVar>(new Term<TVar>(0));
                 foreach (var path in paths)
                 {
-                    poly.Add(new Term<TVar>(1, this.FlowPathVariables[path]));
+                    computeFlow.Add(new Term<TVar>(1, this.FlowPathVariables[path]));
                 }
 
-                poly.Add(new Term<TVar>(-1, this.FlowVariables[pair]));
-                this.innerProblemEncoder.AddEqZeroConstraint(poly);
+                computeFlow.Add(new Term<TVar>(-1, this.FlowVariables[pair]));
+                this.innerProblemEncoder.AddEqZeroConstraint(computeFlow);
             }
 
             // Ensure the capacity constraints hold.

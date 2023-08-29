@@ -214,6 +214,7 @@ namespace MetaOptimize
             }
 
             // enforce sensitivity
+            // TODO: need a better comment that describes what this means.
             if (this.PartitionSensitivity != -1)
             {
                 for (int i = 0; i < this.NumPartitions; i++)

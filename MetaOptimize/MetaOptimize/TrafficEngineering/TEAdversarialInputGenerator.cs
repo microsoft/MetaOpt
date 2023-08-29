@@ -70,6 +70,8 @@ namespace MetaOptimize
         /// <summary>
         /// Find an adversarial input that maximizes the optimality gap between two optimizations.
         /// </summary>
+        /// TODO: need a better comment here that describes what this function is actually doing.
+        /// Is this gap generator really only specific to TE?
         public virtual (TEOptimizationSolution, TEOptimizationSolution) MaximizeOptimalityGap(
             IEncoder<TVar, TSolution> optimalEncoder,
             IEncoder<TVar, TSolution> heuristicEncoder,
@@ -268,7 +270,8 @@ namespace MetaOptimize
             solution = SimplifyAdversarialInputs(simplify, optimalEncoder, heuristicEncoder, solution, objective);
 
             var solList = new List<(TEOptimizationSolution, TEOptimizationSolution)>();
-            for (int sNumber = 0; sNumber < solutionCount; sNumber++) {
+            for (int sNumber = 0; sNumber < solutionCount; sNumber++)
+            {
                 var optSol = (TEOptimizationSolution)optimalEncoder.GetSolution(solution, sNumber);
                 var heuSol = (TEOptimizationSolution)heuristicEncoder.GetSolution(solution, sNumber);
                 solList.Add((optSol, heuSol));
