@@ -51,6 +51,8 @@ namespace MetaOptimize
             this.NumProcesses = numProcesses;
         }
 
+        // TODO: need a comment that describes what this function is doing. Also is this the only way you can simplify?
+        // OR are there other ways? 
         private TSolution SimplifyAdversarialInputs(bool simplify, IEncoder<TVar, TSolution> optimalEncoder, IEncoder<TVar, TSolution> heuristicEncoder,
             TSolution solution, Polynomial<TVar> objective)
         {
@@ -58,7 +60,7 @@ namespace MetaOptimize
             {
                 var solver = optimalEncoder.Solver;
                 Console.WriteLine("===== Going to simplify the solution....");
-                var simplifier = new AdversarialInputSimplifier<TVar, TSolution>(Topology, maxNumPath, DemandEnforcers);
+                var simplifier = new TEAdversarialInputSimplifier<TVar, TSolution>(Topology, maxNumPath, DemandEnforcers);
                 var optimalObj = ((TEOptimizationSolution)optimalEncoder.GetSolution(solution)).MaxObjective;
                 var heuristicObj = ((TEOptimizationSolution)heuristicEncoder.GetSolution(solution)).MaxObjective;
                 var gap = optimalObj - heuristicObj;
@@ -152,20 +154,20 @@ namespace MetaOptimize
             {
                 EnsureDemandUB(solver, demandUB);
             }
+            // TODO: modify this to only print in debug mode.
             Utils.logger("adding equality constraints for specified demands.", verbose);
             EnsureDemandEquality(solver, constrainedDemands);
             Utils.logger("Adding density constraint: max density = " + density, verbose);
             EnsureDensityConstraint(solver, density);
 
             Utils.logger("setting the objective.", verbose);
-            // var objective = new Polynomial<TVar>(
-            //             new Term<TVar>(1, optimalEncoding.GlobalObjective),
-            //             new Term<TVar>(-1, heuristicEncoding.GlobalObjective));
+
             var objective = new Polynomial<TVar>();
             objective.Add(optimalEncoding.MaximizationObjective.Copy());
             objective.Add(heuristicEncoding.MaximizationObjective.Negate());
             var solution = solver.Maximize(objective, reset: true);
 
+            // TODO: what is the implication of this on scale? 
             solution = SimplifyAdversarialInputs(simplify, optimalEncoder, heuristicEncoder, solution, objective);
 
             var optSol = (TEOptimizationSolution)optimalEncoder.GetSolution(solution);
@@ -1298,6 +1300,8 @@ namespace MetaOptimize
             }
         }
 
+        // TODO: need a comment that describes what this function does.
+        // TODO: seems like it just controls how many demand variables can be non-zero.
         private void EnsureDensityConstraint(
             ISolver<TVar, TSolution> solver,
             double density)

@@ -53,6 +53,8 @@ namespace MetaOptimize.Test
         /// <summary>
         /// Test the POP encoder on a more complex example.
         /// </summary>
+        /// TODO: in the documentation make sure you state that for the adversarial input generator to work
+        /// the heuristic and the optimum encoders should use the same solver instance.
         [TestMethod]
         public void TestPopGapSK()
         {
