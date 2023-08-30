@@ -52,7 +52,7 @@ namespace MetaOptimize
         }
 
         // TODO: need a comment that describes what this function is doing. Also is this the only way you can simplify?
-        // OR are there other ways? 
+        // OR are there other ways?
         private TSolution SimplifyAdversarialInputs(bool simplify, IEncoder<TVar, TSolution> optimalEncoder, IEncoder<TVar, TSolution> heuristicEncoder,
             TSolution solution, Polynomial<TVar> objective)
         {
@@ -167,7 +167,7 @@ namespace MetaOptimize
             objective.Add(heuristicEncoding.MaximizationObjective.Negate());
             var solution = solver.Maximize(objective, reset: true);
 
-            // TODO: what is the implication of this on scale? 
+            // TODO: what is the implication of this on scale?
             solution = SimplifyAdversarialInputs(simplify, optimalEncoder, heuristicEncoder, solution, objective);
 
             var optSol = (TEOptimizationSolution)optimalEncoder.GetSolution(solution);
@@ -1385,7 +1385,7 @@ namespace MetaOptimize
                         bool atLeastOneValidLvl = false;
                         foreach (double demandlvl in demands)
                         {
-                            // Skip if the distance between the pair is larger than what we allow or 
+                            // Skip if the distance between the pair is larger than what we allow or
                             // if the demand level is larger than the large demand lower bound.
                             if (distance > LargeMaxDistance && demandlvl >= LargeDemandLB)
                             {

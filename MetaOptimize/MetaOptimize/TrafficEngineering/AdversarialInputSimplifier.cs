@@ -33,7 +33,7 @@ namespace MetaOptimize
         /// <summary>
         /// Constructor.
         /// </summary>
-        /// TODO: is this class general or does it only apply to TE? Judging by K TE? if so you should clearly 
+        /// TODO: is this class general or does it only apply to TE? Judging by K TE? if so you should clearly
         /// specify that in the class name and in the constructor.
         public TEAdversarialInputSimplifier(Topology topology, int maxNumPath, Dictionary<(string, string), Polynomial<TVar>> DemandVariables)
         {

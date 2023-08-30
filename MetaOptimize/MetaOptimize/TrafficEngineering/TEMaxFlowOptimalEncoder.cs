@@ -91,6 +91,7 @@ namespace MetaOptimize
             return true;
         }
 
+        // TODO: this needs a comment that describes what it does and what each input is.
         private void InitializeVariables(Dictionary<(string, string), Polynomial<TVar>> preDemandVariables,
                 Dictionary<(string, string), double> demandEqualityConstraints, InnerRewriteMethodChoice encodingMethod,
                 PathType pathType, Dictionary<(string, string), string[][]> selectedPaths,
