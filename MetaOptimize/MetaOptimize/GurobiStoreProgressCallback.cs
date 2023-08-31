@@ -5,8 +5,6 @@
 namespace MetaOptimize
 {
     using System;
-    using System.Diagnostics;
-    using System.IO;
     using Gurobi;
     class GurobiStoreProgressCallback : GRBCallback
     {
@@ -18,7 +16,8 @@ namespace MetaOptimize
         private double bstObj = Double.NegativeInfinity;
         private double lastTime = -1;
 
-        public GurobiStoreProgressCallback(GRBModel model, String dirname, String filename) {
+        public GurobiStoreProgressCallback(GRBModel model, String dirname, String filename)
+        {
             this.model = model;
             this.dirname = dirname;
             this.filename = filename;
@@ -30,20 +29,27 @@ namespace MetaOptimize
 
         protected override void Callback()
         {
-            try {
-                if (where == GRB.Callback.PRESOLVE) {
+            try
+            {
+                if (where == GRB.Callback.PRESOLVE)
+                {
                     this.presolvetime_ms = GetDoubleInfo(GRB.Callback.RUNTIME) * 1000;
                 }
-                else if (where == GRB.Callback.MIP) {
+                else if (where == GRB.Callback.MIP)
+                {
                     var obj = GetDoubleInfo(GRB.Callback.MIP_OBJBST);
                     var currtime_ms = GetDoubleInfo(GRB.Callback.RUNTIME);
                     CallCallback(obj, currtime_ms, this.presolvetime_ms);
                 }
-            } catch (GRBException e) {
+            }
+            catch (GRBException e)
+            {
                 Console.WriteLine("Error code: " + e.ErrorCode);
                 Console.WriteLine(e.Message);
                 Console.WriteLine(e.StackTrace);
-            } catch (Exception e) {
+            }
+            catch (Exception e)
+            {
                 Console.WriteLine("Error during callback");
                 Console.WriteLine(e.StackTrace);
             }
@@ -62,14 +68,17 @@ namespace MetaOptimize
         {
             // Utils.AppendToFile(@"../logs/logs.txt", " last time = " + lastTime + " final time = " + finaltime_ms);
             finaltime_ms += timeBias;
-            if (finaltime_ms > lastTime) {
+            if (finaltime_ms > lastTime)
+            {
                 Utils.AppendToFile(dirname, filename, finaltime_ms + ", " + this.bstObj);
                 this.lastTime = finaltime_ms;
             }
         }
 
-        public void AppendToStoreProgressFile(double time_ms, double gap) {
-            if (time_ms > lastTime) {
+        public void AppendToStoreProgressFile(double time_ms, double gap)
+        {
+            if (time_ms > lastTime)
+            {
                 this.bstObj = Math.Max(this.bstObj, gap);
                 Utils.AppendToFile(dirname, filename, time_ms + ", " + this.bstObj);
                 this.lastTime = time_ms;

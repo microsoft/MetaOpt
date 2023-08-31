@@ -412,14 +412,12 @@ namespace MetaOptimize
                 maxNonPinnedLB.Add(new Term<TVar>(-1, MaxAuxVariables[pair]));
                 this.innerProblemEncoder.AddLeqZeroConstraint(maxNonPinnedLB);
 
-
-                //TODO: need a comment here about what exactly this is doing and what is happening.
-                //TODO: need to rename polyTerm to something that is more descriptive of the constraint.
+                // TODO: need a comment here about what exactly this is doing and what is happening.
+                // TODO: need to rename polyTerm to something that is more descriptive of the constraint.
                 // sum non shortest flows \leq MaxAuxVariables
                 sumNonShortestPoly.Add(new Term<TVar>(-1, MaxAuxVariables[pair]));
                 this.innerProblemEncoder.AddLeqZeroConstraint(sumNonShortestPoly);
                 // Up to this point MaxAuxVariables = max(0, M(d_k - T_d), sum non shortest flows))
-
 
                 // demand - shortest path flows \leq MaxAuxVariables
                 var shortestPathUB = this.DemandPolynomials[pair].Multiply(this._scale);
