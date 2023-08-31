@@ -123,42 +123,21 @@ namespace MetaOptimize
                 dirname: this._logFileDirname, filename: filename + "_" + Utils.GetFID() + fileExtension,
                 this._timeToTerminateIfNoImprovement * 1000, this._timeout * 1000);
             this._model.SetCallback(this.guorbiCallback);
-            // Debug.Assert(this._timeToTerminateIfNoImprovement <= 0 || this._timeout <= 0);
-            // if (this._timeToTerminateIfNoImprovement > 0 & this._storeProgress) {
-            //     this.guorbiCallback = new GurobiCallback(this._model, this._logFileDirname,
-            //             filename + "_" + Utils.GetFID() + fileExtension, this._timeToTerminateIfNoImprovement * 1000);
-            //     this._model.SetCallback(this.guorbiCallback);
-            // } else if (this._timeToTerminateIfNoImprovement > 0) {
-            //     this.gurobiTerminationCallback = new GurobiTerminationCallback(this._model, this._timeToTerminateIfNoImprovement * 1000);
-            //     this._model.SetCallback(this.gurobiTerminationCallback);
-            // } else if (this._storeProgress) {
-            //     this.gurobiStoreProgressCallback = new GurobiStoreProgressCallback(this._model, this._logFileDirname, filename + "_" + Utils.GetFID() + fileExtension);
-            //     this._model.SetCallback(this.gurobiStoreProgressCallback);
-            // }
         }
 
         /// <summary>
         /// to reset the timer for termination.
         /// </summary>
+        /// TODO: need more details here: when is this called? what does it do?
         protected void ResetCallbackTimer()
         {
             this.guorbiCallback.ResetAll();
-            // if (this._timeToTerminateIfNoImprovement > 0 & this._storeProgress) {
-            //     this.guorbiCallback.ResetTermination();
-            //     this.guorbiCallback.ResetProgressTimer();
-            //     this._model.SetCallback(this.guorbiCallback);
-            // } else if (this._timeToTerminateIfNoImprovement > 0) {
-            //     this.gurobiTerminationCallback.ResetTermination();
-            //     this._model.SetCallback(this.gurobiTerminationCallback);
-            // } else if (this._storeProgress) {
-            //     this.gurobiStoreProgressCallback.ResetProgressTimer();
-            //     this._model.SetCallback(this.gurobiStoreProgressCallback);
-            // }
         }
 
         /// <summary>
-        /// constructor.
+        /// The solver constructor.
         /// </summary>
+        /// TODO: add more details on what each input means.
         public GurobiSOS(double timeout = double.PositiveInfinity, int verbose = 0, int numThreads = 0, double timeToTerminateNoImprovement = -1,
                 bool recordProgress = false, string logPath = null, bool focusBstBd = false)
         {
@@ -166,7 +145,7 @@ namespace MetaOptimize
             this._timeout = timeout;
             this._verbose = verbose;
             this._numThreads = numThreads;
-            // this._model.Parameters.TimeLimit = timeout;
+
             this._model.Parameters.Presolve = 2;
             this._focusBstBd = focusBstBd;
             if (numThreads < 0)
@@ -336,16 +315,19 @@ namespace MetaOptimize
         }
 
         /// <summary>
-        /// Set the quadratic objective.
+        /// Sets the class variable quadObjective.
+        /// It takes as input a list of polynomials, and their corresponding coefficients
+        /// and returns the sum of the polynomials to the power 2 multiplied by their respective coefficients.
         /// </summary>
-        public void SetQuadPow2Objective(IList<Polynomial<GRBVar>> quadObjective, IList<double> quadCoeff)
+        /// TODO: do you allow for any degree in the objective?
+        public void SetSumOfPow2Polynomials(IList<Polynomial<GRBVar>> quadObjective, IList<double> quadCoeff)
         {
             this._quadObjective = 0;
             var numQuadTerms = quadObjective.Count();
             Debug.Assert(numQuadTerms == quadCoeff.Count());
             for (int i = 0; i < numQuadTerms; i++)
             {
-                this._quadObjective += ConvertQPow2(quadObjective[i], quadCoeff[i]);
+                this._quadObjective += ConvertPolyToPower2(quadObjective[i], quadCoeff[i]);
             }
         }
 
@@ -375,27 +357,13 @@ namespace MetaOptimize
         }
 
         /// <summary>
-        /// Converts polynomials to linear expressions.
+        /// Takes a polynomail and a coefficient and returns (polynomial)^2 * coefficient. 
         /// </summary>
         /// <returns>Linear expression.</returns>
-        protected internal GRBQuadExpr ConvertQPow2(Polynomial<GRBVar> quadPoly, double quadCoeff)
+        protected internal GRBQuadExpr ConvertPolyToPower2(Polynomial<GRBVar> quadPoly, double quadCoeff)
         {
             GRBLinExpr quadlin = this.fromPolyToLinExpr(quadPoly);
             GRBQuadExpr obj = quadCoeff * quadlin * quadlin;
-            // foreach (var term in quadPoly.GetTerms())
-            // {
-            //     switch (term.Exponent)
-            //     {
-            //         case 0:
-            //             obj += quadCoeff * (term.Coefficient * term.Coefficient);
-            //             break;
-            //         case 1:
-            //             obj += quadCoeff * (term.Coefficient * term.Coefficient) * (term.Variable.Value * term.Variable.Value);
-            //             break;
-            //         default:
-            //             throw new Exception("non 0|1 exponent is not modeled");
-            //     }
-            // }
             return obj;
         }
 
@@ -965,7 +933,7 @@ namespace MetaOptimize
             }
 
             this.SetObjective(linObjective);
-            this.SetQuadPow2Objective(quadObjective, quadCoeff);
+            this.SetSumOfPow2Polynomials(quadObjective, quadCoeff);
             Console.WriteLine("in maximize call");
             GRBLinExpr objective = 0;
             foreach (var auxVar in auxPolyList)
@@ -1076,6 +1044,7 @@ namespace MetaOptimize
         /// <summary>
         /// initialize some of the variables.
         /// </summary>
+        /// TODO: make the comment a little bit more informative. Is it that this initialization helps the solver find a solution faster?
         public void InitializeVariables(GRBVar variable, double value)
         {
             variable.Start = value;
