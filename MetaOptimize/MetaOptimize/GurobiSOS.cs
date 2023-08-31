@@ -640,15 +640,13 @@ namespace MetaOptimize
         public void AddLogisticConstraint(GRBVar xVar, GRBVar yVar, string name, double FuncPieces = -1, double FuncPeiceError = 0.01,
             double FuncPieceLength = 0.01, double FuncPieceRatio = -1.0)
         {
-            // string options = String.Format("FuncPieces={0} FuncPieceError={1} FuncPieceLength={2} FuncPieceRatio={3}",
-            //     FuncPieces, FuncPeiceError, FuncPieceLength, FuncPieceRatio);
-            // this._model.AddGenConstrLogistic(xVar, yVar, name, options);
             throw new Exception("Not implemented");
         }
 
         /// <summary>
         /// power constraint y = x^a.
         /// </summary>
+        /// TODO: describe this function in more detail, specifically, what each of the parameters mean and how they influence the outcome.
         public void AddPowerConstraint(GRBVar xVar, GRBVar yVar, int a, string name, double FuncPieces = -1, double FuncPeiceError = 0.01,
             double FuncPieceLength = 0.01, double FuncPieceRatio = -1.0)
         {
@@ -660,6 +658,7 @@ namespace MetaOptimize
         /// <summary>
         /// polynomial constraint y = p0 x^d + p1 x^{d-1} + ... + pd.
         /// </summary>
+        /// TODO: same comment as above.
         public void AddPolynomialConstraint(GRBVar xVar, GRBVar yVar, double[] p, string name, double FuncPieces = -1, double FuncPeiceError = 0.01,
             double FuncPieceLength = 0.01, double FuncPieceRatio = -1.0)
         {
@@ -671,6 +670,7 @@ namespace MetaOptimize
         /// <summary>
         /// polynomial constraint y = norm_d(x_1, ..., x_n).
         /// </summary>
+        /// TODO: same comment as above.
         public void AddNormConstraint(GRBVar[] xVar, GRBVar yVar, double which, string name, double FuncPieces = -1, double FuncPeiceError = 0.01,
             double FuncPieceLength = 0.01, double FuncPieceRatio = -1.0)
         {
@@ -700,6 +700,8 @@ namespace MetaOptimize
 
         /// <summary>
         /// Add a = max(b, c) constraint.
+        /// To achieve this the function ensures that b \le a \le b + M * binaryvariable 
+        /// and c \le a \le c + M(1 - binaryvariable).
         /// </summary>
         public void AddMaxConstraint(GRBVar LHS, GRBVar var1, GRBVar var2)
         {
@@ -709,16 +711,16 @@ namespace MetaOptimize
             this.AddLeqZeroConstraint(new Polynomial<GRBVar>(
                 new Term<GRBVar>(-1, LHS),
                 new Term<GRBVar>(1, var1)));
-            // a >= var2
+            // a >= c
             this.AddLeqZeroConstraint(new Polynomial<GRBVar>(
                 new Term<GRBVar>(-1, LHS),
                 new Term<GRBVar>(1, var2)));
-            // a <= b + Mx
+            // a <= b + M * binaryvar
             this.AddLeqZeroConstraint(new Polynomial<GRBVar>(
                 new Term<GRBVar>(1, LHS),
                 new Term<GRBVar>(-1, var1),
                 new Term<GRBVar>(-1 * this._bigM, bin)));
-            // a <= var2 + M(1 - x)
+            // a <= c + M(1 - binaryvar)
             this.AddLeqZeroConstraint(new Polynomial<GRBVar>(
                 new Term<GRBVar>(1, LHS),
                 new Term<GRBVar>(-1, var2),
@@ -732,7 +734,6 @@ namespace MetaOptimize
         public void AddMaxConstraint(GRBVar LHS, GRBVar var1, double constant)
         {
             this._model.AddGenConstrMax(LHS, new GRBVar[] { var1 }, constant, "max_constraint");
-            // AddMaxConstraint(LHS, new Polynomial<GRBVar>(new Term<GRBVar>(1, var1)), constant);
         }
 
         /// <summary>
@@ -740,27 +741,6 @@ namespace MetaOptimize
         /// </summary>
         public void AddMaxConstraint(GRBVar LHS, Polynomial<GRBVar> var1, double constant)
         {
-            // this._model.AddGenConstrMax(LHS, new GRBVar[] { var1 }, constant, "max_constraint");
-            // var bin = this.CreateBinaryVariable("aux_max");
-            // // a >= b
-            // var constr1 = new Polynomial<GRBVar>(new Term<GRBVar>(-1, LHS));
-            // constr1.Add(var1.Copy());
-            // this.AddLeqZeroConstraint(constr1);
-            // // a >= constant
-            // this.AddLeqZeroConstraint(new Polynomial<GRBVar>(
-            //     new Term<GRBVar>(-1, LHS),
-            //     new Term<GRBVar>(constant)));
-            // // a <= b + Mx
-            // var constr3 = new Polynomial<GRBVar>(
-            //     new Term<GRBVar>(1, LHS),
-            //     new Term<GRBVar>(-1 * this._bigM, bin));
-            // constr3.Add(var1.Negate());
-            // this.AddLeqZeroConstraint(constr3);
-            // // a <= constant + M(1 - x)
-            // this.AddLeqZeroConstraint(new Polynomial<GRBVar>(
-            //     new Term<GRBVar>(1, LHS),
-            //     new Term<GRBVar>(-1 * constant - this._bigM),
-            //     new Term<GRBVar>(this._bigM, bin)));
             throw new Exception("Not implemented yet.");
         }
 
@@ -786,6 +766,9 @@ namespace MetaOptimize
         /// <summary>
         /// check feasibility of optimization.
         /// </summary>
+        /// TODO: this function needs to have a better comment to describe the role of the objective value you are taking in
+        /// It wsn't clear ot me why you are not just solving a problem without  an objective.
+        /// Should have an option probably that would allow for a default value of objectivevalue?
         public virtual GRBModel CheckFeasibility(double objectiveValue)
         {
             Console.WriteLine("in feasibility call");
@@ -800,7 +783,6 @@ namespace MetaOptimize
             this._model.Optimize();
             if (this._model.Status != GRB.Status.USER_OBJ_LIMIT & this._model.Status != GRB.Status.OPTIMAL)
             {
-                // throw new Exception($"model not optimal {ModelStatusToString(this._model.Status)}");
                 throw new InfeasibleOrUnboundSolution();
             }
             if (this._objective.Value < objectiveValue)
@@ -814,6 +796,8 @@ namespace MetaOptimize
         /// Maximize the objective.
         /// </summary>
         /// <returns>A solution.</returns>
+        /// TODO: seems like there are a lot of ways of configuring gurobi here that you can apply, it may be good to
+        /// add what each of these mean in a comment and in the documentation for the code writing up how users can modify them.
         public virtual GRBModel Maximize()
         {
             Console.WriteLine("in maximize call");
@@ -993,6 +977,7 @@ namespace MetaOptimize
         /// Get the resulting value assigned to a variable.
         /// </summary>
         /// <returns>The value as a double.</returns>
+        /// TODO: need pooria to explain to behnaz what solution number is and how it works.
         public double GetVariable(GRBModel solution, GRBVar variable, int solutionNumber = 0)
         {
             // Maximize() above is a synchronous call; not sure if this check is needed
@@ -1051,6 +1036,7 @@ namespace MetaOptimize
         /// <summary>
         /// adding some auxiliary term to be added to the global objective when maximized.
         /// </summary>
+        /// TODO: need to improve this comment not at all clear what this function does.
         public void AddGlobalTerm(Polynomial<GRBVar> auxObjPoly)
         {
             this.auxPolyList.Add(auxObjPoly);
