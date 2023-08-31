@@ -700,7 +700,7 @@ namespace MetaOptimize
 
         /// <summary>
         /// Add a = max(b, c) constraint.
-        /// To achieve this the function ensures that b \le a \le b + M * binaryvariable 
+        /// To achieve this the function ensures that b \le a \le b + M * binaryvariable
         /// and c \le a \le c + M(1 - binaryvariable).
         /// </summary>
         public void AddMaxConstraint(GRBVar LHS, GRBVar var1, GRBVar var2)
