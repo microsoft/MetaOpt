@@ -357,7 +357,7 @@ namespace MetaOptimize
         }
 
         /// <summary>
-        /// Takes a polynomail and a coefficient and returns (polynomial)^2 * coefficient. 
+        /// Takes a polynomail and a coefficient and returns (polynomial)^2 * coefficient.
         /// </summary>
         /// <returns>Linear expression.</returns>
         protected internal GRBQuadExpr ConvertPolyToPower2(Polynomial<GRBVar> quadPoly, double quadCoeff)
@@ -583,8 +583,6 @@ namespace MetaOptimize
             {
                 GRBLinExpr quadConstraint = this.ConvertQEToLinear(coeffPolyList, variableList, linearPoly, varType);
                 this._model.AddConstr(quadConstraint, GRB.EQUAL, 0.0, name);
-                // GRBLinExpr quadConstraint = this.ConvertQESOS(coeffPolyList, variableList, linearPoly);
-                // this._model.AddConstr(quadConstraint, GRB.EQUAL, 0.0, name);
             }
             else
             {
@@ -601,7 +599,7 @@ namespace MetaOptimize
         /// <param name="otherSolver">The other solver.</param>
         public void CombineWith(ISolver<GRBVar, GRBModel> otherSolver)
         {
-            // removed support for this. Check earlier git commits if you need it.
+            throw new Exception("We no longer support combining two solvers.");
         }
 
         /// <summary>
