@@ -64,6 +64,7 @@ namespace MetaOptimize
             this.Exponent = exponent;
         }
 
+        /// TODO: should this move to the zenSolver library?
         /// <summary>
         /// Convert this polynomial term to a Zen form.
         /// </summary>
@@ -72,7 +73,8 @@ namespace MetaOptimize
         {
             if (this.Exponent == 0)
             {
-                if ((int)this.Coefficient == Coefficient) {
+                if ((int)this.Coefficient == Coefficient)
+                {
                     return new Real((int)this.Coefficient);
                 }
                 return new Real((int)(this.Coefficient * precision), precision);
@@ -80,7 +82,8 @@ namespace MetaOptimize
 
             if (this.Exponent == 1)
             {
-                if ((int)this.Coefficient == Coefficient) {
+                if ((int)this.Coefficient == Coefficient)
+                {
                     return new Real((int)this.Coefficient) * (dynamic)this.Variable.Value;
                 }
                 return new Real((int)(this.Coefficient * precision), precision) * (dynamic)this.Variable.Value;
@@ -94,6 +97,7 @@ namespace MetaOptimize
         /// </summary>
         /// <param name="variable">The variable.</param>
         /// <returns>The result as a polynomial.</returns>
+        /// TODO: function name should change to derivative of linear polynomial or something.
         public double Derivative(TVar variable)
         {
             if (this.Exponent == 0 || !this.Variable.HasValue || !this.Variable.Value.Equals(variable))
@@ -152,6 +156,7 @@ namespace MetaOptimize
         /// Multiply this polynomial term by a number.
         /// </summary>
         /// <returns></returns>
+        /// TODO: do we need to also add instances to multiply variable by variable?
         public Term<TVar> Multiply(double constant)
         {
             if (this.Variable.HasValue)
@@ -195,20 +200,5 @@ namespace MetaOptimize
                 return $"{prefix}{this.Variable}";
             }
         }
-        // /// <summary>
-        // /// Returns True if the input polynomial is equal to the current one.
-        // /// </summary>
-        // public bool Equals(Term<TVar> term2) {
-        //     if (term2.Variable.Equals(this.Variable)) {
-        //         return false;
-        //     }
-        //     if (term2.Exponent != this.Exponent) {
-        //         return false;
-        //     }
-        //     if (term2.Coefficient != this.Coefficient) {
-        //         return false;
-        //     }
-        //     return true;
-        // }
     }
 }

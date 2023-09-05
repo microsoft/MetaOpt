@@ -438,7 +438,7 @@ namespace MetaOptimize
         }
 
         /// <summary>
-        /// Check feasibility.
+        /// Check whether we can find a feasible solution given the constraints.
         /// </summary>
         public ZenSolution CheckFeasibility(double objectiveValue)
         {
