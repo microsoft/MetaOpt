@@ -281,7 +281,7 @@ namespace MetaOptimize
         /// <summary>
         /// polynomial constraint y = p0 x^d + p1 x^{d-1} + ... + pd.
         /// </summary>
-        /// TODO:add 
+        /// TODO:add
         public void AddPolynomialConstraint(Zen<Real> xVar, Zen<Real> yVar, double[] p, string name, double FuncPieces = -1, double FuncPeiceError = 0.01,
             double FuncPieceLength = 0.01, double FuncPieceRatio = -1.0)
         {
