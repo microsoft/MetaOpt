@@ -410,6 +410,7 @@ namespace MetaOptimize
         /// Maximize the objective with objective as input.
         /// </summary>
         /// <returns>A solution.</returns>
+        /// TODO: with this function and the ones bellow it, write a better comment that differentiates between it and the others.
         public virtual ZenSolution Maximize(Polynomial<Zen<Real>> objective)
         {
             SetObjective(objective);
