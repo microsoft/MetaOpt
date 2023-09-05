@@ -1,20 +1,24 @@
 namespace MetaOptimize
 {
+    // TODO: you need to xplain this a lot better: people with heuristics wont know what a bilinear term is or what mccormick relaxation is.
     /// <summary>
     /// using McCormick enveloped for relaxing bilinear terms.
     /// </summary>
+    /// TODO: something here doesn't make sense: the main function, bilinear is taking as input polynomials for both x and y but none of the other ones are passing it a polynomial for x.
+    /// Double check to make sure the implementation is correct.
     public static class McCormickRelaxation<TVar, TSolution>
     {
         /// <summary>
         /// relaxation.
         /// assume x \in [xL, xU].
         /// assume y \ine [yL, yU]
-        /// z = xy is replaced with.
+        /// we replace x * y with z.
         /// 1. z \leq xU y + x yL - xU yL.
         /// 2. z \leq xL y + x yU - xL yU.
         /// 3. z \geq xL y + x yL - xL yL.
         /// 4. z \geq xU y + x yU - xU yU.
         /// </summary>
+        /// TODO: how come this is not referenced anywhere?
         public static void Bilinear(ISolver<TVar, TSolution> solver, TVar x, TVar y, TVar output,
             double xLB, double xUB, double yLB, double yUB)
         {
@@ -24,6 +28,7 @@ namespace MetaOptimize
         /// <summary>
         /// mccormick relaxation take polynomial as input.
         /// </summary>
+        /// TODO: explain hwo the polynomial is mapped to a bilinear term, is it that we have x * y?
         public static void Bilinear(ISolver<TVar, TSolution> solver, TVar x, Polynomial<TVar> y, TVar output,
             double xLB, double xUB, double yLB, double yUB)
         {
@@ -33,6 +38,7 @@ namespace MetaOptimize
         /// <summary>
         /// mccormick relaxation take polynomial as input.
         /// </summary>
+        /// TODO: duplicate description compared to the one above it.
         public static void Bilinear(ISolver<TVar, TSolution> solver, TVar x, Polynomial<TVar> y, Polynomial<TVar> output,
             double xLB, double xUB, double yLB, double yUB)
         {

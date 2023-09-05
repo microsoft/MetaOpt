@@ -1,7 +1,7 @@
 ﻿// <copyright file="OptimizationSolution.cs" company="Microsoft">
 // Copyright (c) Microsoft. All rights reserved.
 // </copyright>
-
+//TODO: remove?
 namespace MetaOptimize
 {
     using System.Collections.Generic;
