@@ -149,12 +149,12 @@ namespace MetaOptimize
             EnsureDensityConstraint(solver, density);
 
             Utils.logger("setting the objective.", verbose);
-            // var objective = new Polynomial<TVar>(
-            //             new Term<TVar>(1, optimalEncoding.GlobalObjective),
-            //             new Term<TVar>(-1, heuristicEncoding.GlobalObjective));
-            var objective = new Polynomial<TVar>();
-            objective.Add(optimalEncoding.MaximizationObjective.Copy());
-            objective.Add(heuristicEncoding.MaximizationObjective.Negate());
+            var objective = new Polynomial<TVar>(
+                        new Term<TVar>(1, optimalEncoding.GlobalObjective),
+                        new Term<TVar>(-1, heuristicEncoding.GlobalObjective));
+            // var objective = new Polynomial<TVar>();
+            // objective.Add(optimalEncoding.MaximizationObjective.Copy());
+            // objective.Add(heuristicEncoding.MaximizationObjective.Negate());
             var solution = solver.Maximize(objective, reset: true);
 
             solution = SimplifyAdversarialInputs(simplify, optimalEncoder, heuristicEncoder, solution, objective);

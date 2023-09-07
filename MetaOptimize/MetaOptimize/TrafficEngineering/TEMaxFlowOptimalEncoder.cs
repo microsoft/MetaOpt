@@ -183,6 +183,7 @@ namespace MetaOptimize
             Dictionary<(string, string), double> demandEqualityConstraints = null, bool noAdditionalConstraints = false,
             InnerEncodingMethodChoice innerEncoding = InnerEncodingMethodChoice.KKT,
             PathType pathType = PathType.KSP, Dictionary<(string, string), string[][]> selectedPaths = null,
+            Dictionary<(int, string, string), double> historicDemandConstraints = null,
             int numProcesses = -1, bool verbose = false)
         {
             // Initialize Variables for the encoding
