@@ -27,7 +27,7 @@ namespace MetaOptimize
             try {
                 if (where == GRB.Callback.MIPNODE) {
                     var obj = GetDoubleInfo(GRB.Callback.MIPNODE_OBJBST);
-                    CallCallback(obj, GetDoubleInfo(GRB.Callback.RUNTIME)*1000);
+                    CallCallback(obj, GetDoubleInfo(GRB.Callback.RUNTIME) * 1000);
                 }
             } catch (GRBException e) {
                 Console.WriteLine("Error code: " + e.ErrorCode);
@@ -47,7 +47,7 @@ namespace MetaOptimize
                 return;
             }
 
-            if (prevObj * (1 + MetaOptimize.Explainability.Expr.Epsilon) >= obj)
+            if (prevObj * (1 + 1e-6) >= obj)
             {
                 if (time_ms - prevTime_ms >= terminateNoImprovement_ms)
                 {

@@ -11,13 +11,13 @@ namespace MetaOptimize
     class GurobiStoreProgressCallback : GRBCallback
     {
         private GRBModel model;
-        private IProgress<MetaOptimize.Explainability.SolverProgress> progress;
+        private IProgress<SolverProgress> progress;
         private double presolvetime_ms = -1;
         private double bstObj = Double.NegativeInfinity;
         private double bstBnd = Double.PositiveInfinity;
         private double lastTime = -1;
 
-        public GurobiStoreProgressCallback(GRBModel model, IProgress<MetaOptimize.Explainability.SolverProgress> progress) {
+        public GurobiStoreProgressCallback(GRBModel model, IProgress<SolverProgress> progress) {
             this.model = model;
             this.progress = progress;
             // this.presolvetimer = null;
@@ -53,7 +53,7 @@ namespace MetaOptimize
             double time = currtime_ms - presolvetime_ms;
             if (time >= lastTime + 100)
             {
-                progress.Report(new(bstObj, bound, TimeSpan.FromMilliseconds(time)));
+                progress.Report(new (bstObj, bound, TimeSpan.FromMilliseconds(time)));
                 this.lastTime = time;
             }
         }
@@ -63,7 +63,7 @@ namespace MetaOptimize
             // Utils.AppendToFile(@"../logs/logs.txt", " last time = " + lastTime + " final time = " + finaltime_ms);
             if (finaltime_ms > lastTime)
             {
-                progress.Report(new(bstObj, bstBnd, TimeSpan.FromMilliseconds(finaltime_ms)));
+                progress.Report(new (bstObj, bstBnd, TimeSpan.FromMilliseconds(finaltime_ms)));
                 this.lastTime = finaltime_ms;
             }
         }

@@ -20,7 +20,7 @@ namespace MetaOptimize
 
         public GurobiCallback(
             GRBModel model,
-            IProgress<MetaOptimize.Explainability.SolverProgress> progress = null,
+            IProgress<SolverProgress> progress = null,
             double terminateNoImprovement_ms = -1,
             double timeout = 0)
         {
@@ -48,13 +48,13 @@ namespace MetaOptimize
                 } else if (where == GRB.Callback.MESSAGE) {
                     // nothing to do.
                 } else {
-                    if (where == GRB.Callback.MIP || where==GRB.Callback.MIPNODE || where == GRB.Callback.MIPSOL) {
+                    if (where == GRB.Callback.MIP || where == GRB.Callback.MIPNODE || where == GRB.Callback.MIPSOL) {
                         double bnd = -1;
                         double obj = -1;
                         if (where == GRB.Callback.MIP) {
                             obj = GetDoubleInfo(GRB.Callback.MIP_OBJBST);
                             bnd = GetDoubleInfo(GRB.Callback.MIP_OBJBND);
-                        } else if (where == GRB.Callback.MIPNODE) { 
+                        } else if (where == GRB.Callback.MIPNODE) {
                             obj = GetDoubleInfo(GRB.Callback.MIPNODE_OBJBST);
                             bnd = GetDoubleInfo(GRB.Callback.MIPNODE_OBJBND);
                         } else {

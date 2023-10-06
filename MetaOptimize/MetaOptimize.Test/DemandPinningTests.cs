@@ -54,9 +54,8 @@
             Assert.IsTrue(Utils.IsApproximately(10, optimal - heuristic));
         }
 
-
         /// <summary>
-        /// Paper example
+        /// Paper example.
         /// </summary>
         [TestMethod]
         public void TestPaperExampleTopo()

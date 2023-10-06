@@ -24,7 +24,7 @@
 	<PackageReference Include="Gurobi.Optimizer" Version="10.0.2" />
   </ItemGroup>
 
-  <!--<Import Project="..\.stylecop\StyleCop.props" />-->
+  <Import Project="..\.stylecop\StyleCop.props" />
 
   <ItemGroup>
     <ProjectReference Include="..\MetaOptimize\MetaOptimize.csproj" />
