@@ -16,7 +16,7 @@
     <PackageReference Include="CommandLineParser" Version="2.8.0" />
     <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
     <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.16.0" />
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
+<PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
     <PackageReference Include="QuikGraph" Version="2.3.0" />
     <PackageReference Include="System.Numerics.Tensors" Version="0.1.0" />
     <PackageReference Include="ZenLib" Version="2.2.4" />
@@ -25,5 +25,11 @@
   <ItemGroup>
     <ProjectReference Include="..\MetaOptimize.Test\MetaOptimize.Test.csproj" />
     <ProjectReference Include="..\MetaOptimize\MetaOptimize.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="Microsoft.ML.OnnxRuntime">
+      <HintPath>C:\Users\bearzani\.nuget\packages\microsoft.ml.onnxruntime.managed\1.16.0\lib\xamarinios10\Microsoft.ML.OnnxRuntime.dll</HintPath>
+    </Reference>
   </ItemGroup>
 </Project>
