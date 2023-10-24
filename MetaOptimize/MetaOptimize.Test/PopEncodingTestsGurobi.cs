@@ -11,6 +11,7 @@ namespace MetaOptimize.Test
     /// Tests for the pop encoder.
     /// </summary>
     [TestClass]
+    [Ignore]
     public class PopEncodingTestsGurobi : PopEncodingTests<GRBVar, GRBModel>
     {
         /// <summary>

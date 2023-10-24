@@ -137,12 +137,12 @@ namespace MetaOptimize
             var optimalEncoding = optimalEncoder.Encoding(this.Topology, preInputVariables: this.DemandEnforcers,
                     innerEncoding: innerEncoding, numProcesses: this.NumProcesses, verbose: verbose,
                     inputEqualityConstraints: LocalityConstrainedDemands, noAdditionalConstraints: true,
-                    pathType: pathType, selectedPaths: selectedPaths, historicDemandConstraints: historicDemandConstraints);
+                    pathType: pathType, selectedPaths: selectedPaths, historicInputConstraints: historicDemandConstraints);
             Utils.logger("generating heuristic encoding.", verbose);
             var heuristicEncoding = heuristicEncoder.Encoding(this.Topology, preInputVariables: this.DemandEnforcers,
                     innerEncoding: innerEncoding, numProcesses: this.NumProcesses, verbose: verbose,
                     inputEqualityConstraints: LocalityConstrainedDemands,
-                    pathType: pathType, selectedPaths: selectedPaths, historicDemandConstraints: historicDemandConstraints);
+                    pathType: pathType, selectedPaths: selectedPaths, historicInputConstraints: historicDemandConstraints);
 
             // ensures that demand in both problems is the same and lower than demand upper bound constraint.
             Utils.logger("adding constraints for upper bound on demands.", verbose);
@@ -243,12 +243,12 @@ namespace MetaOptimize
             var optimalEncoding = optimalEncoder.Encoding(this.Topology, preInputVariables: this.DemandEnforcers,
                     innerEncoding: innerEncoding, numProcesses: this.NumProcesses, verbose: verbose,
                     inputEqualityConstraints: LocalityConstrainedDemands, noAdditionalConstraints: true,
-                    pathType: pathType, selectedPaths: selectedPaths, historicDemandConstraints: historicDemandConstraints);
+                    pathType: pathType, selectedPaths: selectedPaths, historicInputConstraints: historicDemandConstraints);
             Utils.logger("generating heuristic encoding.", verbose);
             var heuristicEncoding = heuristicEncoder.Encoding(this.Topology, preInputVariables: this.DemandEnforcers,
                     innerEncoding: innerEncoding, numProcesses: this.NumProcesses, verbose: verbose,
                     inputEqualityConstraints: LocalityConstrainedDemands,
-                    pathType: pathType, selectedPaths: selectedPaths, historicDemandConstraints: historicDemandConstraints);
+                    pathType: pathType, selectedPaths: selectedPaths, historicInputConstraints: historicDemandConstraints);
 
             // ensures that demand in both problems is the same and lower than demand upper bound constraint.
             Utils.logger("adding constraints for upper bound on demands.", verbose);

@@ -184,16 +184,16 @@ namespace MetaOptimize
         /// </summary>
         /// <returns>The constraints and maximization objective.</returns>
         /// TODO: need a better comment that describes the function and what each input variable is.
-        public OptimizationEncoding<TVar, TSolution> Encoding(Topology topology, Dictionary<(string, string), Polynomial<TVar>> preDemandVariables = null,
-            Dictionary<(string, string), double> demandEqualityConstraints = null, bool noAdditionalConstraints = false,
+        public OptimizationEncoding<TVar, TSolution> Encoding(Topology topology, Dictionary<(string, string), Polynomial<TVar>> preInputVariables = null,
+            Dictionary<(string, string), double> inputEqualityConstraints = null, bool noAdditionalConstraints = false,
             InnerRewriteMethodChoice innerEncoding = InnerRewriteMethodChoice.KKT,
-            PathType pathType = PathType.KSP, Dictionary<(string, string), string[][]> selectedPaths = null,
+            PathType pathType = PathType.KSP, Dictionary<(string, string), string[][]> selectedPaths = null, Dictionary<(int, string, string), double> historicInputConstraints = null,
             int numProcesses = -1, bool verbose = false)
         {
             // Initialize Variables for the encoding
             Utils.logger("initializing variables", verbose);
             this.Topology = topology;
-            InitializeVariables(preDemandVariables, demandEqualityConstraints,
+            InitializeVariables(preInputVariables, inputEqualityConstraints,
                 innerEncoding, pathType, selectedPaths, numProcesses, verbose);
             // Compute the maximum demand M.
             // Since we don't know the demands we have to be very conservative.

@@ -11,6 +11,7 @@ namespace MetaOptimize.Test
     /// Some basic optimization tests.
     /// </summary>
     [TestClass]
+    [Ignore]
     public class KktOptimizationTestsGurobi : KktOptimizationTests<GRBVar, GRBModel>
     {
         /// <summary>

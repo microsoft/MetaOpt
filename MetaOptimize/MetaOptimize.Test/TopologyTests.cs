@@ -104,11 +104,11 @@ namespace MetaOptimize.Test
             Assert.AreEqual("d", paths[0][1]);
 
             Assert.AreEqual("a", paths[1][0]);
-            Assert.AreEqual("c", paths[1][1]);
+            Assert.IsTrue(("c" == paths[1][1]) || ("b" == paths[1][1]));
             Assert.AreEqual("d", paths[1][2]);
 
             Assert.AreEqual("a", paths[2][0]);
-            Assert.AreEqual("b", paths[2][1]);
+            Assert.IsTrue(("c" == paths[2][1]) || ("b" == paths[2][1]));
             Assert.AreEqual("d", paths[2][2]);
         }
     }

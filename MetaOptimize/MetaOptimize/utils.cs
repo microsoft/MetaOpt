@@ -341,13 +341,13 @@ namespace MetaOptimize
         {
             heuristicEncoder.Solver.CleanAll();
             var encodingHeuristic = heuristicEncoder.Encoding(topology, inputEqualityConstraints: demands,
-                noAdditionalConstraints: true, pathType: pathType, selectedPaths: selectedPaths, historicDemandConstraints: historicDemands);
+                noAdditionalConstraints: true, pathType: pathType, selectedPaths: selectedPaths, historicInputConstraints: historicDemands);
             var solverSolutionHeuristic = heuristicEncoder.Solver.Maximize(encodingHeuristic.MaximizationObjective);
             var optimizationSolutionHeuristic = (TEOptimizationSolution)heuristicEncoder.GetSolution(solverSolutionHeuristic);
 
             optimalEncoder.Solver.CleanAll();
             var encodingOptimal = optimalEncoder.Encoding(topology, inputEqualityConstraints: demands,
-                noAdditionalConstraints: true, pathType: pathType, selectedPaths: selectedPaths, historicDemandConstraints: historicDemands);
+                noAdditionalConstraints: true, pathType: pathType, selectedPaths: selectedPaths, historicInputConstraints: historicDemands);
             var solverSolutionOptimal = optimalEncoder.Solver.Maximize(encodingOptimal.MaximizationObjective);
             var optimizationSolutionOptimal = (TEOptimizationSolution)optimalEncoder.GetSolution(solverSolutionOptimal);
             Console.WriteLine($"optimal-{solverN} = {optimizationSolutionOptimal.MaxObjective}, heuristic-{solverN}={optimizationSolutionHeuristic.MaxObjective}");

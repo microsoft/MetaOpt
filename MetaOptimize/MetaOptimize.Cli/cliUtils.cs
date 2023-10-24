@@ -340,7 +340,7 @@ namespace MetaOptimize.Cli
             var optimizationSolutionHeuristic = (TEOptimizationSolution)heuristicEncoder.GetSolution(solverSolutionHeuristic);
             var heuristicDemandMet = optimizationSolutionHeuristic.MaxObjective;
             var optimalEncoder = new TEMaxFlowOptimalEncoder<TVar, TSolution>(solver, numPaths);
-            var optimalEncoding = optimalEncoder.Encoding(topology, demandEqualityConstraints: demands, noAdditionalConstraints: true);
+            var optimalEncoding = optimalEncoder.Encoding(topology, inputEqualityConstraints: demands, noAdditionalConstraints: true);
             var solverSolutionOptimal = optimalEncoder.Solver.Maximize(optimalEncoding.MaximizationObjective);
             var optimizationSolutionOptimal = (TEOptimizationSolution)optimalEncoder.GetSolution(solverSolutionOptimal);
             var optimalDemandMet = optimizationSolutionOptimal.MaxObjective;

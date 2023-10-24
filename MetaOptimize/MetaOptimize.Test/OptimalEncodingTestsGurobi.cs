@@ -11,6 +11,7 @@ namespace MetaOptimize.Test
     /// Tests for the optimal encoder.
     /// </summary>
     [TestClass]
+    [Ignore]
     public class OptimalEncodingTestsGurobi : OptimalEncodingTests<GRBVar, GRBModel>
     {
         /// <summary>

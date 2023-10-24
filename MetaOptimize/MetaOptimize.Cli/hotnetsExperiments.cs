@@ -619,7 +619,7 @@ namespace MetaOptimize
             solver.CleanAll();
             solver.GetModel().Parameters.LogFile = Path.Combine(logDir, logFile + "_inner_optimal.txt");
             var optimalEncoder = new TEMaxFlowOptimalEncoder<GRBVar, GRBModel>(solver, numPaths);
-            var optimalEncoding = optimalEncoder.Encoding(topology, demandEqualityConstraints: dic_demands, noAdditionalConstraints: true);
+            var optimalEncoding = optimalEncoder.Encoding(topology, inputEqualityConstraints: dic_demands, noAdditionalConstraints: true);
             // gurobi optimal inner
             timer = Stopwatch.StartNew();
             var solverSolutionOptimal = optimalEncoder.Solver.Maximize(optimalEncoding.MaximizationObjective);

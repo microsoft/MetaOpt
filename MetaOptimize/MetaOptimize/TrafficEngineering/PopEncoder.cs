@@ -150,7 +150,7 @@ namespace MetaOptimize
         public OptimizationEncoding<TVar, TSolution> Encoding(Topology topology, Dictionary<(string, string), Polynomial<TVar>> preDemandVariables = null,
             Dictionary<(string, string), double> demandEqualityConstraints = null, bool noAdditionalConstraints = false,
             InnerRewriteMethodChoice innerEncoding = InnerRewriteMethodChoice.KKT,
-            PathType pathType = PathType.KSP, Dictionary<(string, string), string[][]> selectedPaths = null,
+            PathType pathType = PathType.KSP, Dictionary<(string, string), string[][]> selectedPaths = null, Dictionary<(int, string, string), double> historicInputConstraints = null,
             int numProcesses = -1, bool verbose = false)
         {
             if (pathType != PathType.KSP)
