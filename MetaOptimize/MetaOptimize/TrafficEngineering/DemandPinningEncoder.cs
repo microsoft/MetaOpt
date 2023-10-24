@@ -74,6 +74,8 @@ namespace MetaOptimize
         private double capacityTolerance = Math.Pow(10, -4);
         /// <summary>
         /// scale factor.
+        /// TODO: you are not using the scale factor when solving opt and this was introducing a bug
+        /// in the test cases.
         /// </summary>
         protected double _scale = Math.Pow(10, 0);
 

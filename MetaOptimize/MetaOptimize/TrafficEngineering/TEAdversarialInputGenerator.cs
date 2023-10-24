@@ -162,9 +162,14 @@ namespace MetaOptimize
 
             Utils.logger("setting the objective.", verbose);
 
-            var objective = new Polynomial<TVar>();
-            objective.Add(optimalEncoding.MaximizationObjective.Copy());
-            objective.Add(heuristicEncoding.MaximizationObjective.Negate());
+            // var objective = new Polynomial<TVar>();
+            // objective.Add(optimalEncoding.MaximizationObjective.Copy());
+            // objective.Add(heuristicEncoding.MaximizationObjective.Negate());
+            // TODO: @Pooria I had to change this to fix the test cases
+            // fix it please by figuring out how to handle this._scale better.
+            var objective = new Polynomial<TVar>(
+                        new Term<TVar>(1, optimalEncoding.GlobalObjective),
+                        new Term<TVar>(-1, heuristicEncoding.GlobalObjective));
             var solution = solver.Maximize(objective, reset: true);
 
             // TODO: what is the implication of this on scale?
