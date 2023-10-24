@@ -44,7 +44,7 @@ namespace MetaOptimize
                 {
                     continue;
                 }
-                this.SPLowerBound[pair] = this.DemandPolynomials[pair].GetTermsWithCoeffLeq(this.Threshold);
+                this.SPLowerBound[pair] = this.DemandVariables[pair].GetTermsWithCoeffLeq(this.Threshold);
             }
         }
 
@@ -71,7 +71,7 @@ namespace MetaOptimize
                 }
                 else
                 {
-                    foreach (var demandlvl in this.DemandPolynomials[pair].GetTerms())
+                    foreach (var demandlvl in this.DemandVariables[pair].GetTerms())
                     {
                         // Console.WriteLine("_" + demandlvl.Coefficient + " " + demand);
                         if (Math.Abs(demand - demandlvl.Coefficient) <= 0.001)

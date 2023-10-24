@@ -57,8 +57,8 @@ namespace MetaOptimize
                 {
                     continue;
                 }
-                this.SPLowerBound[pair] = this.DemandPolynomials[pair].GetTermsWithCoeffLeq(this.Threshold);
-                this.NSPUpperBound[pair] = this.DemandPolynomials[pair].GetTermsWithCoeffGreater(this.Threshold);
+                this.SPLowerBound[pair] = this.DemandVariables[pair].GetTermsWithCoeffLeq(this.Threshold);
+                this.NSPUpperBound[pair] = this.DemandVariables[pair].GetTermsWithCoeffGreater(this.Threshold);
             }
         }
 
@@ -89,7 +89,7 @@ namespace MetaOptimize
                 }
                 else
                 {
-                    foreach (var demandlvl in this.DemandPolynomials[pair].GetTerms())
+                    foreach (var demandlvl in this.DemandVariables[pair].GetTerms())
                     {
                         if (Math.Abs(demand - demandlvl.Coefficient) <= 0.001)
                         {
@@ -125,7 +125,7 @@ namespace MetaOptimize
                 else
                 {
                     // for scalability reasons, zero out the variables <= threshold
-                    var poly = this.DemandPolynomials[pair].GetTermsWithCoeffLeq(this.Threshold);
+                    var poly = this.DemandVariables[pair].GetTermsWithCoeffLeq(this.Threshold);
                     this.Solver.AddEqZeroConstraint(poly);
                 }
             }
