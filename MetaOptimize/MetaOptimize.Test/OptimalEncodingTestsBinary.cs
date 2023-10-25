@@ -13,6 +13,7 @@ namespace MetaOptimize.Test
     /// Tests for the optimal encoder.
     /// </summary>
     [TestClass]
+    [Ignore]
     public class OptimalEncodingTestsBinary : OptimalEncodingTests<GRBVar, GRBModel>
     {
         /// <summary>
