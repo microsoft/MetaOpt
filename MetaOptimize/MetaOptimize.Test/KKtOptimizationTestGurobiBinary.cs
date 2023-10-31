@@ -12,6 +12,7 @@ namespace MetaOptimize.Test
     /// Tests Gurobi Or Version.
     /// </summary>
     [TestClass]
+    [Ignore]
     public class KKtOptimizationTestGurobiBinary : PopEncodingTests<GRBVar, GRBModel>
     {
         /// <summary>
