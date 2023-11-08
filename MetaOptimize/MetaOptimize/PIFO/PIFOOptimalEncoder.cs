@@ -75,6 +75,14 @@ namespace MetaOptimize
             }
             this.rankEqualityConstraints = rankEqualityConstraints;
             this.cost = this.Solver.CreateVariable("total_cost_optimal");
+            CreateAdditionalVariables();
+        }
+
+        /// <summary>
+        /// for the modified versions to create additional variables.
+        /// </summary>
+        protected virtual void CreateAdditionalVariables()
+        {
         }
 
         private void EnsureRankEquality() {
@@ -116,6 +124,9 @@ namespace MetaOptimize
                 this.Solver.AddEqZeroConstraint(sumPerPlace);
             }
 
+            Utils.logger("Adding additional constraints for modified versions", verbose);
+            this.AddOtherConstraints();
+
             Utils.logger("computing the cost.", verbose);
             this.ComputeCost();
             var objective = new Polynomial<TVar>(new Term<TVar>(-1, this.cost));
@@ -128,11 +139,26 @@ namespace MetaOptimize
         }
 
         /// <summary>
+        /// additional constraints for the modified variants.
+        /// </summary>
+        protected virtual void AddOtherConstraints()
+        {
+        }
+
+        /// <summary>
         /// compute the cost of an ordering of packets.
         /// </summary>
         protected virtual void ComputeCost()
         {
             throw new Exception("not implemented....");
+        }
+
+        /// <summary>
+        /// return whether packet is admitted to the queue.
+        /// </summary>
+        protected virtual int GetAdmitSolution(TSolution solution, int packetID)
+        {
+            return 1;
         }
 
         /// <summary>
@@ -142,6 +168,7 @@ namespace MetaOptimize
         {
             var packetRanks = new Dictionary<int, double>();
             var packetOrder = new Dictionary<int, int>();
+            var packetAdmit = new Dictionary<int, int>();
             for (int packetID = 0; packetID < this.NumPackets; packetID++) {
                 packetRanks[packetID] = this.Solver.GetVariable(solution, this.rankVariables[packetID]);
                 for (int place = 0; place < this.NumPackets; place++) {
@@ -151,12 +178,14 @@ namespace MetaOptimize
                         break;
                     }
                 }
+                packetAdmit[packetID] = this.GetAdmitSolution(solution, packetID);
             }
 
             return new PIFOOptimizationSolution
             {
                 Ranks = packetRanks,
                 Order = packetOrder,
+                Admit = packetAdmit,
                 Cost = Convert.ToInt32(this.Solver.GetVariable(solution, this.cost)),
             };
         }

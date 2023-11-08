@@ -21,5 +21,10 @@ namespace MetaOptimize
         /// order of dequeued packets.
         /// </summary>
         public IDictionary<int, int> Order;
+
+        /// <summary>
+        /// packet admitted or dropped.
+        /// </summary>
+        public IDictionary<int, int> Admit;
     }
 }

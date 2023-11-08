@@ -6,6 +6,7 @@ namespace MetaOptimize
 {
     using System;
     using System.Collections.Generic;
+    using System.Diagnostics;
     using System.Linq;
     /// <summary>
     /// The Pop encoder for splitting a network capacity into pieces.
@@ -110,11 +111,13 @@ namespace MetaOptimize
             Dictionary<(string, string), double> demandEqualityConstraints = null, bool noAdditionalConstraints = false,
             InnerEncodingMethodChoice innerEncoding = InnerEncodingMethodChoice.KKT,
             PathType pathType = PathType.KSP, Dictionary<(string, string), string[][]> selectedPaths = null,
+            Dictionary<(int, string, string), double> historicDemandConstraints = null,
             int numProcesses = -1, bool verbose = false)
         {
             if (pathType != PathType.KSP) {
                 throw new Exception("Only KSP works for now.");
             }
+            Debug.Assert(historicDemandConstraints == null);
             this.Topology = topology;
             Utils.logger("initializing variables for pop encoder.", verbose);
             InitializeVariables(preDemandVariables, demandEqualityConstraints);

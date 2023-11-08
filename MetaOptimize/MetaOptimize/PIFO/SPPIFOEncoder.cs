@@ -36,11 +36,6 @@ namespace MetaOptimize
         /// </summary>
         public Dictionary<(int, int), TVar> queueRankVarAfterPD  { get; set; }
 
-        // / <summary>
-        // / number of packets in each queue at the time of enqueuing the i-th packet.
-        // / </summary>
-        // public Dictionary<(int, int), TVar> numPacketsInEachQueue { get; set; }
-
         /// <summary>
         /// weight of packet i.
         /// </summary>
@@ -103,7 +98,6 @@ namespace MetaOptimize
             this.packetWeightVar = new Dictionary<int, TVar>();
             this.queueRankVar = new Dictionary<(int, int), TVar>();
             this.queueRankVarAfterPD = new Dictionary<(int, int), TVar>();
-            // this.numPacketsInEachQueue = new Dictionary<(int, int), TVar>();
             // this.pushdown = new Dictionary<int, TVar>();
             this.dequeueAfter = new Dictionary<(int, int), TVar>();
             for (int packetID = 0; packetID < this.NumPackets; packetID++) {
@@ -114,7 +108,6 @@ namespace MetaOptimize
                 }
                 for (int queueID = 0; queueID < this.NumQueues; queueID++) {
                     this.queuePlacementVar[(packetID, queueID)] = this.Solver.CreateVariable("place_" + packetID + "_" + queueID, GRB.BINARY);
-                    // this.numPacketsInEachQueue[(packetID, queueID)] = this.Solver.CreateVariable("num_pkts_in_q_" + packetID + "_" + queueID);
                     this.queueRankVar[(packetID, queueID)] = this.Solver.CreateVariable("queue_rank_" + packetID + "_" + queueID);
                     this.queueRankVarAfterPD[(packetID, queueID)] = this.Solver.CreateVariable("queue_rank_after_pd_" + packetID + "_" + queueID);
                 }
@@ -198,6 +191,22 @@ namespace MetaOptimize
         }
 
         /// <summary>
+        /// Ensure we admit packets to one of the queues.
+        /// </summary>
+        protected virtual void EnsureAtLeastOneQueue()
+        {
+            for (int pid = 0; pid < this.NumPackets; pid++) {
+                var sumOverQ = new Polynomial<TVar>(new Term<TVar>(-1));
+                for (int qid = 0; qid < this.NumQueues; qid++)
+                {
+                    sumOverQ.Add(new Term<TVar>(1, this.queuePlacementVar[(pid, qid)]));
+                }
+                // sum f over j = 1
+                this.Solver.AddEqZeroConstraint(sumOverQ);
+            }
+        }
+
+        /// <summary>
         /// enqueue the i-th packet on the FIFO queue that matches.
         /// </summary>
         protected virtual void ChooseQueue()
@@ -205,24 +214,13 @@ namespace MetaOptimize
             double epsilon = 1.0 / (1 + this.MaxRank);
             double miu = epsilon / 2;
             for (int pid = 0; pid < this.NumPackets; pid++) {
-                var sumOverQ = new Polynomial<TVar>(new Term<TVar>(-1));
                 for (int qid = 0; qid < this.NumQueues; qid++)
                 {
-                    sumOverQ.Add(new Term<TVar>(1, this.queuePlacementVar[(pid, qid)]));
                     CheckQueueLB(epsilon, pid, qid);
                     CheckQueueUB(epsilon, miu, pid, qid);
-
-                    // if (pid < this.NumPackets - 1) {
-                    //     var constr3 = new Polynomial<TVar>(
-                    //         new Term<TVar>(-1, this.numPacketsInEachQueue[(pid + 1, qid)]),
-                    //         new Term<TVar>(1, this.numPacketsInEachQueue[(pid, qid)]),
-                    //         new Term<TVar>(1, this.queuePlacementVar[(pid, qid)]));
-                    //     this.Solver.AddEqZeroConstraint(constr3);
-                    // }
                 }
-                // sum f over j = 1
-                this.Solver.AddEqZeroConstraint(sumOverQ);
             }
+            EnsureAtLeastOneQueue();
             AdditionalConstraintOnPlacement();
         }
 
@@ -295,7 +293,10 @@ namespace MetaOptimize
             }
         }
 
-        private void AssignWeights()
+        /// <summary>
+        /// assign weights to dequeue accordingly.
+        /// </summary>
+        protected virtual void AssignWeights()
         {
             for (int pid = 0; pid < this.NumPackets; pid++) {
                 var sumPoly = new Polynomial<TVar>(
@@ -311,7 +312,10 @@ namespace MetaOptimize
             }
         }
 
-        void ComputeOrder()
+        /// <summary>
+        /// compute the order based on the weights.
+        /// </summary>
+        protected virtual void ComputeOrder()
         {
             double epsilon = 1.0 / (this.NumPackets * this.NumQueues);
             for (int pid = 0; pid < this.NumPackets; pid++) {
@@ -421,12 +425,21 @@ namespace MetaOptimize
         }
 
         /// <summary>
+        /// return whether packet is admitted to the queue.
+        /// </summary>
+        protected virtual int GetAdmitSolution(TSolution solution, int packetID)
+        {
+            return 1;
+        }
+
+        /// <summary>
         /// Get the optimization solution from the solver.
         /// </summary>
         public OptimizationSolution GetSolution(TSolution solution)
         {
             var packetRanks = new Dictionary<int, double>();
             var packetOrder = new Dictionary<int, int>();
+            var packetAdmit = new Dictionary<int, int>();
 
             for (int pid = 0; pid < this.NumPackets; pid++) {
                 packetRanks[pid] = this.Solver.GetVariable(solution, this.packetRankVar[pid]);
@@ -435,9 +448,8 @@ namespace MetaOptimize
                     if (pid == pid2) {
                         continue;
                     }
-                    int dequeueAfter;
                     // if (pid < pid2) {
-                    dequeueAfter = Convert.ToInt32(this.Solver.GetVariable(solution, this.dequeueAfter[(pid, pid2)]));
+                    int dequeueAfter = Convert.ToInt32(this.Solver.GetVariable(solution, this.dequeueAfter[(pid, pid2)]));
                     // } else {
                     //     dequeueAfter = 1 - Convert.ToInt32(this.Solver.GetVariable(solution, this.dequeueAfter[(pid2, pid)]));
                     // }
@@ -451,6 +463,7 @@ namespace MetaOptimize
                 }
                 var weight = this.Solver.GetVariable(solution, this.packetWeightVar[pid]);
                 Console.WriteLine(" weight of packet " + pid + " = " + weight);
+                packetAdmit[pid] = this.GetAdmitSolution(solution, pid);
             }
 
             return new PIFOOptimizationSolution
@@ -458,6 +471,7 @@ namespace MetaOptimize
                 Ranks = packetRanks,
                 Order = packetOrder,
                 Cost = this.Solver.GetVariable(solution, this.cost),
+                Admit = packetAdmit,
             };
         }
     }

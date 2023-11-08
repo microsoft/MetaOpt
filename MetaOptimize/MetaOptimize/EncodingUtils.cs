@@ -1,4 +1,6 @@
 namespace MetaOptimize {
+    using System;
+    using System.Collections.Generic;
     using Gurobi;
     /// <summary>
     /// Implements a utility function with some .
@@ -360,6 +362,154 @@ namespace MetaOptimize {
             poly3.Add(polyA.Negate());
             poly3.Add(polyB.Negate());
             solver.AddLeqZeroConstraint(poly3);
+        }
+
+        /// <summary>
+        /// output = 1 if x \leq y otherwise = 0.
+        /// bigM should be > max(|x - y|).
+        /// miu should be less than min non zero(|x - y|).
+        /// </summary>
+        public static TVar IsLeq(ISolver<TVar, TSolution> solver, TVar x, TVar y, double bigM, double miu)
+        {
+            TVar output = solver.CreateVariable("x_leq_y", GRB.BINARY);
+            IsLeq(solver, output, x, y, bigM, miu);
+            return output;
+        }
+
+        /// <summary>
+        /// output = 1 if x \leq y otherwise = 0.
+        /// bigM should be > max(|x - y|).
+        /// miu should be less than min non zero(|x - y|).
+        /// </summary>
+        public static TVar IsLeq(ISolver<TVar, TSolution> solver, Polynomial<TVar> x, TVar y, double bigM, double miu)
+        {
+            TVar output = solver.CreateVariable("x_leq_y", GRB.BINARY);
+            IsLeq(solver, output, x,
+                  new Polynomial<TVar>(new Term<TVar>(1, y)),
+                  bigM, miu);
+            return output;
+        }
+
+        /// <summary>
+        /// output = 1 if x \leq y otherwise = 0.
+        /// bigM should be > max(|x - y|).
+        /// miu should be less than min non zero(|x - y|).
+        /// </summary>
+        public static void IsLeq(ISolver<TVar, TSolution> solver, TVar output,
+            TVar x, TVar y, double bigM, double miu)
+        {
+            IsLeq(solver, output,
+                new Polynomial<TVar>(new Term<TVar>(1, x)),
+                new Polynomial<TVar>(new Term<TVar>(1, y)),
+                bigM, miu);
+        }
+
+        /// <summary>
+        /// output = 1 if x \leq y otherwise = 0.
+        /// bigM should be > max(|x - y|).
+        /// miu should be less than min non zero(|x - y|).
+        /// </summary>
+        public static TVar IsLeq(ISolver<TVar, TSolution> solver,
+            TVar x, Polynomial<TVar> y, double bigM, double miu)
+        {
+            TVar output = solver.CreateVariable("x_leq_y", GRB.BINARY);
+            IsLeq(solver, output,
+                new Polynomial<TVar>(new Term<TVar>(1, x)),
+                y, bigM, miu);
+            return output;
+        }
+        /// <summary>
+        /// output = 1 if x \leq y otherwise = 0.
+        /// bigM should be > max(|x - y|).
+        /// miu should be less than min non zero(|x - y|).
+        /// </summary>
+        public static TVar IsLeq(ISolver<TVar, TSolution> solver,
+            Polynomial<TVar> x, Polynomial<TVar> y, double bigM, double miu)
+        {
+            TVar output = solver.CreateVariable("x_leq_y", GRB.BINARY);
+            IsLeq(solver, output, x, y, bigM, miu);
+            return output;
+        }
+        /// <summary>
+        /// output = 1 if x \leq y otherwise = 0.
+        /// bigM should be > max(|x - y|).
+        /// miu should be less than min non zero(|x - y|).
+        /// </summary>
+        public static void IsLeq(ISolver<TVar, TSolution> solver, TVar output,
+            Polynomial<TVar> x, Polynomial<TVar> y, double bigM, double miu)
+        {
+            double epsilon = 1.0 / bigM;
+            // z <= 1 + epsilon * (y - x)
+            var constr1 = new Polynomial<TVar>(
+                new Term<TVar>(1, output),
+                new Term<TVar>(-1));
+            constr1.Add(x.Multiply(epsilon));
+            constr1.Add(y.Multiply(-epsilon));
+            solver.AddLeqZeroConstraint(constr1);
+
+            // z >= epsilon * (y - x + miu)
+            var constr2 = new Polynomial<TVar>(
+                new Term<TVar>(-1, output),
+                new Term<TVar>(miu * epsilon));
+            constr2.Add(x.Multiply(-epsilon));
+            constr2.Add(y.Multiply(epsilon));
+            solver.AddLeqZeroConstraint(constr2);
+        }
+
+        /// <summary>
+        /// output = 1 if x less than y otherwise = 0.
+        /// bigM should be > max(|x - y|).
+        /// miu should be less than min non zero(|x - y|).
+        /// </summary>
+        public static TVar IsLess(ISolver<TVar, TSolution> solver,
+            TVar x, TVar y, double bigM, double miu)
+        {
+            TVar output = solver.CreateVariable("x_less_y", GRB.BINARY);
+            IsLess(solver, output, x, y, bigM, miu);
+            return output;
+        }
+
+        /// <summary>
+        /// output = 1 if x less than y otherwise = 0.
+        /// bigM should be > max(|x - y|).
+        /// miu should be less than min non zero(|x - y|).
+        /// </summary>
+        public static void IsLess(ISolver<TVar, TSolution> solver, TVar output,
+            TVar x, TVar y, double bigM, double miu)
+        {
+            double epsilon = 1.0 / bigM;
+            // z <= 1 + epsilon * (y - x - miu)
+            var constr1 = new Polynomial<TVar>(
+                new Term<TVar>(1, output),
+                new Term<TVar>(-1 + epsilon * miu),
+                new Term<TVar>(-epsilon, y),
+                new Term<TVar>(epsilon, x));
+            solver.AddLeqZeroConstraint(constr1);
+
+            // z >= epsilon * (y - x)
+            var constr2 = new Polynomial<TVar>(
+                new Term<TVar>(-1, output),
+                new Term<TVar>(epsilon, y),
+                new Term<TVar>(-epsilon, x));
+            solver.AddLeqZeroConstraint(constr2);
+        }
+
+        /// <summary>
+        /// Estimate the relative rank of a variable with respect to a list of variables.
+        /// bigM should be > max(|varList[i] - x|).
+        /// miu should be less than min non zero(|varList[i] - x|).
+        /// </summary>
+        public static TVar ComputeQuantile(ISolver<TVar, TSolution> solver, TVar x,
+            IList<TVar> varList, double bigM, double miu)
+        {
+            // output = (number of elements less than or equal to output) / num elements
+            TVar output = solver.CreateVariable("quantile");
+            var constr1 = new Polynomial<TVar>(new Term<TVar>(-varList.Count, output));
+            foreach (TVar var in varList) {
+                constr1.Add(new Term<TVar>(1, IsLess(solver, var, x, bigM, miu)));
+            }
+            solver.AddEqZeroConstraint(constr1);
+            return output;
         }
     }
 }
