@@ -40,6 +40,11 @@ namespace MetaOptimize
         public Dictionary<int, List<double>> DemandConstraints { get; set; }
 
         /// <summary>
+        /// Prespecify where some of the demands should be placed.
+        /// </summary>
+        public Dictionary<int, int> DemandPlacementConstraints { get; set; }
+
+        /// <summary>
         /// The number of objects.
         /// </summary>
         public int NumItems { get; set; }
@@ -65,13 +70,19 @@ namespace MetaOptimize
         public TVar TotalNumBinsUsedVariable { get; set; }
 
         /// <summary>
+        /// whether exploiting symmetry to apply variable reduction.
+        /// </summary>
+        private bool BreakSymmetry;
+
+        /// <summary>
         /// Create a new instance of the <see cref="VBPOptimalEncoder{TVar, TSolution}"/> class.
         /// </summary>
-        public VBPOptimalEncoder(ISolver<TVar, TSolution> solver, int NumItems, int NumDimensions)
+        public VBPOptimalEncoder(ISolver<TVar, TSolution> solver, int NumItems, int NumDimensions, bool BreakSymmetry = false)
         {
             this.Solver = solver;
             this.NumDimensions = NumDimensions;
             this.NumItems = NumItems;
+            this.BreakSymmetry = BreakSymmetry;
         }
         private bool IsDemandValid(int itemID) {
             if (this.DemandConstraints.ContainsKey(itemID)) {
@@ -85,10 +96,22 @@ namespace MetaOptimize
             return true;
         }
 
+        private int GetMaxBinIDForItem(int itemID)
+        {
+            var maxBinID = this.bins.GetNum() - 1;
+            if (this.BreakSymmetry) {
+                maxBinID = Math.Min(maxBinID, itemID);
+            }
+            // Console.WriteLine(maxBinID);
+            return maxBinID;
+        }
+
         private void InitializeVariables(Dictionary<int, List<TVar>> preDemandVariables = null,
-            Dictionary<int, List<double>> demandEqualityConstraints = null)
+            Dictionary<int, List<double>> demandEqualityConstraints = null,
+            Dictionary<int, int> demandPlacementEqualityConstraints = null)
         {
             this.DemandConstraints = demandEqualityConstraints ?? new Dictionary<int, List<double>>();
+            this.DemandPlacementConstraints = demandPlacementEqualityConstraints ?? new Dictionary<int, int>();
             this.DemandVariables = new Dictionary<int, List<TVar>>();
 
             if (preDemandVariables == null) {
@@ -119,7 +142,8 @@ namespace MetaOptimize
             foreach (int id in this.DemandVariables.Keys) {
                 this.PlacementVariables[id] = new List<TVar>();
                 this.DemandPerBinVariables[id] = new List<List<TVar>>();
-                for (int bid = 0; bid < this.bins.GetNum(); bid++) {
+                var maxBinID = GetMaxBinIDForItem(id);
+                for (int bid = 0; bid <= maxBinID; bid++) {
                     this.PlacementVariables[id].Add(this.Solver.CreateVariable("placement_item_" + id + "_bin_" + bid, type: GRB.BINARY));
                     this.DemandPerBinVariables[id].Add(new List<TVar>());
                     for (int did = 0; did < this.NumDimensions; did++) {
@@ -139,11 +163,15 @@ namespace MetaOptimize
         /// Encoder the problem.
         /// </summary>
         public OptimizationEncoding<TVar, TSolution> Encoding(Bins bins, Dictionary<int, List<TVar>> preDemandVariables = null,
-            Dictionary<int, List<double>> demandEqualityConstraints = null, bool verbose = false)
+            Dictionary<int, List<double>> demandEqualityConstraints = null,
+            Dictionary<int, int> demandPlacementEqualityConstraints = null,
+            bool verbose = false)
         {
+            Utils.logger("break symmetry " + this.BreakSymmetry, verbose);
             Utils.logger("initialize variables", verbose);
             this.bins = bins;
-            InitializeVariables(preDemandVariables, demandEqualityConstraints);
+            InitializeVariables(preDemandVariables, demandEqualityConstraints,
+                demandPlacementEqualityConstraints);
 
             Utils.logger("ensure capacity constraints are respected", verbose);
             var binSizeList = this.bins.getBinSizes();
@@ -154,20 +182,30 @@ namespace MetaOptimize
                     // var demandCoeff = new List<Polynomial<TVar>>();
                     // var demandVar = new List<TVar>();
                     foreach (int itemID in this.DemandVariables.Keys) {
+                        if (!IsDemandValid(itemID)) {
+                            continue;
+                        }
                         // demandVar.Add(this.DemandVariables[itemID][dimension]);
                         // demandCoeff.Add(new Polynomial<TVar>(new Term<TVar>(1, this.PlacementVariables[itemID][binId])));
-                        capPoly.Add(new Term<TVar>(1, this.DemandPerBinVariables[itemID][binId][dimension]));
+                        if (itemID >= binId || !this.BreakSymmetry) {
+                            capPoly.Add(new Term<TVar>(1, this.DemandPerBinVariables[itemID][binId][dimension]));
+                        }
                     }
                     // this.Solver.AddLeqZeroConstraint(demandCoeff, demandVar, capPoly);
                     this.Solver.AddLeqZeroConstraint(capPoly);
+                    // this.Solver.AddEqZeroConstraint(capPoly);
                 }
             }
 
             Utils.logger("ensure only one demandPerBinVariable is non-zero", verbose);
             foreach (int itemID in this.DemandVariables.Keys) {
+                if (!IsDemandValid(itemID)) {
+                    continue;
+                }
                 for (int dimension = 0; dimension < this.NumDimensions; dimension++) {
                     var sumPoly = new Polynomial<TVar>();
-                    for (int binId = 0; binId < this.bins.GetNum(); binId++) {
+                    var maxBinID = this.GetMaxBinIDForItem(itemID);
+                    for (int binId = 0; binId <= maxBinID; binId++) {
                         var poly = new Polynomial<TVar>();
                         poly.Add(new Term<TVar>(1, this.DemandPerBinVariables[itemID][binId][dimension]));
                         poly.Add(new Term<TVar>(-1 * this.bins.MaxCapacity(dimension), this.PlacementVariables[itemID][binId]));
@@ -180,10 +218,15 @@ namespace MetaOptimize
                 }
             }
 
-            Utils.logger("ensure each item ends up in exactly one bin", verbose);
+            Utils.logger("ensure each item ends up in exactly one bin + break symmetry", verbose);
+            var num_bins = this.bins.GetNum();
             foreach (var itemID in this.DemandVariables.Keys) {
+                if (!IsDemandValid(itemID)) {
+                    continue;
+                }
                 var placePoly = new Polynomial<TVar>(new Term<TVar>(-1));
-                for (int binId = 0; binId < this.bins.GetNum(); binId++) {
+                var maxBinID = this.GetMaxBinIDForItem(itemID);
+                for (int binId = 0; binId <= maxBinID; binId++) {
                     placePoly.Add(new Term<TVar>(1, this.PlacementVariables[itemID][binId]));
                 }
                 this.Solver.AddEqZeroConstraint(placePoly);
@@ -192,6 +235,9 @@ namespace MetaOptimize
             Utils.logger("ensuring demand constraints are respected", verbose);
             foreach (var (itemID, demandConstant) in this.DemandConstraints)
             {
+                if (!IsDemandValid(itemID)) {
+                    continue;
+                }
                 for (int dimension = 0; dimension < this.NumDimensions; dimension++) {
                     if (demandConstant[dimension] < 0) {
                         continue;
@@ -201,6 +247,18 @@ namespace MetaOptimize
                     poly.Add(new Term<TVar>(-1 * demandConstant[dimension]));
                     this.Solver.AddEqZeroConstraint(poly);
                 }
+            }
+
+            Utils.logger("ensure demand placement constraints are respected", verbose);
+            foreach (var (itemID, placementConstant) in this.DemandPlacementConstraints)
+            {
+                if (!IsDemandValid(itemID)) {
+                    continue;
+                }
+                Debug.Assert(placementConstant <= this.GetMaxBinIDForItem(itemID));
+                var poly = new Polynomial<TVar>(new Term<TVar>(-1));
+                poly.Add(new Term<TVar>(1, this.PlacementVariables[itemID][placementConstant]));
+                this.Solver.AddEqZeroConstraint(poly);
             }
 
             Utils.logger("ensure objective == total bins used", verbose);
