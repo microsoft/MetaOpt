@@ -10,6 +10,7 @@ namespace MetaOptimize
 
     /// <summary>
     /// An optimization encoder that automatically derives the KKT conditions.
+    /// TODO: change the name of the file to match the name of the class.
     /// </summary>
     public class KKTRewriteGenerator<TVar, TSolution>
     {
