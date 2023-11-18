@@ -85,13 +85,13 @@ namespace MetaOptimize
             return true;
         }
 
-        private void InitializeVariables(Dictionary<int, List<TVar>> preDemandVariables = null,
+        private void InitializeVariables(Dictionary<int, List<TVar>> preInputVariables = null,
             Dictionary<int, List<double>> demandEqualityConstraints = null)
         {
             this.DemandConstraints = demandEqualityConstraints ?? new Dictionary<int, List<double>>();
             this.DemandVariables = new Dictionary<int, List<TVar>>();
 
-            if (preDemandVariables == null) {
+            if (preInputVariables == null) {
                 for (int id = 0; id < this.NumItems; id++) {
                     if (!IsDemandValid(id)) {
                         continue;
@@ -103,8 +103,8 @@ namespace MetaOptimize
                     }
                 }
             } else {
-                Debug.Assert(preDemandVariables.Count == this.NumItems);
-                foreach (var (id, variable) in preDemandVariables) {
+                Debug.Assert(preInputVariables.Count == this.NumItems);
+                foreach (var (id, variable) in preInputVariables) {
                     if (!IsDemandValid(id)) {
                         continue;
                     }
