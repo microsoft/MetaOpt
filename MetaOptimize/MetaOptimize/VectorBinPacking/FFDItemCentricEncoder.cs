@@ -14,7 +14,7 @@ namespace MetaOptimize
     /// </summary>
     public class FFDItemCentricEncoder<TVar, TSolution> : IEncoder<TVar, TSolution>
     {
-        private double bigM = Math.Pow(10, 1);
+        private double bigM = Math.Pow(10, 3);
         private double Epsilon = Math.Pow(10, -6);
 
         /// <summary>
