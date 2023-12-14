@@ -9,9 +9,9 @@ steps:
    toolMajorVersion: 'V2'
 - task: ESLint@
   inputs:
-  Configuration: 'recommended'
-  TargetType: 'eslint'
-  ErrorLevel: 'warn'
+   Configuration: 'recommended'
+   TargetType: 'eslint'
+   ErrorLevel: 'warn'
 
 - task: Semmle@
   env:
