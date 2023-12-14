@@ -5,7 +5,7 @@ pool:
 
 steps:
 - task: CredScan@2
-inputs:
+  inputs:
    toolMajorVersion: 'V2'
 - task: ESLint@
   inputs:
