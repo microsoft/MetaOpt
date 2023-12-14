@@ -16,7 +16,7 @@ steps:
 - task: Semmle@
   env:
    SYSTEM_ACCESSTOKEN: $(System.AccessToken)
-   inputs:
+  inputs:
      sourceCodeDirectory: '$(Build.SourcesDirectory)'
      language: 'tsandjs'
      includeNodeModules: true
