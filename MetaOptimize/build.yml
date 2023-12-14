@@ -1,0 +1,33 @@
+trigger: - master 
+pool: 
+   vmImage: 'windows-latest'
+
+steps:
+- task: CredScan@2
+inputs:
+   toolMajorVersion: 'V2'
+- task: ESLint@
+  inputs:
+  Configuration: 'recommended'
+  TargetType: 'eslint'
+  ErrorLevel: 'warn'
+
+- task: Semmle@
+  env:
+   SYSTEM_ACCESSTOKEN: $(System.AccessToken)
+   inputs:
+     sourceCodeDirectory: '$(Build.SourcesDirectory)'
+     language: 'tsandjs'
+     includeNodeModules: true
+     querySuite: 'Recommended'
+     timeout: '1800'
+     ram: '16384'
+     addProjectDirToScanningExclusionList: true
+- task: Semmle@1
+  inputs:
+    sourceCodeDirectory: '$(Build.SourcesDirectory)'
+    language: 'C#'
+    querySuite: 'Recommended'
+    timeout: '1800'
+    ram: '16384'
+    addProjectDirToScanningExclusionList: true
