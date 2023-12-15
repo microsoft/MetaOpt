@@ -5,6 +5,8 @@
 namespace MetaOptimize
 {
     using System;
+    using System.Diagnostics;
+    using System.IO;
     using Gurobi;
     class GurobiCallback : GRBCallback
     {

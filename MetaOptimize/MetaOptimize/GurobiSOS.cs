@@ -273,7 +273,7 @@ namespace MetaOptimize
             catch (GRBException ex)
             {
                 Console.WriteLine(ex.ToString());
-                throw;
+                throw (ex);
             }
         }
 
