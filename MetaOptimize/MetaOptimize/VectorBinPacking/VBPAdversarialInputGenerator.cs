@@ -111,6 +111,31 @@ namespace MetaOptimize
             }
         }
 
+        private void AddSingleDemandEquality(
+            ISolver<TVar, TSolution> solver,
+            int itemID,
+            List<double> demand)
+        {
+            for (int dim = 0; dim < this.NumDimensions; dim++) {
+                var poly = new Polynomial<TVar>();
+                poly.Add(new Term<TVar>(1, DemandVariables[itemID][dim]));
+                poly.Add(new Term<TVar>(-1 * demand[dim]));
+                solver.AddEqZeroConstraint(poly);
+            }
+        }
+
+        private void EnsureDemandEquality(
+            ISolver<TVar, TSolution> solver,
+            IDictionary<int, List<double>> constrainedDemands)
+        {
+            if (constrainedDemands == null) {
+                return;
+            }
+            foreach (var (itemID, demand) in constrainedDemands) {
+                AddSingleDemandEquality(solver, itemID, demand);
+            }
+        }
+
         private Polynomial<TVar> MultiplicationTwoBinaryPoly(
             ISolver<TVar, TSolution> solver,
             Polynomial<TVar> poly1,
@@ -177,11 +202,11 @@ namespace MetaOptimize
         public (VBPOptimizationSolution, VBPOptimizationSolution) MaximizeOptimalityGapFFD(
             IEncoder<TVar, TSolution> optimalEncoder,
             IEncoder<TVar, TSolution> heuristicEncoder,
-            //int numBinsUsedOptimal,
+            int numBinsUsedOptimal,
             FFDMethodChoice ffdMethod,
             double demandUB = -1,
             IList<IList<double>> demandList = null,
-            Action<ISolver<TVar, TSolution>, Dictionary<int, List<TVar>>> demandConstraint = null,
+            IDictionary<int, List<double>> constrainedDemands = null,
             bool simplify = false,
             bool verbose = false,
             bool cleanUpSolver = true,

@@ -10,7 +10,8 @@ namespace MetaOptimize.Test
     /// <summary>
     /// Test that the optimal encoding is working.
     /// </summary>
-    public abstract class OptimalEncodingTests<TVar, TSol>
+    [TestClass]
+    public class OptimalEncodingTests<TVar, TSol>
     {
         /// <summary>
         /// Function to create a new solver.

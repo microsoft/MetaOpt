@@ -2,8 +2,7 @@
 
   <PropertyGroup>
 	<OutputType>Library</OutputType>
-	<TargetFramework>net7.0</TargetFramework>
-	<LangVersion>preview</LangVersion>
+	<TargetFramework>net6.0</TargetFramework>
 	<Copyright>© Microsoft Corporation. All rights reserved.</Copyright>
     <Company>Microsoft</Company>
     <Platforms>x64</Platforms>

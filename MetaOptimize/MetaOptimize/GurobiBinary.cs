@@ -32,7 +32,7 @@ namespace MetaOptimize
         /// Constructor.
         /// </summary>
         public GurobiBinary(double timeout = double.PositiveInfinity, int verbose = 0, int numThreads = 0, double timeToTerminateNoImprovement = -1,
-                bool recordProgress = false, string logPath = null) : base(timeout, verbose, numThreads, timeToTerminateNoImprovement, recordProgress: recordProgress, logPath: logPath)
+                bool recordProgress = false, string logPath = null) : base(timeout, verbose, numThreads, timeToTerminateNoImprovement, recordProgress, logPath)
         {
         }
 

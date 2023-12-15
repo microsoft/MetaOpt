@@ -5,8 +5,6 @@
 namespace MetaOptimize
 {
     using System;
-    using System.Diagnostics;
-    using System.IO;
     using Gurobi;
     class GurobiCallback : GRBCallback
     {
@@ -20,13 +18,15 @@ namespace MetaOptimize
 
         public GurobiCallback(
             GRBModel model,
-            IProgress<SolverProgress> progress = null,
+            bool storeProgress = false,
+            String dirname = null,
+            String filename = null,
             double terminateNoImprovement_ms = -1,
             double timeout = 0)
         {
-            if (progress != null) {
+            if (storeProgress) {
                 this.storeProgressEnabled = true;
-                this.storeProgressCallback = new GurobiStoreProgressCallback(model, progress);
+                this.storeProgressCallback = new GurobiStoreProgressCallback(model, dirname, filename);
             }
             if (terminateNoImprovement_ms > 0) {
                 this.terminationCallbackEnabled = true;
@@ -48,26 +48,20 @@ namespace MetaOptimize
                 } else if (where == GRB.Callback.MESSAGE) {
                     // nothing to do.
                 } else {
-                    if (where == GRB.Callback.MIP || where == GRB.Callback.MIPNODE || where == GRB.Callback.MIPSOL) {
-                        double bnd = -1;
+                    if (where == GRB.Callback.MIP || where == GRB.Callback.MIPSOL) {
                         double obj = -1;
                         if (where == GRB.Callback.MIP) {
                             obj = GetDoubleInfo(GRB.Callback.MIP_OBJBST);
-                            bnd = GetDoubleInfo(GRB.Callback.MIP_OBJBND);
-                        } else if (where == GRB.Callback.MIPNODE) {
-                            obj = GetDoubleInfo(GRB.Callback.MIPNODE_OBJBST);
-                            bnd = GetDoubleInfo(GRB.Callback.MIPNODE_OBJBND);
                         } else {
-                            obj = GetDoubleInfo(GRB.Callback.MIPSOL_OBJBST);
-                            bnd = GetDoubleInfo(GRB.Callback.MIPSOL_OBJBND);
+                            obj = GetDoubleInfo(GRB.Callback.MIPSOL_OBJ);
                         }
                         var currtime_ms = GetDoubleInfo(GRB.Callback.RUNTIME) * 1000;
                         // Utils.AppendToFile(@"../logs/logs.txt", "measured time = " + currtime_ms + " obj = " + obj);
                         if (this.storeProgressEnabled) {
-                            this.storeProgressCallback.CallCallback(obj, bnd, currtime_ms, presolvetime_ms);
+                            this.storeProgressCallback.CallCallback(obj, currtime_ms, presolvetime_ms);
                         }
                         if (this.terminationCallbackEnabled) {
-                            this.terminationCallback.CallCallback(obj, currtime_ms);
+                            this.terminationCallback.CallCallback(obj);
                         }
                     }
                     if (this.timeoutCallbackEnabled) {

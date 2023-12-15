@@ -52,13 +52,13 @@ namespace MetaOptimize
                 return;
             }
             if (this.timer == null) {
-                // Console.WriteLine("Starting the timeout timer");
+                Console.WriteLine("Starting the timeout timer");
                 this.timer = Stopwatch.StartNew();
             }
             double currTime_ms = timer.ElapsedMilliseconds;
             if (currTime_ms > timeout) {
                 // Utils.AppendToFile(@"../logs/logs.txt", "terminating after = " + currTime_ms);
-                // Console.WriteLine("Terminating After = " + currTime_ms + ", presolve time = " + presolvetime_ms);
+                Console.WriteLine("Terminating After = " + currTime_ms + ", presolve time = " + presolvetime_ms);
                 if (storeLastIfTerminated) {
                     storeProgressCallback.WriteLastLineBeforeTermination(currTime_ms);
                 }

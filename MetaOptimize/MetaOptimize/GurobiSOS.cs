@@ -3,9 +3,12 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Reflection.Metadata.Ecma335;
 using System.Text;
-using System.Transactions;
+using System.Threading.Tasks;
 using Gurobi;
+using Microsoft.VisualBasic.FileIO;
+using Microsoft.Z3;
 using ZenLib;
 
 namespace MetaOptimize
@@ -107,13 +110,11 @@ namespace MetaOptimize
         // private GurobiTerminationCallback gurobiTerminationCallback;
         // private GurobiStoreProgressCallback gurobiStoreProgressCallback;
         // private GurobiTimeoutCallback gurobiTimeoutCallback;
-        private void SetCallbacks(bool disableStoreProgress = false)
-        {
+        private void SetCallbacks(bool disableStoreProgress = false) {
             var fileExtension = Path.GetExtension(this._logFileFilename);
             var filename = Path.GetFileNameWithoutExtension(this._logFileFilename);
             var progress = this._storeProgress;
-            if (disableStoreProgress)
-            {
+            if (disableStoreProgress) {
                 progress = false;
             }
             this.guorbiCallback = new GurobiCallback(this._model, storeProgress: progress,
@@ -137,8 +138,7 @@ namespace MetaOptimize
         /// <summary>
         /// to reset the timer for termination.
         /// </summary>
-        protected void ResetCallbackTimer()
-        {
+        protected void ResetCallbackTimer() {
             this.guorbiCallback.ResetAll();
             // if (this._timeToTerminateIfNoImprovement > 0 & this._storeProgress) {
             //     this.guorbiCallback.ResetTermination();
@@ -166,27 +166,18 @@ namespace MetaOptimize
             // this._model.Parameters.TimeLimit = timeout;
             this._model.Parameters.Presolve = 2;
             this._focusBstBd = focusBstBd;
-            if (numThreads < 0)
-            {
+            if (numThreads < 0) {
                 throw new Exception("num threads should be either 0 (automatic) or positive but got " + numThreads);
             }
-            // 0 == do not override
-            if (numThreads > 0)
-            {
-                this._model.Parameters.Threads = numThreads;
-            }
+            this._model.Parameters.Threads = numThreads;
             this._model.Parameters.OutputFlag = verbose;
             this._timeToTerminateIfNoImprovement = timeToTerminateNoImprovement;
             this._storeProgress = recordProgress;
-            if (recordProgress)
-            {
-                if (logPath != null)
-                {
+            if (recordProgress) {
+                if (logPath != null) {
                     this._logFileDirname = Path.GetDirectoryName(logPath);
                     this._logFileFilename = Path.GetFileName(logPath);
-                }
-                else
-                {
+                } else {
                     throw new Exception("logDirname and logFilename should be specified when recordProgress is true");
                 }
             }
@@ -196,12 +187,10 @@ namespace MetaOptimize
         /// <summary>
         /// Reset the solver by removing all the variables and constraints.
         /// </summary>
-        public void CleanAll(double timeout = -1, bool disableStoreProgress = false)
-        {
+        public void CleanAll(double timeout = -1, bool disableStoreProgress = false) {
             this._model.Dispose();
             this._model = new GRBModel(GurobiEnvironment.Instance);
-            if (timeout > 0)
-            {
+            if (timeout > 0) {
                 this._timeout = timeout;
             }
             // this._model.Parameters.TimeLimit = this._timeout;
@@ -211,12 +200,7 @@ namespace MetaOptimize
             this._variables = new Dictionary<string, GRBVar>();
             this._auxiliaryVars = new Dictionary<string, GRBVar>();
             this._objective = 0;
-
-            // 0 == do not override
-            if (_numThreads > 0)
-            {
-                this._model.Parameters.Threads = this._numThreads;
-            }
+            this._model.Parameters.Threads = this._numThreads;
             this._model.Parameters.OutputFlag = this._verbose;
             this.auxPolyList = new List<Polynomial<GRBVar>>();
             SetCallbacks(disableStoreProgress);
@@ -225,11 +209,9 @@ namespace MetaOptimize
         /// <summary>
         /// append as the next line of the store progress file.
         /// </summary>
-        public void AppendToStoreProgressFile(double time_ms, double gap, bool reset = false)
-        {
+        public void AppendToStoreProgressFile(double time_ms, double gap, bool reset = false) {
             this.guorbiCallback.AppendToStoreProgressFile(time_ms, gap);
-            if (reset)
-            {
+            if (reset) {
                 ResetCallbackTimer();
             }
         }
@@ -237,8 +219,7 @@ namespace MetaOptimize
         /// <summary>
         /// Reset the solver by removing all the variables and constraints.
         /// </summary>
-        public void CleanAll(bool focusBstBd, double timeout = -1)
-        {
+        public void CleanAll(bool focusBstBd, double timeout = -1) {
             this._focusBstBd = focusBstBd;
             CleanAll(timeout);
         }
@@ -247,8 +228,7 @@ namespace MetaOptimize
         /// set the timeout.
         /// </summary>
         /// <param name="timeout">value for timeout.</param>
-        public void SetTimeout(double timeout)
-        {
+        public void SetTimeout(double timeout) {
             this._timeout = timeout;
             // this._model.Parameters.TimeLimit = timeout;
         }
@@ -256,16 +236,14 @@ namespace MetaOptimize
         /// <summary>
         /// set the FocusBstBd.
         /// </summary>
-        public void SetFocusBstBd(bool focusBstBd)
-        {
+        public void SetFocusBstBd(bool focusBstBd) {
             this._focusBstBd = focusBstBd;
         }
 
         /// <summary>
         /// get model.
         /// </summary>
-        public GRBModel GetModel()
-        {
+        public GRBModel GetModel() {
             return this._model;
         }
 
@@ -295,7 +273,7 @@ namespace MetaOptimize
             catch (GRBException ex)
             {
                 Console.WriteLine(ex.ToString());
-                throw (ex);
+                throw;
             }
         }
 
@@ -327,8 +305,7 @@ namespace MetaOptimize
         /// set the objective.
         /// </summary>
         /// <param name="objective">The solver solution.</param>
-        public void SetObjective(Polynomial<GRBVar> objective)
-        {
+        public void SetObjective(Polynomial<GRBVar> objective) {
             this._objective = Convert(objective);
         }
 
@@ -336,8 +313,7 @@ namespace MetaOptimize
         /// set the objective.
         /// </summary>
         /// <param name="objective">The solver solution.</param>
-        public void SetObjective(GRBVar objective)
-        {
+        public void SetObjective(GRBVar objective) {
             this._objective = objective;
         }
 
@@ -433,14 +409,11 @@ namespace MetaOptimize
             // Utils.logger("Using big-M QE to Linear Conversion.", this._verbose);
             GRBLinExpr obj = this.Convert(linearPoly);
 
-            for (int i = 0; i < coeffPolyList.Count; i++)
-            {
+            for (int i = 0; i < coeffPolyList.Count; i++) {
                 Polynomial<GRBVar> coeffPoly = coeffPolyList[i];
                 GRBVar variable = variableList[i];
-                foreach (var term in coeffPoly.GetTerms())
-                {
-                    switch (term.Exponent)
-                    {
+                foreach (var term in coeffPoly.GetTerms()) {
+                    switch (term.Exponent) {
                         case 1:
                             GRBVar binaryVar = term.Variable.Value;
                             GeneralConvertMultToLin(obj, variable, binaryVar, term.Coefficient);
@@ -494,8 +467,7 @@ namespace MetaOptimize
         {
             // Utils.logger("Using QE expressions as they are.", this._verbose);
             GRBQuadExpr quadConstraint = this.Convert(linearPoly);
-            for (int i = 0; i < coeffPolyList.Count; i++)
-            {
+            for (int i = 0; i < coeffPolyList.Count; i++) {
                 var coeffPoly = this.Convert(coeffPolyList[i]);
                 GRBVar variable = variableList[i];
                 quadConstraint += coeffPoly * variable;
@@ -511,14 +483,11 @@ namespace MetaOptimize
             Utils.logger("Using Indicator for QE Conversion.", this._verbose);
             GRBLinExpr obj = this.Convert(linearPoly);
 
-            for (int i = 0; i < coeffPolyList.Count; i++)
-            {
+            for (int i = 0; i < coeffPolyList.Count; i++) {
                 Polynomial<GRBVar> coeffPoly = coeffPolyList[i];
                 GRBVar variable = variableList[i];
-                foreach (var term in coeffPoly.GetTerms())
-                {
-                    switch (term.Exponent)
-                    {
+                foreach (var term in coeffPoly.GetTerms()) {
+                    switch (term.Exponent) {
                         case 1:
                             GRBVar binary_variable = term.Variable.Value;
                             var auxVar = this.CreateVariable("aux_qe");
@@ -611,45 +580,29 @@ namespace MetaOptimize
         /// <param name="polynomial2"></param>
         public virtual void AddOrEqZeroConstraint(Polynomial<GRBVar> polynomial1, Polynomial<GRBVar> polynomial2)
         {
-            this.AddOrEqZeroConstraint(new[] { polynomial1, polynomial2 });
-        }
-
-        /// <summary>
-        /// Ensure at least one of these terms is zero.
-        /// </summary>
-        /// <param name="polynomials"></param>
-        public void AddOrEqZeroConstraint(params Polynomial<GRBVar>[] polynomials)
-        {
-            this.AddOrEqZeroConstraintV1(polynomials.Select(this.Convert).ToArray());
+            this.AddOrEqZeroConstraintV1(this.Convert(polynomial1), this.Convert(polynomial2));
         }
 
         /// <summary>
         /// Uses SOS constraint to ensure atleast one of the following terms should equal 0.
         /// </summary>
-        /// <param name="exprs">The polynomiasl.</param>
+        /// <param name="expr1">The first polynomial.</param>
         /// <param name="expr2">The second polynomial.</param>
-        public void AddOrEqZeroConstraintV1(params GRBLinExpr[] exprs)
+        public void AddOrEqZeroConstraintV1(GRBLinExpr expr1, GRBLinExpr expr2)
         {
             // Create auxilary variable for each polynomial
-            var vars = new List<GRBVar>();
-            foreach (var expr in exprs)
-            {
-                // Avoid creating a variable if it's not needed
-                if (expr.Size == 1 && expr.Constant == 0 && expr.GetCoeff(0) is 1 or -1)
-                {
-                    vars.Add(expr.GetVar(0));
-                }
-                else
-                {
-                    var v = this._model.AddVar(Double.NegativeInfinity, Double.PositiveInfinity, 0, GRB.CONTINUOUS, "aux_" + this._auxiliaryVars.Count);
-                    this._auxiliaryVars.Add($"aux_{this._auxiliaryVars.Count}", v);
-                    this._model.AddConstr(expr, GRB.EQUAL, v, "eq_index_" + this._constraintEqCount++);
-                    vars.Add(v);
-                }
-            }
+            var var_1 = this._model.AddVar(Double.NegativeInfinity, Double.PositiveInfinity, 0, GRB.CONTINUOUS, "aux_" + this._auxiliaryVars.Count);
+            this._auxiliaryVars.Add($"aux_{this._auxiliaryVars.Count}", var_1);
+
+            var var_2 = this._model.AddVar(Double.NegativeInfinity, Double.PositiveInfinity, 0, GRB.CONTINUOUS, "aux_" + this._auxiliaryVars.Count);
+            this._auxiliaryVars.Add($"aux_{this._auxiliaryVars.Count}", var_2);
+
+            this._model.AddConstr(expr1, GRB.EQUAL, var_1, "eq_index_" + this._constraintEqCount++);
+            this._model.AddConstr(expr2, GRB.EQUAL, var_2, "eq_index_" + this._constraintEqCount++);
 
             // Add SOS constraint.
-            this._model.AddSOS(vars.ToArray(), Enumerable.Range(1, vars.Count).Select(n => (double)n).ToArray(), GRB.SOS_TYPE1); // note: weights do not matter
+            var auxiliaries = new GRBVar[] { var_1, var_2 };
+            this._model.AddSOS(auxiliaries, new Double[] { 1, 2 }, GRB.SOS_TYPE1); // note: weights do not matter
         }
 
         /// <summary>
@@ -700,8 +653,7 @@ namespace MetaOptimize
         /// <summary>
         /// Add a = max(b, c) constraint.
         /// </summary>
-        public void AddMaxConstraint(GRBVar LHS, Polynomial<GRBVar> maxItem1, Polynomial<GRBVar> maxItem2)
-        {
+        public void AddMaxConstraint(GRBVar LHS, Polynomial<GRBVar> maxItem1, Polynomial<GRBVar> maxItem2) {
             // Create auxilary variable for each polynomial
             var var_1 = this._model.AddVar(Double.NegativeInfinity, Double.PositiveInfinity, 0, GRB.CONTINUOUS, "aux_" + this._auxiliaryVars.Count);
             this._auxiliaryVars.Add($"aux_{this._auxiliaryVars.Count}", var_1);
@@ -818,8 +770,7 @@ namespace MetaOptimize
                 // throw new Exception($"model not optimal {ModelStatusToString(this._model.Status)}");
                 throw new InfeasibleOrUnboundSolution();
             }
-            if (this._objective.Value < objectiveValue)
-            {
+            if (this._objective.Value < objectiveValue) {
                 throw new InfeasibleOrUnboundSolution();
             }
             return this._model;
@@ -831,15 +782,13 @@ namespace MetaOptimize
         /// <returns>A solution.</returns>
         public virtual GRBModel Maximize()
         {
-            // Console.WriteLine("in maximize call");
+            Console.WriteLine("in maximize call");
             GRBLinExpr objective = 0;
-            foreach (var auxVar in auxPolyList)
-            {
+            foreach (var auxVar in auxPolyList) {
                 objective += this.Convert(auxVar);
             }
             this._model.SetObjective(objective + this._objective, GRB.MAXIMIZE);
-            if (this._focusBstBd)
-            {
+            if (this._focusBstBd) {
                 this._model.Parameters.MIPFocus = 3;
                 this._model.Parameters.Heuristics = 0.01;
                 this._model.Parameters.Cuts = 3;
@@ -868,13 +817,6 @@ namespace MetaOptimize
             // Directory.CreateDirectory(exhaust_dir_name);
             // this._model.Write($"{exhaust_dir_name}/model_" + DateTime.Now.Millisecond + ".lp");
 
-            string exhaust_dir_name = Directory.CreateTempSubdirectory("gurobisos_").FullName;
-#if true
-            this._model.Write($"{exhaust_dir_name}/model.lp");
-            this._model.Write($"{exhaust_dir_name}/model.mps");
-            Trace.WriteLine("GurobiSOS model in: " + exhaust_dir_name);
-#endif
-
             this._model.Optimize();
             if (this._model.Status != GRB.Status.TIME_LIMIT & this._model.Status != GRB.Status.OPTIMAL & this._model.Status != GRB.Status.INTERRUPTED)
             {
@@ -887,10 +829,6 @@ namespace MetaOptimize
                 this._model.Write($"{exhaust_dir_name_viol}/model_infeas_reduce_" + DateTime.Now.Millisecond + ".ilp");
                 throw new Exception($"model not optimal {ModelStatusToString(this._model.Status)}");
                 // throw new InfeasibleOrUnboundSolution();
-            }
-            else
-            {
-                this._model.Write($"{exhaust_dir_name}/model.sol");
             }
 
             return this._model;
@@ -913,8 +851,7 @@ namespace MetaOptimize
         /// </summary>
         public virtual GRBModel Maximize(Polynomial<GRBVar> objective, bool reset)
         {
-            if (reset)
-            {
+            if (reset) {
                 this.ResetCallbackTimer();
             }
             return Maximize(objective);
@@ -1041,8 +978,7 @@ namespace MetaOptimize
         /// <summary>
         /// Get the resulting value assigned to a variable.
         /// </summary>
-        public double GetDualVariable(GRBModel solution, string constraintName)
-        {
+        public double GetDualVariable(GRBModel solution, string constraintName) {
             if (solution.Status != GRB.Status.USER_OBJ_LIMIT & solution.Status != GRB.Status.TIME_LIMIT
                 & solution.Status != GRB.Status.OPTIMAL & solution.Status != GRB.Status.INTERRUPTED)
             {
