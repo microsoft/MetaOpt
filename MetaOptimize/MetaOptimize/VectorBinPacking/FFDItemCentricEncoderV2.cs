@@ -162,7 +162,7 @@ namespace MetaOptimize
         /// Encoder the problem.
         /// </summary>
         public OptimizationEncoding<TVar, TSolution> Encoding(Bins bins, Dictionary<int, List<TVar>> preDemandVariables = null,
-            Dictionary<int, List<double>> demandEqualityConstraints = null, bool verbose = false)
+            Dictionary<int, List<double>> demandEqualityConstraints = null, Dictionary<int, int> reqEqualityConstraints = null, bool verbose = false)
         {
             Utils.logger("initialize variables", verbose);
             this.bins = bins;

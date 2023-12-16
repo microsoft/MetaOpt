@@ -234,6 +234,10 @@ namespace MetaOptimize
             {
                 throw new Exception("if global demand ub is enabled, then perDemandUB should be null");
             }
+            if (numBinsUsedOptimal <= 0 && numBinsUsedOptimal != -1)
+            {
+                throw new Exception("optimal number of bins should be either -1 or > 0.");
+            }
 
             var solver = optimalEncoder.Solver;
             if (cleanUpSolver)
@@ -243,50 +247,8 @@ namespace MetaOptimize
 
             Utils.logger("creating demand variables.", verbose);
             this.DemandVariables = CreateDemandVariables(solver);
-            this.DemandToBinaryPoly = new Dictionary<int, List<Polynomial<TVar>>>();
-            if (demandList == null)
-            {
-                Utils.logger("demand List is null.", verbose);
-                foreach (var (itemID, demandVar) in this.DemandVariables)
-                {
-                    this.DemandToBinaryPoly[itemID] = new List<Polynomial<TVar>>();
-                    for (int dim = 0; dim < NumDimensions; dim++)
-                    {
-                        var outPoly = new Polynomial<TVar>();
-                        for (int i = 1; i <= ((int)Math.Ceiling(this.Bins.MaxCapacity(dim) / smallestDemandUnit)); i++)
-                        {
-                            outPoly.Add(new Term<TVar>(-1 * i * smallestDemandUnit,
-                                            solver.CreateVariable("demand_" + itemID + "_" + dim, type: GRB.BINARY)));
-                        }
-                        this.DemandToBinaryPoly[itemID].Add(outPoly.Negate());
-                        outPoly.Add(new Term<TVar>(1, demandVar[dim]));
-                        solver.AddEqZeroConstraint(outPoly);
-                    }
-                }
-            }
-            else
-            {
-                Utils.logger("demand List specified.", verbose);
-                foreach (var (itemID, demandVar) in this.DemandVariables)
-                {
-                    this.DemandToBinaryPoly[itemID] = new List<Polynomial<TVar>>();
-                    for (int dim = 0; dim < NumDimensions; dim++)
-                    {
-                        var demandPoly = new Polynomial<TVar>();
-                        var sumPoly = new Polynomial<TVar>(new Term<TVar>(1));
-                        foreach (var demandlvl in demandList[dim])
-                        {
-                            var newBinary = solver.CreateVariable("bin_dim_" + itemID + "_" + dim + "_" + demandlvl, type: GRB.BINARY);
-                            demandPoly.Add(new Term<TVar>(-1 * demandlvl, newBinary));
-                            sumPoly.Add(new Term<TVar>(-1, newBinary));
-                        }
-                        this.DemandToBinaryPoly[itemID].Add(demandPoly.Negate());
-                        demandPoly.Add(new Term<TVar>(1, demandVar[dim]));
-                        solver.AddEqZeroConstraint(demandPoly);
-                        solver.AddEqZeroConstraint(sumPoly);
-                    }
-                }
-            }
+            CreateBinaryDemandLevels(solver, demandList, verbose);
+
             Utils.logger("generating optimal encoding.", verbose);
             // var optBins = this.Bins.GetFirstKBins(numBinsUsedOptimal);
             var optimalEncoding = optimalEncoder.Encoding(Bins, preInputVariables: this.DemandVariables, verbose: verbose);
@@ -305,7 +267,26 @@ namespace MetaOptimize
             }
             Utils.logger("adding equality constraints for specified demands.", verbose);
             EnsureDemandEquality(solver, constrainedDemands);
+            AddFFDWeightConstraints(solver, ffdMethod, verbose);
 
+            if (numBinsUsedOptimal > 0) {
+                var optimalBinsPoly = new Polynomial<TVar>();
+                optimalBinsPoly.Add(new Term<TVar>(-1 * numBinsUsedOptimal));
+                optimalBinsPoly.Add(new Term<TVar>(1, optimalEncoding.GlobalObjective));
+                solver.AddEqZeroConstraint(optimalBinsPoly);
+            }
+
+            Utils.logger("setting the objective.", verbose);
+            var objective = new Polynomial<TVar>(
+                        new Term<TVar>(-1, optimalEncoding.GlobalObjective),
+                        new Term<TVar>(1, heuristicEncoding.GlobalObjective));
+            var solution = solver.Maximize(objective, reset: true);
+
+            return ((VBPOptimizationSolution)optimalEncoder.GetSolution(solution), (VBPOptimizationSolution)heuristicEncoder.GetSolution(solution));
+        }
+
+        private void AddFFDWeightConstraints(ISolver<TVar, TSolution> solver, FFDMethodChoice ffdMethod, bool verbose)
+        {
             switch (ffdMethod)
             {
                 case FFDMethodChoice.FF:
@@ -370,19 +351,233 @@ namespace MetaOptimize
                 default:
                     throw new Exception("invalid FFD Heuristic Method.");
             }
+        }
 
-            var optimalBinsPoly = new Polynomial<TVar>();
-            optimalBinsPoly.Add(new Term<TVar>(-1 * numBinsUsedOptimal));
-            optimalBinsPoly.Add(new Term<TVar>(1, optimalEncoding.GlobalObjective));
-            solver.AddEqZeroConstraint(optimalBinsPoly);
+        private void CreateBinaryDemandLevels(ISolver<TVar, TSolution> solver, IList<IList<double>> demandList, bool verbose)
+        {
+            this.DemandToBinaryPoly = new Dictionary<int, List<Polynomial<TVar>>>();
+            if (demandList == null)
+            {
+                Utils.logger("demand List is null.", verbose);
+                foreach (var (itemID, demandVar) in this.DemandVariables)
+                {
+                    this.DemandToBinaryPoly[itemID] = new List<Polynomial<TVar>>();
+                    for (int dim = 0; dim < NumDimensions; dim++)
+                    {
+                        var demandPoly = new Polynomial<TVar>();
+                        var sumPoly = new Polynomial<TVar>(new Term<TVar>(-1));
+                        for (int i = 1; i <= ((int)Math.Ceiling(this.Bins.MaxCapacity(dim) / smallestDemandUnit)); i++)
+                        {
+                            var newBinary = solver.CreateVariable("demand_" + itemID + "_" + dim, type: GRB.BINARY);
+                            demandPoly.Add(new Term<TVar>(-1 * i * smallestDemandUnit, newBinary));
+                            sumPoly.Add(new Term<TVar>(1, newBinary));
+                        }
+                        this.DemandToBinaryPoly[itemID].Add(demandPoly.Negate());
+                        demandPoly.Add(new Term<TVar>(1, demandVar[dim]));
+                        solver.AddEqZeroConstraint(demandPoly);
+                        solver.AddLeqZeroConstraint(sumPoly);
+                    }
+                }
+            }
+            else
+            {
+                Utils.logger("demand List specified.", verbose);
+                foreach (var (itemID, demandVar) in this.DemandVariables)
+                {
+                    this.DemandToBinaryPoly[itemID] = new List<Polynomial<TVar>>();
+                    for (int dim = 0; dim < NumDimensions; dim++)
+                    {
+                        var demandPoly = new Polynomial<TVar>();
+                        var sumPoly = new Polynomial<TVar>(new Term<TVar>(1));
+                        foreach (var demandlvl in demandList[dim])
+                        {
+                            var newBinary = solver.CreateVariable("bin_dim_" + itemID + "_" + dim + "_" + demandlvl, type: GRB.BINARY);
+                            demandPoly.Add(new Term<TVar>(-1 * demandlvl, newBinary));
+                            sumPoly.Add(new Term<TVar>(-1, newBinary));
+                        }
+                        this.DemandToBinaryPoly[itemID].Add(demandPoly.Negate());
+                        demandPoly.Add(new Term<TVar>(1, demandVar[dim]));
+                        solver.AddEqZeroConstraint(demandPoly);
+                        solver.AddEqZeroConstraint(sumPoly);
+                    }
+                }
+            }
+        }
 
-            Utils.logger("setting the objective.", verbose);
-            var objective = new Polynomial<TVar>(
-                        new Term<TVar>(-1, optimalEncoding.GlobalObjective),
-                        new Term<TVar>(1, heuristicEncoding.GlobalObjective));
-            var solution = solver.Maximize(objective, reset: true);
+        private bool checkIfDemandIsConstrained(
+            IDictionary<int, List<double>> constrainedDemands,
+            int itemID)
+        {
+            return constrainedDemands.ContainsKey(itemID);
+        }
 
-            return ((VBPOptimizationSolution)optimalEncoder.GetSolution(solution), (VBPOptimizationSolution)heuristicEncoder.GetSolution(solution));
+        private double DiscoverMatchingDemandLvl(Polynomial<TVar> DemandVar, double demandValue)
+        {
+            if (demandValue <= 0.0001) {
+                return 0;
+            }
+            foreach (var demandlvl in DemandVar.GetTerms()) {
+                if (Math.Abs(demandlvl.Coefficient - demandValue) <= 0.0001) {
+                    return demandlvl.Coefficient;
+                }
+            }
+            throw new Exception(String.Format("does not match {0}", demandValue));
+        }
+
+        private (double, (VBPOptimizationSolution, VBPOptimizationSolution)) GetGap (
+            IEncoder<TVar, TSolution> optimalEncoder,
+            IEncoder<TVar, TSolution> heuristicEncoder,
+            Dictionary<int, List<double>> itemSizes,
+            bool disableStoreProgress = false)
+        {
+            // solving the hueristic for the demand
+            heuristicEncoder.Solver.CleanAll(disableStoreProgress: disableStoreProgress);
+            var demandVariables = CreateDemandVariables(heuristicEncoder.Solver);
+            var encodingHeuristic = heuristicEncoder.Encoding(Bins, preInputVariables: demandVariables,
+                                            inputEqualityConstraints: itemSizes);
+            var solverSolutionHeuristic = heuristicEncoder.Solver.Maximize(encodingHeuristic.MaximizationObjective);
+            var optimizationSolutionHeuristic = (VBPOptimizationSolution)heuristicEncoder.GetSolution(solverSolutionHeuristic);
+
+            // solving the optimal for the demand
+            optimalEncoder.Solver.CleanAll(disableStoreProgress: disableStoreProgress);
+            demandVariables = CreateDemandVariables(optimalEncoder.Solver);
+            var encodingOptimal = optimalEncoder.Encoding(Bins, preInputVariables: demandVariables,
+                                            inputEqualityConstraints: itemSizes);
+            var solverSolutionOptimal = optimalEncoder.Solver.Maximize(encodingOptimal.MaximizationObjective);
+            var optimizationSolutionOptimal = (VBPOptimizationSolution)optimalEncoder.GetSolution(solverSolutionOptimal);
+            double currGap = optimizationSolutionOptimal.TotalNumBinsUsed - optimizationSolutionHeuristic.TotalNumBinsUsed;
+            return (currGap, (optimizationSolutionOptimal, optimizationSolutionHeuristic));
+        }
+
+        /// <summary>
+        /// Find an adversarial input that maximizes the optimality gap between two optimizations.
+        /// </summary>
+        public (VBPOptimizationSolution, VBPOptimizationSolution) MaximizeOptimalityGapFFDIterative(
+            IEncoder<TVar, TSolution> optimalEncoder,
+            IEncoder<TVar, TSolution> heuristicEncoder,
+            FFDMethodChoice ffdMethod,
+            int numItemsEachIteration,
+            int maxNumOptBinEachIteration = -1,
+            double demandUB = -1,
+            IList<IList<double>> demandList = null,
+            IDictionary<int, List<double>> constrainedDemands = null,
+            bool simplify = false,
+            bool verbose = false,
+            bool cleanUpSolver = true,
+            IDictionary<int, List<double>> perDemandUB = null)
+        {
+            constrainedDemands = constrainedDemands ?? new Dictionary<int, List<double>>();
+            // only works for online ffd for now
+            Debug.Assert(ffdMethod == FFDMethodChoice.FF);
+            if (optimalEncoder.Solver != heuristicEncoder.Solver)
+            {
+                throw new Exception("Solver mismatch between optimal and heuristic encoders.");
+            }
+            if (demandUB != -1 & perDemandUB != null) {
+                throw new Exception("if global demand ub is enabled, then perDemandUB should be null");
+            }
+            if (maxNumOptBinEachIteration != -1 & maxNumOptBinEachIteration < 0) {
+                throw new Exception("maximum bin in each iteration should be either -1 or > 0.");
+            }
+
+            var solver = optimalEncoder.Solver;
+            if (cleanUpSolver) {
+                solver.CleanAll();
+            }
+
+            Utils.logger("creating demand variables.", verbose);
+            this.DemandVariables = CreateDemandVariables(solver);
+            CreateBinaryDemandLevels(solver, demandList, verbose);
+
+            Utils.logger("generating optimal encoding.", verbose);
+            // var optBins = this.Bins.GetFirstKBins(numBinsUsedOptimal);
+            var optimalEncoding = optimalEncoder.Encoding(Bins, preInputVariables: this.DemandVariables, verbose: verbose);
+            Utils.logger("generating heuristic encoding.", verbose);
+            var heuristicEncoding = heuristicEncoder.Encoding(Bins, preInputVariables: this.DemandVariables, verbose: verbose);
+
+            // ensures that demand in both problems is the same and lower than demand upper bound constraint.
+            Utils.logger("adding constraints for upper bound on demands.", verbose);
+            if (perDemandUB != null)
+            {
+                EnsureDemandUB(solver, perDemandUB);
+            }
+            else
+            {
+                EnsureDemandUB(solver, demandUB);
+            }
+            Utils.logger("adding equality constraints for specified demands.", verbose);
+            EnsureDemandEquality(solver, constrainedDemands);
+
+            Utils.logger("Initialize all demands with zero!", verbose);
+            var itemToConstraintMapping = new Dictionary<int, List<string>>();
+            foreach (var (itemID, ListDemandVar) in this.DemandVariables) {
+                var listConstrNames = new List<string>();
+                foreach (var demandVar in ListDemandVar) {
+                    if (this.checkIfDemandIsConstrained(constrainedDemands, itemID)) {
+                        continue;
+                    }
+                    var constrName = solver.AddLeqZeroConstraint(new Polynomial<TVar>(new Term<TVar>(1, demandVar)));
+                    listConstrNames.Add(constrName);
+                }
+                itemToConstraintMapping[itemID] = listConstrNames;
+            }
+
+            var optimalUBConstraintName = "";
+            if (maxNumOptBinEachIteration > 0) {
+                Utils.logger("Add Upper bound on the number of bins optimal uses.", verbose);
+                var optimalBinsPoly = new Polynomial<TVar>();
+                optimalBinsPoly.Add(new Term<TVar>(-1 * maxNumOptBinEachIteration));
+                optimalBinsPoly.Add(new Term<TVar>(1, optimalEncoding.GlobalObjective));
+                optimalUBConstraintName = solver.AddLeqZeroConstraint(optimalBinsPoly);
+            }
+            solver.ModelUpdate();
+
+            int lastItemPlaced = -1;
+            int numOptBinsSoFar = 0;
+            var itemSizes = new Dictionary<int, List<double>>();
+            while (lastItemPlaced + 1 < this.NumItems) {
+                Utils.logger(
+                    string.Format("Placing Items {0} - {1}", lastItemPlaced + 1, lastItemPlaced + numItemsEachIteration),
+                    verbose);
+                var consideredItems = new HashSet<int>();
+                for (var numPlaced = 0; numPlaced < numItemsEachIteration; numPlaced++) {
+                    lastItemPlaced += 1;
+                    if (lastItemPlaced >= this.NumItems) {
+                        break;
+                    }
+                    foreach (var constrName in itemToConstraintMapping[lastItemPlaced]) {
+                        solver.RemoveConstraint(constrName);
+                    }
+                    consideredItems.Add(lastItemPlaced);
+                }
+
+                if (maxNumOptBinEachIteration > 0) {
+                    solver.ChangeConstraintRHS(optimalUBConstraintName, numOptBinsSoFar + maxNumOptBinEachIteration);
+                }
+
+                Utils.logger("setting the objective.", verbose);
+                var objective = new Polynomial<TVar>(
+                            new Term<TVar>(-1, optimalEncoding.GlobalObjective),
+                            new Term<TVar>(1, heuristicEncoding.GlobalObjective));
+                var solution = solver.Maximize(objective, reset: true);
+                var optimalSolution = (VBPOptimizationSolution)optimalEncoder.GetSolution(solution);
+                numOptBinsSoFar = optimalSolution.TotalNumBinsUsed;
+                // var heuristicSolution = (VBPOptimizationSolution)heuristicEncoder.GetSolution(solution);
+
+                foreach (var itemID in consideredItems) {
+                    itemSizes[itemID] = new List<double>();
+                    for (var dimID = 0; dimID < this.NumDimensions; dimID++) {
+                        var demandlvl = DiscoverMatchingDemandLvl(this.DemandToBinaryPoly[itemID][dimID],
+                                            optimalSolution.Demands[itemID][dimID]);
+                        itemSizes[itemID].Add(demandlvl);
+                    }
+                    AddSingleDemandEquality(solver, itemID, itemSizes[itemID]);
+                }
+            }
+            // Console.WriteLine(Newtonsoft.Json.JsonConvert.SerializeObject(itemSizes, Newtonsoft.Json.Formatting.Indented));
+            var output = GetGap(optimalEncoder, heuristicEncoder, itemSizes);
+            Utils.logger("Final gap: " + output.Item1, verbose);
+            return output.Item2;
         }
     }
 }
