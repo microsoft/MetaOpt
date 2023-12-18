@@ -17,6 +17,7 @@ topo_name_list = [
     # ("Kdl", 1),
     # ("b4-teavar", 0),
     # ("ring_200", 0),
+    # ("ring_400", 0),
     # ("SWANTETopology", 0)
     ]
 num_partitions_list = [
