@@ -88,9 +88,7 @@ namespace MetaOptimize
                 throw new ArgumentOutOfRangeException("You need to adjust the max demand allowed.");
             }
 
-#if DEBUG
             Console.WriteLine("========= parition sensitivity: " + partitionSensitivity);
-#endif
             if (partitionSensitivity != -1 & (partitionSensitivity < 0 | partitionSensitivity > 1))
             {
                 throw new Exception("production sensitivity should be between 0 and 1");
