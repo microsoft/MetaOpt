@@ -14,11 +14,9 @@ topo_name_list = [
     # ("GtsCe", 1), 
     ("Cogentco", 0),
     # ("Uninett2010", 0)
-    # ("Kdl", 1)
-    # ("Kdl", 1)
+    # ("Kdl", 1),
     # ("b4-teavar", 0),
     # ("ring_200", 0),
-    # ("ring_400", 0),
     # ("SWANTETopology", 0)
     ]
 num_partitions_list = [
