@@ -14,9 +14,9 @@ namespace MetaOptimize
     /// <summary>
     /// Meta-optimization utility functions for maximizing optimality gaps.
     /// </summary>
-    public class VBPAdversarialInputGenerator<TVar, TSolution>
+    public class VBPAdversarialInputGeneratorNew<TVar, TSolution>
     {
-        private double smallestDemandUnit = 2 * Math.Pow(10, -2);
+        private double smallestDemandUnit =  2 * Math.Pow(10, -2);
         /// <summary>
         /// The bins to fill.
         /// </summary>
@@ -50,8 +50,7 @@ namespace MetaOptimize
         /// <summary>
         /// Constructor.
         /// </summary>
-        public VBPAdversarialInputGenerator(Bins bins, int numItems, int numDimensions, int numProcesses = -1)
-        {
+        public VBPAdversarialInputGeneratorNew(Bins bins, int numItems, int numDimensions, int numProcesses = -1) {
             this.Bins = bins;
             this.NumItems = numItems;
             this.NumDimensions = numDimensions;
@@ -59,15 +58,13 @@ namespace MetaOptimize
         }
 
         private Dictionary<int, List<TVar>> CreateDemandVariables(
-                ISolver<TVar, TSolution> solver)
-        {
+                ISolver<TVar, TSolution> solver) {
             var output = new Dictionary<int, List<TVar>>();
             Console.WriteLine("[INFO] In total " + this.Bins.GetNum() + " bins");
-            for (int itemID = 0; itemID < NumItems; itemID++)
-            {
+            for (int itemID = 0; itemID < NumItems; itemID++) {
+                // Console.WriteLine(itemID);
                 output[itemID] = new List<TVar>();
-                for (int dim = 0; dim < NumDimensions; dim++)
-                {
+                for (int dim = 0; dim < NumDimensions; dim++) {
                     // output[itemID].Add(new Polynomial<TVar>(new Term<TVar>(smallestDemandUnit, solver.CreateVariable("demand_" + itemID + "_" + dim, type: GRB.INTEGER))));
                     output[itemID].Add(solver.CreateVariable("demand_" + itemID + "_" + dim, lb: 0, ub: this.Bins.MaxCapacity(dim)));
                 }
@@ -79,13 +76,10 @@ namespace MetaOptimize
             ISolver<TVar, TSolution> solver,
             IDictionary<int, List<double>> demandUB)
         {
-            for (int dim = 0; dim < this.NumDimensions; dim++)
-            {
-                foreach (var (itemID, perDemandUb) in demandUB)
-                {
+            for (int dim = 0; dim < this.NumDimensions; dim++) {
+                foreach (var (itemID, perDemandUb) in demandUB) {
                     var ub = perDemandUb[dim];
-                    if (ub < 0)
-                    {
+                    if (ub < 0) {
                         ub = double.PositiveInfinity;
                     }
                     ub = Math.Min(this.Bins.MaxCapacity(dim), ub);
@@ -101,11 +95,9 @@ namespace MetaOptimize
             ISolver<TVar, TSolution> solver,
             double origDemandUB)
         {
-            for (int dim = 0; dim < this.NumDimensions; dim++)
-            {
+            for (int dim = 0; dim < this.NumDimensions; dim++) {
                 var demandUB = origDemandUB;
-                if (demandUB < 0)
-                {
+                if (demandUB < 0) {
                     demandUB = double.PositiveInfinity;
                 }
                 demandUB = Math.Min(this.Bins.MaxCapacity(dim), demandUB);
@@ -124,8 +116,7 @@ namespace MetaOptimize
             int itemID,
             List<double> demand)
         {
-            for (int dim = 0; dim < this.NumDimensions; dim++)
-            {
+            for (int dim = 0; dim < this.NumDimensions; dim++) {
                 var poly = new Polynomial<TVar>();
                 poly.Add(new Term<TVar>(1, DemandVariables[itemID][dim]));
                 poly.Add(new Term<TVar>(-1 * demand[dim]));
@@ -137,12 +128,10 @@ namespace MetaOptimize
             ISolver<TVar, TSolution> solver,
             IDictionary<int, List<double>> constrainedDemands)
         {
-            if (constrainedDemands == null)
-            {
+            if (constrainedDemands == null) {
                 return;
             }
-            foreach (var (itemID, demand) in constrainedDemands)
-            {
+            foreach (var (itemID, demand) in constrainedDemands) {
                 AddSingleDemandEquality(solver, itemID, demand);
             }
         }
@@ -153,11 +142,9 @@ namespace MetaOptimize
             Polynomial<TVar> poly2)
         {
             var output = new Polynomial<TVar>();
-            foreach (var term1 in poly1.GetTerms())
-            {
+            foreach (var term1 in poly1.GetTerms()) {
                 Debug.Assert(term1.Exponent == 1);
-                foreach (var term2 in poly2.GetTerms())
-                {
+                foreach (var term2 in poly2.GetTerms()) {
                     Debug.Assert(term2.Exponent == 1);
                     // replace multiplication of binary variables with z = xy.
                     var multBinary = solver.CreateVariable("multi_", type: GRB.BINARY);
@@ -188,8 +175,7 @@ namespace MetaOptimize
             double variableUB)
         {
             var output = new Polynomial<TVar>();
-            foreach (var term1 in poly1.GetTerms())
-            {
+            foreach (var term1 in poly1.GetTerms()) {
                 var newVar = solver.CreateVariable("mult_bin_cont", type: GRB.CONTINUOUS, lb: 0);
                 output.Add(new Term<TVar>(term1.Coefficient, newVar));
                 // z <= Ux
@@ -497,12 +483,9 @@ namespace MetaOptimize
 
             // ensures that demand in both problems is the same and lower than demand upper bound constraint.
             Utils.logger("adding constraints for upper bound on demands.", verbose);
-            if (perDemandUB != null)
-            {
+            if (perDemandUB != null) {
                 EnsureDemandUB(solver, perDemandUB);
-            }
-            else
-            {
+            } else {
                 EnsureDemandUB(solver, demandUB);
             }
             Utils.logger("adding equality constraints for specified demands.", verbose);

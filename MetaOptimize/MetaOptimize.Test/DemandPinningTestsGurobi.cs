@@ -12,6 +12,7 @@ namespace MetaOptimize.Test
     /// uses Gurobi to test demand pinning.
     /// </summary>
     [TestClass]
+    [Ignore]
     public class DemandPinningTestsGurobi : DemandPinningTests<GRBVar, GRBModel>
     {
         /// <summary>

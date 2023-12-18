@@ -11,6 +11,7 @@ namespace MetaOptimize.Test
     /// Tests for the optimality gap.
     /// </summary>
     [TestClass]
+    [Ignore]
     public class OptimalityGapTestsGurobi : OptimalityGapTests<GRBVar, GRBModel>
     {
         /// <summary>

@@ -109,7 +109,8 @@ namespace MetaOptimize
             this.Threshold = threshold;
         }
 
-        private void InitializeVariables(Dictionary<(string, string), double> demandConstraints, int numProcesses, bool verbose) {
+        private void InitializeVariables(Dictionary<(string, string), double> demandConstraints, int numProcesses, bool verbose)
+        {
             this.variables = new HashSet<TVar>();
             this.Paths = new Dictionary<(string, string), string[][]>();
             // establish the demand variables.
@@ -124,27 +125,36 @@ namespace MetaOptimize
             this.sumPaths = new Dictionary<(string, string), Polynomial<TVar>>();
 
             this.link_to_cap_mapping = new Dictionary<(string, string), double>();
-            foreach (var pair in this.Topology.GetAllEdges()) {
+            foreach (var pair in this.Topology.GetAllEdges())
+            {
                 this.link_to_cap_mapping[(pair.Source, pair.Target)] = pair.Capacity;
             }
             this.totalDemandPinned = 0.0;
-            foreach (var (pair, demand) in this.DemandConstraints) {
-                if (!IsDemandValid(pair)) {
+            foreach (var (pair, demand) in this.DemandConstraints)
+            {
+                if (!IsDemandValid(pair))
+                {
                     continue;
                 }
-                if (demand <= Threshold + this._threshold_tolerance) {
+                if (demand <= Threshold + this._threshold_tolerance)
+                {
                     // Console.WriteLine(pair.Item1 + " " + pair.Item2 + " " + demand + " " + Threshold);
                     var shortestPaths = this.Topology.ShortestKPaths(1, pair.Item1, pair.Item2);
-                    if (shortestPaths.Count() <= 0) {
+                    if (shortestPaths.Count() <= 0)
+                    {
                         continue;
                     }
-                    for (int i = 0; i < shortestPaths[0].Count() - 1; i++) {
+                    for (int i = 0; i < shortestPaths[0].Count() - 1; i++)
+                    {
                         var edge = (shortestPaths[0][i], shortestPaths[0][i + 1]);
                         this.link_to_cap_mapping[edge] -= demand;
-                        if (this.link_to_cap_mapping[edge] < -1 * this._threshold_tolerance) {
+                        if (this.link_to_cap_mapping[edge] < -1 * this._threshold_tolerance)
+                        {
                             Console.WriteLine(edge.Item1 + " " + edge.Item2 + " " + this.link_to_cap_mapping[edge]);
                             throw new DemandPinningLinkNegativeException("negative link capacity", edge, this.Threshold);
-                        } else {
+                        }
+                        else
+                        {
                             this.link_to_cap_mapping[edge] = Math.Max(0, this.link_to_cap_mapping[edge]);
                         }
                     }
@@ -154,10 +164,11 @@ namespace MetaOptimize
                 }
             }
             Console.WriteLine("Total Demand pinned = " + this.totalDemandPinned);
-            this.Paths = this.Topology.AllPairsKShortestPathMultiProcessing(this.K, numProcesses: numProcesses, verbose: verbose);
+            this.Paths = this.Topology.MultiProcessAllPairsKShortestPath(this.K, numProcesses: numProcesses, verbose: verbose);
             foreach (var pair in this.Topology.GetNodePairs())
             {
-                if (!IsDemandValid(pair)) {
+                if (!IsDemandValid(pair))
+                {
                     continue;
                 }
                 // establish the flow variable.
@@ -175,11 +186,16 @@ namespace MetaOptimize
             }
         }
 
-        private bool IsDemandValid((string, string) pair) {
-            if (this.DemandConstraints.ContainsKey(pair)) {
-                if (this.DemandConstraints[pair] < 0) {
+        private bool IsDemandValid((string, string) pair)
+        {
+            if (this.DemandConstraints.ContainsKey(pair))
+            {
+                if (this.DemandConstraints[pair] < 0)
+                {
                     throw new System.Exception("demands should be non-negative.");
-                } else if (this.DemandConstraints[pair] == 0) {
+                }
+                else if (this.DemandConstraints[pair] == 0)
+                {
                     return false;
                 }
                 return true;
@@ -192,7 +208,7 @@ namespace MetaOptimize
         /// <returns>The constraints and maximization objective.</returns>
         public OptimizationEncoding<TVar, TSolution> Encoding(Topology topology, Dictionary<(string, string), Polynomial<TVar>> preDemandVariables = null,
             Dictionary<(string, string), double> demandEqualityConstraints = null, bool noAdditionalConstraints = false,
-            InnerEncodingMethodChoice innerEncoding = InnerEncodingMethodChoice.KKT,
+            InnerRewriteMethodChoice innerEncoding = InnerRewriteMethodChoice.KKT,
             PathType pathType = PathType.KSP, Dictionary<(string, string), string[][]> selectedPaths = null,
             int numProcesses = -1, bool verbose = false)
         {
@@ -212,7 +228,8 @@ namespace MetaOptimize
             var polynomial = new Polynomial<TVar>();
             foreach (var pair in this.Topology.GetNodePairs())
             {
-                if (!IsDemandValid(pair)) {
+                if (!IsDemandValid(pair))
+                {
                     continue;
                 }
                 polynomial.Add(new Term<TVar>(1, this.FlowVariables[pair]));
@@ -235,7 +252,8 @@ namespace MetaOptimize
             // Ensure that f_k^p geq 0.
             foreach (var (pair, paths) in this.Paths)
             {
-                if (!IsDemandValid(pair)) {
+                if (!IsDemandValid(pair))
+                {
                     continue;
                 }
                 foreach (var path in paths)
@@ -247,7 +265,8 @@ namespace MetaOptimize
             // Ensure that the flow f_k = sum_p f_k^p.
             foreach (var (pair, paths) in this.Paths)
             {
-                if (!IsDemandValid(pair)) {
+                if (!IsDemandValid(pair))
+                {
                     continue;
                 }
                 var poly = new Polynomial<TVar>(new Term<TVar>(0));
@@ -270,7 +289,8 @@ namespace MetaOptimize
 
             foreach (var (pair, paths) in this.Paths)
             {
-                if (!IsDemandValid(pair)) {
+                if (!IsDemandValid(pair))
+                {
                     continue;
                 }
                 foreach (var path in paths)
@@ -281,7 +301,8 @@ namespace MetaOptimize
                         var target = path[i + 1];
                         var edge = this.Topology.GetEdge(source, target);
                         var term = new Term<TVar>(1, this.FlowPathVariables[path]);
-                        if (!sumPerEdge.ContainsKey(edge)) {
+                        if (!sumPerEdge.ContainsKey(edge))
+                        {
                             sumPerEdge[edge] = new Polynomial<TVar>(new Term<TVar>(0));
                         }
                         sumPerEdge[edge].Add(term);

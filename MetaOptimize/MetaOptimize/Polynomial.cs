@@ -25,17 +25,22 @@ namespace MetaOptimize
         /// </summary>
         private Dictionary<TVar, double> variableToDerivativeMapping = new Dictionary<TVar, double>();
 
-        private void addNewTermsToDerivativeDict(List<Term<TVar>> polynomialTerms) {
-            foreach (var term in polynomialTerms) {
+        private void addNewTermsToDerivativeDict(List<Term<TVar>> polynomialTerms)
+        {
+            foreach (var term in polynomialTerms)
+            {
                 addNewTermsToDerivativeDict(term);
             }
         }
 
-        private void addNewTermsToDerivativeDict(Term<TVar> term) {
-            if (term.isConstant()) {
+        private void addNewTermsToDerivativeDict(Term<TVar> term)
+        {
+            if (term.isConstant())
+            {
                 return;
             }
-            if (!variableToDerivativeMapping.ContainsKey(term.Variable.Value)) {
+            if (!variableToDerivativeMapping.ContainsKey(term.Variable.Value))
+            {
                 variableToDerivativeMapping[term.Variable.Value] = 0;
             }
             Debug.Assert(term.Exponent <= 1);
@@ -92,9 +97,12 @@ namespace MetaOptimize
         /// <returns>The result as a polynomial.</returns>
         public double Derivative(TVar variable)
         {
-            if (this.variableToDerivativeMapping.ContainsKey(variable)) {
+            if (this.variableToDerivativeMapping.ContainsKey(variable))
+            {
                 return this.variableToDerivativeMapping[variable];
-            } else {
+            }
+            else
+            {
                 return 0;
             }
             // return this.Terms.Select(x => x.Derivative(variable)).Aggregate((a, b) => a + b);
@@ -116,7 +124,8 @@ namespace MetaOptimize
         /// <param name="newPolynomial">a new Polynomial.</param>
         public void Add(Polynomial<TVar> newPolynomial)
         {
-            foreach (var newTerm in newPolynomial.Terms) {
+            foreach (var newTerm in newPolynomial.Terms)
+            {
                 this.Add(newTerm);
                 addNewTermsToDerivativeDict(newTerm);
             }
@@ -177,11 +186,16 @@ namespace MetaOptimize
         /// <summary>
         /// returns the constant of the polynomial.
         /// </summary>
+        /// TODO: maybe we should change the name of this function? since
+        /// it is based on the assumption that your going to always have the constants on the right hand side
+        /// of the constraints, but you dont have to? maybe you should call it getConstants? or something?
         public Polynomial<TVar> getRHS(ISet<TVar> constVariables)
         {
             Polynomial<TVar> rhs = new Polynomial<TVar>();
-            foreach (var term in this.Terms) {
-                if (term.isInSetOrConst(constVariables)) {
+            foreach (var term in this.Terms)
+            {
+                if (term.isInSetOrConst(constVariables))
+                {
                     rhs.Add(term);
                 }
             }
@@ -193,8 +207,10 @@ namespace MetaOptimize
         public bool isSingleVariable()
         {
             ISet<Option<TVar>> vars = new HashSet<Option<TVar>>();
-            foreach (var term in this.Terms) {
-                if (term.isConstant()) {
+            foreach (var term in this.Terms)
+            {
+                if (term.isConstant())
+                {
                     continue;
                 }
                 vars.Add(term.Variable);
@@ -205,7 +221,8 @@ namespace MetaOptimize
         /// <summary>
         /// Returns Readonly version of terms.
         /// </summary>
-        public ReadOnlyCollection<Term<TVar>> GetTerms() {
+        public ReadOnlyCollection<Term<TVar>> GetTerms()
+        {
             return Terms.AsReadOnly();
         }
         // /// <summary>
@@ -229,10 +246,13 @@ namespace MetaOptimize
         /// <summary>
         /// get all the terms with coefficient less than or equal to a threshold.
         /// </summary>
-        public Polynomial<TVar> GetTermsWithCoeffLeq(double threshold) {
+        public Polynomial<TVar> GetTermsWithCoeffLeq(double threshold)
+        {
             var newTerm = new Polynomial<TVar>();
-            foreach (var term in this.Terms) {
-                if (term.Coefficient <= threshold + 0.00001) {
+            foreach (var term in this.Terms)
+            {
+                if (term.Coefficient <= threshold + 0.00001)
+                {
                     newTerm.Add(term.Copy());
                 }
             }
@@ -242,10 +262,13 @@ namespace MetaOptimize
         /// <summary>
         /// get all the terms with coefficient less than or equal to a threshold.
         /// </summary>
-        public Polynomial<TVar> GetTermsWithCoeffGreater(double threshold) {
+        public Polynomial<TVar> GetTermsWithCoeffGreater(double threshold)
+        {
             var newTerm = new Polynomial<TVar>();
-            foreach (var term in this.Terms) {
-                if (term.Coefficient > threshold + 0.00001) {
+            foreach (var term in this.Terms)
+            {
+                if (term.Coefficient > threshold + 0.00001)
+                {
                     newTerm.Add(term.Copy());
                 }
             }

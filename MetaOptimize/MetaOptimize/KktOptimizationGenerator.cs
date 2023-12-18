@@ -10,8 +10,9 @@ namespace MetaOptimize
 
     /// <summary>
     /// An optimization encoder that automatically derives the KKT conditions.
+    /// TODO: change the name of the file to match the name of the class.
     /// </summary>
-    public class KktOptimizationGenerator<TVar, TSolution>
+    public class KKTRewriteGenerator<TVar, TSolution>
     {
         /// <summary>
         /// The solver being used.
@@ -31,11 +32,13 @@ namespace MetaOptimize
         /// <summary>
         /// The constructed lambda variables for the KKT conditions.
         /// </summary>
+        /// TODO: describe what lambda variables are created for.
         private IList<TVar> lambdaVariables;
 
         /// <summary>
         /// The constructed nu variables for the KKT conditions.
         /// </summary>
+        /// TODO: describe what nu variables are created for.
         private IList<TVar> nuVariables;
 
         /// <summary>
@@ -49,12 +52,14 @@ namespace MetaOptimize
         public ISet<TVar> constantVariables;
 
         /// <summary>
-        /// Creates a new instance of the <see cref="KktOptimizationGenerator{TVar, TSolution}"/> class.
+        /// Creates a new instance of the <see cref="KKTRewriteGenerator{TVar, TSolution}"/> class.
+        /// note that we currently only support linear objectives and constraints when we do kkt rewrites, but the concept is more
+        /// general and in theory we can support other types as well.
         /// </summary>
         /// <param name="variables">The encoding variables.</param>
         /// <param name="constVariables">The variables to avoid the deriviatve for.</param>
         /// <param name="solver">The solver.</param>
-        public KktOptimizationGenerator(ISolver<TVar, TSolution>  solver, ISet<TVar> variables, ISet<TVar> constVariables)
+        public KKTRewriteGenerator(ISolver<TVar, TSolution> solver, ISet<TVar> variables, ISet<TVar> constVariables)
         {
             this.Variables = variables;
             this.solver = solver;
@@ -110,6 +115,8 @@ namespace MetaOptimize
 
         /// <summary>
         /// Get the KKT constraints for maximal solution.
+        /// The function internally calls add minimization constraints but
+        /// first negates the objective function to turn it into a minimization problem.
         /// </summary>
         /// <returns>The result as a Zen boolean expression.</returns>
         public void AddMaximizationConstraints(Polynomial<TVar> objective, bool noKKT = false, bool verbose = false)
@@ -121,6 +128,8 @@ namespace MetaOptimize
         /// Get the KKT constraints for minimal solution.
         /// </summary>
         /// <returns>The result as a Zen boolean expression.</returns>
+        /// TODO: describe the inputs + describe the output as well, i dont think this function returns anything... so
+        /// The description is currently incorrect.
         public virtual void AddMinimizationConstraints(Polynomial<TVar> objective, bool noKKT, bool verbose = false)
         {
             Utils.logger("using KKT encoding", verbose, Utils.LogState.WARNING);
@@ -140,10 +149,13 @@ namespace MetaOptimize
                 for (int i = 0; i < this.leqZeroConstraints.Count; i++)
                 {
                     var leqConstraint = this.leqZeroConstraints[i];
+                    // For the inner problem, the variables in the outer problem are constants.
+                    // This means that they should not be considered when taking the derivative (their derivative is 0).
                     if (leqConstraint.isallInSetOrConst(this.constantVariables))
                     {
                         continue;
                     }
+
                     var lambda = this.solver.CreateVariable("lambda_" + i);
                     haveLambda[i] = lambdaVariables.Count;
                     this.lambdaVariables.Add(lambda);

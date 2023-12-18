@@ -14,6 +14,7 @@ namespace MetaOptimize.Test
     /// testing demandPinning.
     /// </summary>
     [TestClass]
+    [Ignore]
     public class DemandPinningTestZen : DemandPinningTests<Zen<Real>, ZenSolution>
     {
         /// <summary>

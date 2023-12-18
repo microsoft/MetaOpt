@@ -37,7 +37,8 @@ namespace MetaOptimize
         public ModifiedDemandPinningQuantizedEncoder(ISolver<TVar, TSolution> solver, int k, int MaxShortestPathLen, double threshold = 0,
                 double scaleFactor = 1.0) : base(solver, k, threshold, scaleFactor)
         {
-            if (MaxShortestPathLen < 1) {
+            if (MaxShortestPathLen < 1)
+            {
                 throw new Exception("The max shortest path len should be >= 1 but received " + MaxShortestPathLen);
             }
             this.MaxShortestPathLen = MaxShortestPathLen;
@@ -46,12 +47,14 @@ namespace MetaOptimize
         /// <summary>
         /// Create auxiliary variables to model max() in DP formulation.
         /// </summary>
-        protected override void CreateAuxVariable() {
+        protected override void CreateAuxVariable()
+        {
             this.SPLowerBound = new Dictionary<(string, string), Polynomial<TVar>>();
             this.NSPUpperBound = new Dictionary<(string, string), Polynomial<TVar>>();
             foreach (var pair in this.Topology.GetNodePairs())
             {
-                if (!IsDemandValid(pair)) {
+                if (!IsDemandValid(pair))
+                {
                     continue;
                 }
                 this.SPLowerBound[pair] = this.DemandVariables[pair].GetTermsWithCoeffLeq(this.Threshold);
@@ -64,28 +67,38 @@ namespace MetaOptimize
         /// </summary>
         protected override void VerifyOutput(TSolution solution, Dictionary<(string, string), double> demands, Dictionary<(string, string), double> flows)
         {
-            foreach (var (pair, demand) in demands) {
-                if (!flows.ContainsKey(pair)) {
+            foreach (var (pair, demand) in demands)
+            {
+                if (!flows.ContainsKey(pair))
+                {
                     continue;
                 }
                 var shortestPaths = this.Topology.ShortestKPaths(1, pair.Item1, pair.Item2);
-                if (shortestPaths[0].Count() <= this.MaxShortestPathLen) {
-                    if (demand <= this.Threshold && Math.Abs(flows[pair] - demand) > 0.001) {
+                if (shortestPaths[0].Count() <= this.MaxShortestPathLen)
+                {
+                    if (demand <= this.Threshold && Math.Abs(flows[pair] - demand) > 0.001)
+                    {
                         Console.WriteLine($"{pair.Item1},{pair.Item2},{demand},{flows[pair]}");
                         throw new Exception("does not match");
                     }
                 }
                 bool found = false;
-                if (demand <= 0.001) {
+                if (demand <= 0.001)
+                {
                     found = true;
-                } else {
-                    foreach (var demandlvl in this.DemandVariables[pair].GetTerms()) {
-                        if (Math.Abs(demand - demandlvl.Coefficient) <= 0.001) {
+                }
+                else
+                {
+                    foreach (var demandlvl in this.DemandVariables[pair].GetTerms())
+                    {
+                        if (Math.Abs(demand - demandlvl.Coefficient) <= 0.001)
+                        {
                             found = true;
                         }
                     }
                 }
-                if (!found) {
+                if (!found)
+                {
                     Console.WriteLine($"{pair.Item1},{pair.Item2},{demand},{flows[pair]}");
                     throw new Exception("does not match");
                 }
@@ -99,14 +112,18 @@ namespace MetaOptimize
         {
             Utils.logger("Generating Modified Quantized DP constraints.", verbose);
             // generating the max constraints that achieve pinning.
-            foreach (var (pair, polyTerm) in sumNonShortest) {
+            foreach (var (pair, polyTerm) in sumNonShortestDict)
+            {
                 var shortestPaths = this.Topology.ShortestKPaths(1, pair.Item1, pair.Item2);
-                if (shortestPaths[0].Count() <= this.MaxShortestPathLen) {
+                if (shortestPaths[0].Count() <= this.MaxShortestPathLen)
+                {
                     // shortest path flows \geq quantized demand with coefficient less than equal threshold
                     var shortestPathUB = this.SPLowerBound[pair].Copy();
                     shortestPathUB.Add(new Term<TVar>(-1, shortestFlowVariables[pair]));
                     this.innerProblemEncoder.AddLeqZeroConstraint(shortestPathUB);
-                } else {
+                }
+                else
+                {
                     // for scalability reasons, zero out the variables <= threshold
                     var poly = this.DemandVariables[pair].GetTermsWithCoeffLeq(this.Threshold);
                     this.Solver.AddEqZeroConstraint(poly);

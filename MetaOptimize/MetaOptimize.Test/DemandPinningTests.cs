@@ -12,6 +12,7 @@
     {
         /// <summary>
         /// Function to create a new solver.
+        /// This uses a delegate method so that we can plug and play different solvers.
         /// </summary>
         internal Func<ISolver<TVar, TSol>> CreateSolver;
 
@@ -37,9 +38,9 @@
 
             // create the optimal encoder.
             var solver = CreateSolver();
-            var optimalEncoder = new TEMaxFlowOptimalEncoder<TVar, TSol>(solver, k: k);
-            var heuristicEncoder = new DemandPinningEncoder<TVar, TSol>(solver, k: k, threshold: threshold);
-            var adversarialInputGenerator = new TEAdversarialInputGenerator<TVar, TSol>(topology, k: k);
+            var optimalEncoder = new TEMaxFlowOptimalEncoder<TVar, TSol>(solver, maxNumPaths: k);
+            var heuristicEncoder = new DemandPinningEncoder<TVar, TSol>(solver, maxNumPaths: k, threshold: threshold);
+            var adversarialInputGenerator = new TEAdversarialInputGenerator<TVar, TSol>(topology, maxNumPaths: k);
             var (optimalSolution, demandPinningSolution) = adversarialInputGenerator.MaximizeOptimalityGap(optimalEncoder, heuristicEncoder);
             Console.WriteLine("Optimal:");
             Console.WriteLine(Newtonsoft.Json.JsonConvert.SerializeObject(optimalSolution, Newtonsoft.Json.Formatting.Indented));

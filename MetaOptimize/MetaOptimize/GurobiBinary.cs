@@ -44,9 +44,9 @@ namespace MetaOptimize
         /// <param name="polynomial2"></param>
         public override void AddOrEqZeroConstraint(Polynomial<GRBVar> polynomial1, Polynomial<GRBVar> polynomial2)
         {
-            GRBLinExpr poly1 = this.Convert(this.scale(polynomial1));
-            GRBLinExpr poly2 = this.Convert(this.scale(polynomial2));
-            GRBLinExpr poly2Neg = this.Convert(polynomial2.Negate());
+            GRBLinExpr poly1 = this.fromPolyToLinExpr(this.scale(polynomial1));
+            GRBLinExpr poly2 = this.fromPolyToLinExpr(this.scale(polynomial2));
+            GRBLinExpr poly2Neg = this.fromPolyToLinExpr(polynomial2.Negate());
 
             var alpha = this._model.AddVar(0.0, 1.0, 0.0, GRB.BINARY, "binary_" + this._auxiliaryVars.Count);
             this._auxiliaryVars.Add($"binary_{this._auxiliaryVars.Count}", alpha);
@@ -71,8 +71,9 @@ namespace MetaOptimize
         {
             Console.WriteLine("in maximize call");
             GRBLinExpr objective = 0;
-            foreach (var auxVar in this.auxPolyList) {
-                objective += this.Convert(auxVar) * (1 / this._bigM);
+            foreach (var auxVar in this.auxPolyList)
+            {
+                objective += this.fromPolyToLinExpr(auxVar) * (1 / this._bigM);
             }
             this._model.SetObjective(objective + this._objective, GRB.MAXIMIZE);
             // this._model.Parameters.DualReductions = 0;

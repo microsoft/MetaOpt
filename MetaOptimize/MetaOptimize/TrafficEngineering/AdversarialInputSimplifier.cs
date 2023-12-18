@@ -13,7 +13,7 @@ namespace MetaOptimize
     /// <summary>
     /// Meta-optimization utility functions for simplifying optimality gaps.
     /// </summary>
-    public class AdversarialInputSimplifier<TVar, TSolution>
+    public class TEAdversarialInputSimplifier<TVar, TSolution>
     {
         /// <summary>
         /// The topology for the network.
@@ -23,7 +23,7 @@ namespace MetaOptimize
         /// <summary>
         /// The maximum number of paths to use between any two nodes.
         /// </summary>
-        protected int K { get; set; }
+        protected int maxNumPaths { get; set; }
 
         /// <summary>
         /// The demand variables.
@@ -33,10 +33,12 @@ namespace MetaOptimize
         /// <summary>
         /// Constructor.
         /// </summary>
-        public AdversarialInputSimplifier(Topology topology, int k, Dictionary<(string, string), Polynomial<TVar>> DemandVariables)
+        /// TODO: is this class general or does it only apply to TE? Judging by K TE? if so you should clearly
+        /// specify that in the class name and in the constructor.
+        public TEAdversarialInputSimplifier(Topology topology, int maxNumPath, Dictionary<(string, string), Polynomial<TVar>> DemandVariables)
         {
             this.Topology = topology;
-            this.K = k;
+            this.maxNumPaths = maxNumPath;
             this.DemandVariables = DemandVariables;
         }
 
@@ -44,6 +46,7 @@ namespace MetaOptimize
         /// find minimum number of non-zero demands that achieves the desiredGap
         /// using Gurobi Direct Optimzation form.
         /// </summary>
+        /// TODO: can you write this in a more general way so that others outside of TE can use it too?
         public Polynomial<TVar> AddDirectMinConstraintsAndObjectives(
             ISolver<TVar, TSolution> solver,
             Polynomial<TVar> gapObjective,
@@ -56,10 +59,11 @@ namespace MetaOptimize
 
             // adding f_i <= Mx_i where x_i is binary
             var minObj = new Polynomial<TVar>();
-            foreach (var pair in this.Topology.GetNodePairs()) {
+            foreach (var pair in this.Topology.GetNodePairs())
+            {
                 var auxDemandMinVar = solver.CreateVariable("aux_mindemand_" + pair.Item1 + "_" + pair.Item2, type: GRB.BINARY);
                 var poly = this.DemandVariables[pair].Copy();
-                poly.Add(new Term<TVar>(-1 * this.Topology.MaxCapacity() * this.K, auxDemandMinVar));
+                poly.Add(new Term<TVar>(-1 * this.Topology.MaxCapacity() * this.maxNumPaths, auxDemandMinVar));
                 solver.AddLeqZeroConstraint(poly);
                 minObj.Add(new Term<TVar>(1, auxDemandMinVar));
             }

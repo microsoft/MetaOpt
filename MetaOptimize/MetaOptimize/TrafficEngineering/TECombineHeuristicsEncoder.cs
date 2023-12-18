@@ -60,7 +60,8 @@ namespace MetaOptimize
         /// </summary>
         public TECombineHeuristicsEncoder(ISolver<TVar, TSolution> solver, IList<IEncoder<TVar, TSolution>> heuristicEncoderList, int k)
         {
-            foreach (var heuristicEncoder in heuristicEncoderList) {
+            foreach (var heuristicEncoder in heuristicEncoderList)
+            {
                 if (solver != heuristicEncoder.Solver)
                 {
                     throw new Exception("Solver mismatch between combiner and heuristic encoders.");
@@ -71,10 +72,12 @@ namespace MetaOptimize
             this.K = k;
         }
 
-        private void InitializeVariables(Dictionary<(string, string), Polynomial<TVar>> preDemandVariables, Dictionary<(string, string), double> demandEnforcements) {
+        private void InitializeVariables(Dictionary<(string, string), Polynomial<TVar>> preDemandVariables, Dictionary<(string, string), double> demandEnforcements)
+        {
             // establish the demand variables.
             this.DemandVariables = preDemandVariables;
-            if (this.DemandVariables == null) {
+            if (this.DemandVariables == null)
+            {
                 this.DemandVariables = new Dictionary<(string, string), Polynomial<TVar>>();
                 foreach (var pair in this.Topology.GetNodePairs())
                 {
@@ -90,7 +93,7 @@ namespace MetaOptimize
         /// <returns>The constraints and maximization objective.</returns>
         public OptimizationEncoding<TVar, TSolution> Encoding(Topology topology, Dictionary<(string, string), Polynomial<TVar>> preDemandVariables = null,
             Dictionary<(string, string), double> demandEqualityConstraints = null, bool noAdditionalConstraints = false,
-            InnerEncodingMethodChoice innerEncoding = InnerEncodingMethodChoice.KKT,
+            InnerRewriteMethodChoice innerEncoding = InnerRewriteMethodChoice.KKT,
             PathType pathType = PathType.KSP, Dictionary<(string, string), string[][]> selectedPaths = null,
             int numProcesses = -1, bool verbose = false)
         {
@@ -162,10 +165,12 @@ namespace MetaOptimize
         public OptimizationSolution GetSolution(TSolution solution)
         {
             IEncoder<TVar, TSolution> chosenHeuristic = null;
-            foreach (var (heuristicEncoder, heurisicEncoding) in this.HeuristicEncodingDict) {
+            foreach (var (heuristicEncoder, heurisicEncoding) in this.HeuristicEncodingDict)
+            {
                 var chosen = this.Solver.GetVariable(solution, this.WhichHeuristicBinary[heurisicEncoding]);
                 Console.WriteLine(chosen);
-                if (chosen == 1) {
+                if (chosen == 1)
+                {
                     chosenHeuristic = heuristicEncoder;
                 }
             }

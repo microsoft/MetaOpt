@@ -35,11 +35,13 @@ namespace MetaOptimize
         /// <summary>
         /// Create auxiliary variables to model max() in DP formulation.
         /// </summary>
-        protected override void CreateAuxVariable() {
+        protected override void CreateAuxVariable()
+        {
             this.SPLowerBound = new Dictionary<(string, string), Polynomial<TVar>>();
             foreach (var pair in this.Topology.GetNodePairs())
             {
-                if (!IsDemandValid(pair)) {
+                if (!IsDemandValid(pair))
+                {
                     continue;
                 }
                 this.SPLowerBound[pair] = this.DemandVariables[pair].GetTermsWithCoeffLeq(this.Threshold);
@@ -51,26 +53,35 @@ namespace MetaOptimize
         /// </summary>
         protected override void VerifyOutput(TSolution solution, Dictionary<(string, string), double> demands, Dictionary<(string, string), double> flows)
         {
-            foreach (var (pair, demand) in demands) {
-                if (!flows.ContainsKey(pair)) {
+            foreach (var (pair, demand) in demands)
+            {
+                if (!flows.ContainsKey(pair))
+                {
                     continue;
                 }
-                if (demand <= this.Threshold && Math.Abs(flows[pair] - demand) > 0.001) {
+                if (demand <= this.Threshold && Math.Abs(flows[pair] - demand) > 0.001)
+                {
                     Console.WriteLine($"{pair.Item1},{pair.Item2},{demand},{flows[pair]}");
                     throw new Exception("does not match");
                 }
                 bool found = false;
-                if (demand <= 0.001) {
+                if (demand <= 0.001)
+                {
                     found = true;
-                } else {
-                    foreach (var demandlvl in this.DemandVariables[pair].GetTerms()) {
+                }
+                else
+                {
+                    foreach (var demandlvl in this.DemandVariables[pair].GetTerms())
+                    {
                         // Console.WriteLine("_" + demandlvl.Coefficient + " " + demand);
-                        if (Math.Abs(demand - demandlvl.Coefficient) <= 0.001) {
+                        if (Math.Abs(demand - demandlvl.Coefficient) <= 0.001)
+                        {
                             found = true;
                         }
                     }
                 }
-                if (!found) {
+                if (!found)
+                {
                     Console.WriteLine($"{pair.Item1},{pair.Item2},{demand},{flows[pair]}");
                     throw new Exception("does not match");
                 }
@@ -84,7 +95,8 @@ namespace MetaOptimize
         {
             // generating the max constraints that achieve pinning.
             Utils.logger("Generating Quantized DP constraints.", verbose);
-            foreach (var (pair, polyTerm) in sumNonShortest) {
+            foreach (var (pair, polyTerm) in sumNonShortestDict)
+            {
                 // shortest path flows \geq quantized demand with coefficient less than equal threshold
                 var shortestPathUB = this.SPLowerBound[pair].Copy();
                 shortestPathUB.Add(new Term<TVar>(-1, shortestFlowVariables[pair]));

@@ -1,4 +1,4 @@
-// <copyright file="FFDItemCentricEncoder.cs" company="Microsoft">
+// <copyright file="FFDItemCentricEncoderNew.cs" company="Microsoft">
 // Copyright (c) Microsoft. All rights reserved.
 // </copyright>
 
@@ -12,9 +12,9 @@ namespace MetaOptimize
     /// <summary>
     /// A class for the VBP optimal encoding.
     /// </summary>
-    public class FFDItemCentricEncoder<TVar, TSolution> : IEncoder<TVar, TSolution>
+    public class FFDItemCentricEncoderNew<TVar, TSolution> : IEncoder<TVar, TSolution>
     {
-        private double bigM = Math.Pow(10, 3);
+        private double bigM = Math.Pow(10, 1);
         private double Epsilon = Math.Pow(10, -6);
 
         /// <summary>
@@ -83,9 +83,9 @@ namespace MetaOptimize
         public TVar TotalNumBinsUsedVariable { get; set; }
 
         /// <summary>
-        /// Create a new instance of the <see cref="FFDItemCentricEncoder{TVar, TSolution}"/> class.
+        /// Create a new instance of the <see cref="FFDItemCentricEncoderNew{TVar, TSolution}"/> class.
         /// </summary>
-        public FFDItemCentricEncoder(ISolver<TVar, TSolution> solver, int NumItems, int NumDimensions)
+        public FFDItemCentricEncoderNew(ISolver<TVar, TSolution> solver, int NumItems, int NumDimensions)
         {
             this.Solver = solver;
             this.NumDimensions = NumDimensions;

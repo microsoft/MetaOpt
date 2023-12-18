@@ -12,7 +12,7 @@ namespace MetaOptimize
     /// <summary>
     /// A class for the VBP optimal encoding.
     /// </summary>
-    public class VBPOptimalEncoder<TVar, TSolution> : IEncoder<TVar, TSolution>
+    public class VBPOptimalEncoderNew<TVar, TSolution> : IEncoder<TVar, TSolution>
     {
         /// <summary>
         /// The solver being user.
@@ -75,9 +75,9 @@ namespace MetaOptimize
         private bool BreakSymmetry;
 
         /// <summary>
-        /// Create a new instance of the <see cref="VBPOptimalEncoder{TVar, TSolution}"/> class.
+        /// Create a new instance of the <see cref="VBPOptimalEncoderNew{TVar, TSolution}"/> class.
         /// </summary>
-        public VBPOptimalEncoder(ISolver<TVar, TSolution> solver, int NumItems, int NumDimensions, bool BreakSymmetry = false)
+        public VBPOptimalEncoderNew(ISolver<TVar, TSolution> solver, int NumItems, int NumDimensions, bool BreakSymmetry = false)
         {
             this.Solver = solver;
             this.NumDimensions = NumDimensions;
@@ -106,7 +106,7 @@ namespace MetaOptimize
             return maxBinID;
         }
 
-        private void InitializeVariables(Dictionary<int, List<TVar>> preInputVariables = null,
+        private void InitializeVariables(Dictionary<int, List<TVar>> preDemandVariables = null,
             Dictionary<int, List<double>> demandEqualityConstraints = null,
             Dictionary<int, int> demandPlacementEqualityConstraints = null)
         {
@@ -114,7 +114,7 @@ namespace MetaOptimize
             this.DemandPlacementConstraints = demandPlacementEqualityConstraints ?? new Dictionary<int, int>();
             this.DemandVariables = new Dictionary<int, List<TVar>>();
 
-            if (preInputVariables == null) {
+            if (preDemandVariables == null) {
                 for (int id = 0; id < this.NumItems; id++) {
                     if (!IsDemandValid(id)) {
                         continue;
@@ -126,8 +126,8 @@ namespace MetaOptimize
                     }
                 }
             } else {
-                Debug.Assert(preInputVariables.Count == this.NumItems);
-                foreach (var (id, variable) in preInputVariables) {
+                Debug.Assert(preDemandVariables.Count == this.NumItems);
+                foreach (var (id, variable) in preDemandVariables) {
                     if (!IsDemandValid(id)) {
                         continue;
                     }

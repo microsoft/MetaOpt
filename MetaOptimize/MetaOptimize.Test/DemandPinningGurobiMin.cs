@@ -1,18 +1,18 @@
-// <copyright file="PopEncodingTestsGurobi.cs" company="Microsoft">
-// Copyright (c) Microsoft. All rights reserved.
-// </copyright>
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 
 namespace MetaOptimize.Test
 {
     using Gurobi;
     using Microsoft.VisualStudio.TestTools.UnitTesting;
-
     /// <summary>
-    /// Tests for the pop encoder.
+    /// uses Gurobi to test demand pinning.
     /// </summary>
     [TestClass]
-    [Ignore]
-    public class PopEncodingTestsGurobi : PopEncodingTests<GRBVar, GRBModel>
+    public class DemandPinningGurobiMin : DemandPinningTests<GRBVar, GRBModel>
     {
         /// <summary>
         /// Initialize the test class.
@@ -20,7 +20,7 @@ namespace MetaOptimize.Test
         [TestInitialize]
         public void Initialize()
         {
-            this.CreateSolver = () => new SolverGurobi();
+            this.CreateSolver = () => new GurobiMin();
         }
     }
 }

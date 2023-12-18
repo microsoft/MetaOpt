@@ -28,7 +28,7 @@ namespace MetaOptimize
         /// <summary>
         /// The maximum number of paths to use between any two nodes.
         /// </summary>
-        public int K { get; set; }
+        public int maxNumPaths { get; set; }
 
         /// <summary>
         /// The threshold for the demand pinning problem.
@@ -74,6 +74,8 @@ namespace MetaOptimize
         private double capacityTolerance = Math.Pow(10, -4);
         /// <summary>
         /// scale factor.
+        /// TODO: you are not using the scale factor when solving opt and this was introducing a bug
+        /// in the test cases.
         /// </summary>
         protected double _scale = Math.Pow(10, 0);
 
@@ -95,7 +97,7 @@ namespace MetaOptimize
         /// <summary>
         /// Sum non shortest path flows.
         /// </summary>
-        public Dictionary<(string, string), Polynomial<TVar>> sumNonShortest { get; set; }
+        public Dictionary<(string, string), Polynomial<TVar>> sumNonShortestDict { get; set; }
 
         /// <summary>
         /// Shortest path flow.
@@ -109,34 +111,33 @@ namespace MetaOptimize
         /// <summary>
         /// The kkt encoder used to construct the encoding.
         /// </summary>
-        protected KktOptimizationGenerator<TVar, TSolution> innerProblemEncoder;
+        protected KKTRewriteGenerator<TVar, TSolution> innerProblemEncoder;
 
         /// <summary>
         /// Create a new instance of the <see cref="DemandPinningEncoder{TVar, TSolution}"/> class.
         /// </summary>
         /// <param name="solver">The solver.</param>
-        /// <param name="k">The max number of paths between nodes.</param>
+        /// <param name="maxNumPaths">The max number of paths between nodes.</param>
         /// <param name="threshold"> The threshold to use for demand pinning.</param>
         /// <param name="scaleFactor"> The scale factor to show the input is downscaled.</param>
-        public DemandPinningEncoder(ISolver<TVar, TSolution> solver, int k, double threshold = 0, double scaleFactor = 1.0)
+        public DemandPinningEncoder(ISolver<TVar, TSolution> solver, int maxNumPaths, double threshold = 0, double scaleFactor = 1.0)
         {
             this.Solver = solver;
-            this.K = k;
+            this.maxNumPaths = maxNumPaths;
             this.Threshold = threshold;
-            // this._scale = scaleFactor;
             this._bigM *= scaleFactor;
-            // Console.WriteLine(this._bigM);
-            // Console.WriteLine(this.Threshold);
         }
 
         /// <summary>
         /// Create auxiliary variables to model max() in DP formulation.
         /// </summary>
-        protected virtual void CreateAuxVariable() {
+        protected virtual void CreateAuxVariable()
+        {
             this.MaxAuxVariables = new Dictionary<(string, string), TVar>();
             foreach (var pair in this.Topology.GetNodePairs())
             {
-                if (!IsDemandValid(pair)) {
+                if (!IsDemandValid(pair))
+                {
                     continue;
                 }
 
@@ -145,8 +146,10 @@ namespace MetaOptimize
             }
         }
 
+        // TODO: needs a comment that describes how this function works.
         private void InitializeVariables(Dictionary<(string, string), Polynomial<TVar>> preDemandVariables, Dictionary<(string, string), double> demandConstraints,
-                InnerEncodingMethodChoice innerEncoding = InnerEncodingMethodChoice.KKT, int numProcesses = -1, bool verbose = false) {
+                InnerRewriteMethodChoice innerEncoding = InnerRewriteMethodChoice.KKT, int numProcesses = -1, bool verbose = false)
+        {
             this.variables = new HashSet<TVar>();
             this.Paths = new Dictionary<(string, string), string[][]>();
             // establish the demand variables.
@@ -154,7 +157,8 @@ namespace MetaOptimize
             this.DemandVariables = preDemandVariables;
             var demandVariables = new HashSet<TVar>();
 
-            if (this.DemandVariables == null) {
+            if (this.DemandVariables == null)
+            {
                 this.DemandVariables = new Dictionary<(string, string), Polynomial<TVar>>();
                 foreach (var pair in this.Topology.GetNodePairs())
                 {
@@ -163,9 +167,13 @@ namespace MetaOptimize
                     this.variables.Add(variable);
                     demandVariables.Add(variable);
                 }
-            } else {
-                foreach (var (pair, variable) in this.DemandVariables) {
-                    foreach (var term in variable.GetTerms()) {
+            }
+            else
+            {
+                foreach (var (pair, variable) in this.DemandVariables)
+                {
+                    foreach (var term in variable.GetTerms())
+                    {
                         this.variables.Add(term.Variable.Value);
                         demandVariables.Add(term.Variable.Value);
                     }
@@ -176,32 +184,37 @@ namespace MetaOptimize
             this.TotalDemandMetVariable = this.Solver.CreateVariable("total_demand_met");
             this.variables.Add(this.TotalDemandMetVariable);
 
+            // You need a better naming system for flow variables and flow path variables.
             this.FlowVariables = new Dictionary<(string, string), TVar>();
             this.FlowPathVariables = new Dictionary<string[], TVar>(new PathComparer());
-            this.sumNonShortest = new Dictionary<(string, string), Polynomial<TVar>>();
+            this.sumNonShortestDict = new Dictionary<(string, string), Polynomial<TVar>>();
             this.shortestFlowVariables = new Dictionary<(string, string), TVar>();
 
-            this.Paths = this.Topology.AllPairsKShortestPathMultiProcessing(this.K, numProcesses, verbose);
+            this.Paths = this.Topology.MultiProcessAllPairsKShortestPath(this.maxNumPaths, numProcesses, verbose);
             foreach (var pair in this.Topology.GetNodePairs())
             {
-                if (!IsDemandValid(pair)) {
+                if (!IsDemandValid(pair))
+                {
                     continue;
                 }
                 // establish the flow variable.
                 this.FlowVariables[pair] = this.Solver.CreateVariable("flow_" + pair.Item1 + "_" + pair.Item2);
                 this.variables.Add(this.FlowVariables[pair]);
 
-                this.sumNonShortest[pair] = new Polynomial<TVar>(new Term<TVar>(0));
+                this.sumNonShortestDict[pair] = new Polynomial<TVar>(new Term<TVar>(0));
                 var shortestPaths = this.Topology.ShortestKPaths(1, pair.Item1, pair.Item2);
                 foreach (var simplePath in this.Paths[pair])
                 {
                     // establish the flow path variables.
                     this.FlowPathVariables[simplePath] = this.Solver.CreateVariable("flowpath_" + string.Join("_", simplePath));
                     this.variables.Add(this.FlowPathVariables[simplePath]);
-                    if (shortestPaths[0].SequenceEqual(simplePath)) {
+                    if (shortestPaths[0].SequenceEqual(simplePath))
+                    {
                         this.shortestFlowVariables[pair] = this.FlowPathVariables[simplePath];
-                    } else {
-                        this.sumNonShortest[pair].Add(new Term<TVar>(1, this.FlowPathVariables[simplePath]));
+                    }
+                    else
+                    {
+                        this.sumNonShortestDict[pair].Add(new Term<TVar>(1, this.FlowPathVariables[simplePath]));
                     }
                 }
             }
@@ -209,11 +222,11 @@ namespace MetaOptimize
 
             switch (innerEncoding)
             {
-                case InnerEncodingMethodChoice.KKT:
-                    this.innerProblemEncoder = new KktOptimizationGenerator<TVar, TSolution>(this.Solver, this.variables, demandVariables);
+                case InnerRewriteMethodChoice.KKT:
+                    this.innerProblemEncoder = new KKTRewriteGenerator<TVar, TSolution>(this.Solver, this.variables, demandVariables);
                     break;
-                case InnerEncodingMethodChoice.PrimalDual:
-                    this.innerProblemEncoder = new PrimalDualOptimizationGenerator<TVar, TSolution>(this.Solver,
+                case InnerRewriteMethodChoice.PrimalDual:
+                    this.innerProblemEncoder = new PrimalDualRewriteGenerator<TVar, TSolution>(this.Solver,
                                                                                                     this.variables,
                                                                                                     demandVariables,
                                                                                                     numProcesses);
@@ -226,14 +239,17 @@ namespace MetaOptimize
         /// <summary>
         /// Check if demand is valid or not.
         /// </summary>
-        protected bool IsDemandValid((string, string) pair) {
-            if (this.DemandConstraints.ContainsKey(pair)) {
-                if (this.DemandConstraints[pair] <= 0) {
+        protected bool IsDemandValid((string, string) pair)
+        {
+            if (this.DemandConstraints.ContainsKey(pair))
+            {
+                if (this.DemandConstraints[pair] <= 0)
+                {
                     return false;
                 }
             }
-            if (this.Paths[pair].Length < 1) {
-                // Console.WriteLine("$$$$$$$$$$$$$$$$$ pair:" + pair);
+            if (this.Paths[pair].Length < 1)
+            {
                 return false;
             }
             return true;
@@ -245,9 +261,9 @@ namespace MetaOptimize
         public OptimizationEncoding<TVar, TSolution> Encoding(Topology topology, Dictionary<(string, string),
             Polynomial<TVar>> preDemandVariables = null,
             Dictionary<(string, string), double> demandConstraints = null, bool noAdditionalConstraints = false,
-            InnerEncodingMethodChoice innerEncoding = InnerEncodingMethodChoice.KKT,
+            InnerRewriteMethodChoice innerEncoding = InnerRewriteMethodChoice.KKT,
             PathType pathType = PathType.KSP, Dictionary<(string, string), string[][]> selectedPaths = null,
-            Dictionary<(int, string, string), double> historicDemandConstraints = null,
+            Dictionary<(int, string, string), double> historicInputConstraints = null,
             int numProcesses = -1, bool verbose = false)
         {
             if (pathType != PathType.KSP || selectedPaths != null) {
@@ -257,6 +273,7 @@ namespace MetaOptimize
             Utils.logger("Demand Pinning with threshold = " + this.Threshold, verbose);
             this.Topology = topology;
             InitializeVariables(preDemandVariables, demandConstraints, innerEncoding, numProcesses, verbose);
+
             // Compute the maximum demand M.
             // Since we don't know the demands we have to be very conservative.
             // var maxDemand = this.Topology.TotalCapacity() * 10;
@@ -264,34 +281,29 @@ namespace MetaOptimize
             // Ensure that sum_k f_k = total_demand.
             // This includes both the ones that are pinned and
             // those that are not.
-            var polynomial = new Polynomial<TVar>();
+            var totalDemandConstraintPoly = new Polynomial<TVar>();
             foreach (var pair in this.Topology.GetNodePairs())
             {
-                if (!IsDemandValid(pair)) {
+                if (!IsDemandValid(pair))
+                {
                     continue;
                 }
-                polynomial.Add(new Term<TVar>(1, this.FlowVariables[pair]));
+                totalDemandConstraintPoly.Add(new Term<TVar>(1, this.FlowVariables[pair]));
             }
 
-            polynomial.Add(new Term<TVar>(-1 * this._scale, this.TotalDemandMetVariable));
-            this.innerProblemEncoder.AddEqZeroConstraint(polynomial);
-
-            // Ensure that the demands are finite.
-            // This is needed because Z3 can return any value if demands can be infinite.
-            // foreach (var (_, variable) in this.DemandVariables)
-            // {
-            //     this.kktEncoder.AddLeqZeroConstraint(new Polynomial<TVar>(new Term<TVar>(1, variable), new Term<TVar>(-1 * maxDemand)));
-            // }
+            totalDemandConstraintPoly.Add(new Term<TVar>(-1 * this._scale, this.TotalDemandMetVariable));
+            this.innerProblemEncoder.AddEqZeroConstraint(totalDemandConstraintPoly);
 
             // Ensure that the demand constraints are respected
             foreach (var (pair, constant) in this.DemandConstraints)
             {
-                if (constant <= 0) {
+                if (constant <= 0)
+                {
                     continue;
                 }
-                var poly = this.DemandVariables[pair].Copy();
-                poly.Add(new Term<TVar>(-1 * constant));
-                this.innerProblemEncoder.AddEqZeroConstraint(poly);
+                var demandConstraint = this.DemandVariables[pair].Copy();
+                demandConstraint.Add(new Term<TVar>(-1 * constant));
+                this.innerProblemEncoder.AddEqZeroConstraint(demandConstraint);
             }
 
             // Ensure that f_k geq 0.
@@ -299,15 +311,16 @@ namespace MetaOptimize
             foreach (var (pair, variable) in this.FlowVariables)
             {
                 // this.kktEncoder.AddLeqZeroConstraint(new Polynomial<TVar>(new Term<TVar>(-1, variable)));
-                var poly = this.DemandVariables[pair].Negate().Multiply(this._scale);
-                poly.Add(new Term<TVar>(1, variable));
-                this.innerProblemEncoder.AddLeqZeroConstraint(poly);
+                var flowCapConstraint = this.DemandVariables[pair].Negate().Multiply(this._scale);
+                flowCapConstraint.Add(new Term<TVar>(1, variable));
+                this.innerProblemEncoder.AddLeqZeroConstraint(flowCapConstraint);
             }
 
             // Ensure that f_k^p geq 0.
             foreach (var (pair, paths) in this.Paths)
             {
-                if (!IsDemandValid(pair)) {
+                if (!IsDemandValid(pair))
+                {
                     continue;
                 }
                 foreach (var path in paths)
@@ -319,30 +332,28 @@ namespace MetaOptimize
             // Ensure that the flow f_k = sum_p f_k^p.
             foreach (var (pair, paths) in this.Paths)
             {
-                if (!IsDemandValid(pair)) {
+                if (!IsDemandValid(pair))
+                {
                     continue;
                 }
-                var poly = new Polynomial<TVar>(new Term<TVar>(0));
+                var totalFlowPerDemandConstraint = new Polynomial<TVar>(new Term<TVar>(0));
                 foreach (var path in paths)
                 {
-                    poly.Add(new Term<TVar>(1, this.FlowPathVariables[path]));
+                    totalFlowPerDemandConstraint.Add(new Term<TVar>(1, this.FlowPathVariables[path]));
                 }
 
-                poly.Add(new Term<TVar>(-1, this.FlowVariables[pair]));
-                this.innerProblemEncoder.AddEqZeroConstraint(poly);
+                totalFlowPerDemandConstraint.Add(new Term<TVar>(-1, this.FlowVariables[pair]));
+                this.innerProblemEncoder.AddEqZeroConstraint(totalFlowPerDemandConstraint);
             }
 
             // Ensure the capacity constraints hold.
             // The sum of flows over all paths through each edge are bounded by capacity.
             var sumPerEdge = new Dictionary<Edge, Polynomial<TVar>>();
-            // foreach (var edge in this.Topology.GetAllEdges())
-            // {
-            //     sumPerEdge[edge] = new Polynomial<TVar>(new Term<TVar>(0));
-            // }
 
             foreach (var (pair, paths) in this.Paths)
             {
-                if (!IsDemandValid(pair)) {
+                if (!IsDemandValid(pair))
+                {
                     continue;
                 }
                 foreach (var path in paths)
@@ -353,7 +364,8 @@ namespace MetaOptimize
                         var target = path[i + 1];
                         var edge = this.Topology.GetEdge(source, target);
                         var term = new Term<TVar>(1, this.FlowPathVariables[path]);
-                        if (!sumPerEdge.ContainsKey(edge)) {
+                        if (!sumPerEdge.ContainsKey(edge))
+                        {
                             sumPerEdge[edge] = new Polynomial<TVar>(new Term<TVar>(0));
                         }
                         sumPerEdge[edge].Add(term);
@@ -386,11 +398,14 @@ namespace MetaOptimize
         /// <summary>
         /// add Demand Pinning Constraints.
         /// </summary>
+        /// TODO: it is not clear from the code and the comments why this is equivalent to the DP if constraints.
+        /// You need a comment here that explains why.
         protected virtual void GenerateDPConstraints(Polynomial<TVar> objectiveFunction, bool verbose)
         {
             // generating the max constraints that achieve pinning.
             Utils.logger("Generating DP constraints.", verbose);
-            foreach (var (pair, polyTerm) in sumNonShortest) {
+            foreach (var (pair, sumNonShortestPoly) in sumNonShortestDict)
+            {
                 // MaxAuxVariables \geq 0
                 this.innerProblemEncoder.AddLeqZeroConstraint(new Polynomial<TVar>(new Term<TVar>(-1, MaxAuxVariables[pair])));
                 // MaxAuxVariables \geq M(d_k - T_d)
@@ -398,14 +413,14 @@ namespace MetaOptimize
                 maxNonPinnedLB.Add(new Term<TVar>(-1 * this._scale * this._bigM * Threshold));
                 maxNonPinnedLB.Add(new Term<TVar>(-1, MaxAuxVariables[pair]));
                 this.innerProblemEncoder.AddLeqZeroConstraint(maxNonPinnedLB);
-                // this.Solver.AddOrEqZeroConstraint(maxNonPinnedLB, new Polynomial<TVar>(new Term<TVar>(-1, MaxAuxVariables[pair])));
-                // var maxTerm = this.DemandVariables[pair].Multiply(this._scale * this._bigM);
-                // maxTerm.Add(new Term<TVar>(-1 * this._scale * this._bigM * Threshold));
-                // this.Solver.AddMaxConstraint(MaxAuxVariables[pair], maxTerm, new Polynomial<TVar>());
 
+                // TODO: need a comment here about what exactly this is doing and what is happening.
+                // TODO: need to rename polyTerm to something that is more descriptive of the constraint.
                 // sum non shortest flows \leq MaxAuxVariables
-                polyTerm.Add(new Term<TVar>(-1, MaxAuxVariables[pair]));
-                this.innerProblemEncoder.AddLeqZeroConstraint(polyTerm);
+                sumNonShortestPoly.Add(new Term<TVar>(-1, MaxAuxVariables[pair]));
+                this.innerProblemEncoder.AddLeqZeroConstraint(sumNonShortestPoly);
+                // Up to this point MaxAuxVariables = max(0, M(d_k - T_d), sum non shortest flows))
+
                 // demand - shortest path flows \leq MaxAuxVariables
                 var shortestPathUB = this.DemandVariables[pair].Multiply(this._scale);
                 shortestPathUB.Add(new Term<TVar>(-1, shortestFlowVariables[pair]));
@@ -417,7 +432,8 @@ namespace MetaOptimize
 
             double alpha = Math.Ceiling(this.Topology.TotalCapacity() * 1.1);
             Console.WriteLine("$$$$$$ alpha value for demand pinning objective = " + alpha);
-            foreach (var (pair, maxVar) in MaxAuxVariables) {
+            foreach (var (pair, maxVar) in MaxAuxVariables)
+            {
                 objectiveFunction.Add(new Term<TVar>(-1 * alpha, maxVar));
                 // this.Solver.AddGlobalTerm(this.DemandVariables[pair].Multiply(Math.Round(-1 / alpha, 3)));
             }
@@ -428,11 +444,14 @@ namespace MetaOptimize
         /// </summary>
         protected virtual void VerifyOutput(TSolution solution, Dictionary<(string, string), double> demands, Dictionary<(string, string), double> flows)
         {
-            foreach (var (pair, demand) in demands) {
-                if (!flows.ContainsKey(pair)) {
+            foreach (var (pair, demand) in demands)
+            {
+                if (!flows.ContainsKey(pair))
+                {
                     continue;
                 }
-                if (demand <= this.Threshold && Math.Abs(flows[pair] - demand) > 0.001) {
+                if (demand <= this.Threshold && Math.Abs(flows[pair] - demand) > 0.001)
+                {
                     Console.WriteLine($"{pair.Item1},{pair.Item2},{demand},{flows[pair]}");
                     Console.WriteLine($"max aux variable {this.Solver.GetVariable(solution, this.MaxAuxVariables[pair])}");
                     throw new Exception("does not match");
@@ -445,6 +464,7 @@ namespace MetaOptimize
         /// </summary>
         /// <param name="solution"></param>
         /// <returns></returns>
+        /// TODO: why is this a placeholder?
         public OptimizationSolution GetSolution(TSolution solution)
         {
             var demands = new Dictionary<(string, string), double>();
@@ -454,7 +474,8 @@ namespace MetaOptimize
             foreach (var (pair, poly) in this.DemandVariables)
             {
                 demands[pair] = 0;
-                foreach (var term in poly.GetTerms()) {
+                foreach (var term in poly.GetTerms())
+                {
                     demands[pair] += this.Solver.GetVariable(solution, term.Variable.Value) * term.Coefficient;
                 }
             }

@@ -42,14 +42,16 @@ namespace MetaOptimize
         /// <summary>
         /// get model.
         /// </summary>
-        public ZenSolution GetModel() {
+        public ZenSolution GetModel()
+        {
             throw new Exception("need to be implemented");
         }
 
         /// <summary>
         /// Reset the solver by removing all the variables and constraints.
         /// </summary>
-        public void CleanAll(double timeout = -1, bool disableStoreProgress = false) {
+        public void CleanAll(double timeout = -1, bool disableStoreProgress = false)
+        {
             ConstraintExprs = new List<Zen<bool>>();
             Variables = new HashSet<Zen<Real>>();
             _objective = null;
@@ -58,14 +60,16 @@ namespace MetaOptimize
         /// <summary>
         /// Reset the solver by removing all the variables and constraints.
         /// </summary>
-        public void CleanAll(bool focusBstBd, double timeout = -1) {
+        public void CleanAll(bool focusBstBd, double timeout = -1)
+        {
             throw new Exception("not implemented yet");
         }
 
         /// <summary>
         /// append as the next line of the store progress file.
         /// </summary>
-        public void AppendToStoreProgressFile(double time_ms, double gap, bool reset = false) {
+        public void AppendToStoreProgressFile(double time_ms, double gap, bool reset = false)
+        {
             throw new Exception("not implemented yet");
         }
 
@@ -73,14 +77,16 @@ namespace MetaOptimize
         /// set the timeout.
         /// </summary>
         /// <param name="timeout">value for timeout.</param>
-        public void SetTimeout(double timeout) {
+        public void SetTimeout(double timeout)
+        {
             throw new Exception("have not implemented yet");
         }
 
         /// <summary>
         /// set the FocusBstBd.
         /// </summary>
-        public void SetFocusBstBd(bool focusBstBd) {
+        public void SetFocusBstBd(bool focusBstBd)
+        {
             throw new Exception("have not implemented yet");
         }
 
@@ -92,21 +98,24 @@ namespace MetaOptimize
         /// <param name="lb">The lb on the variable.</param>
         /// <param name="ub">The ub on the variable.</param>
         /// <returns>The solver variable.</returns>
+        /// TODO: why is the default variable type GRB.Continuous for a Zen variable?
         public Zen<Real> CreateVariable(string name, char type = GRB.CONTINUOUS,
             double lb = double.NegativeInfinity, double ub = double.PositiveInfinity)
         {
             var variable = Zen.Symbolic<Real>(name);
-            switch (type) {
+            switch (type)
+            {
                 case GRB.CONTINUOUS:
                     break;
                 case GRB.BINARY:
                     this.ConstraintExprs.Add(Zen.Or(variable == (Real)0, variable == (Real)1));
                     break;
                 case GRB.INTEGER:
+                    // TODO: since constr is true, wouldnt this always evaluate to true?
                     Zen<bool> constr = true;
                     Debug.Assert((lb > double.NegativeInfinity) && (ub < double.PositiveInfinity));
-                    for (int i = (int)lb; i <= (int)ub; i++) {
-                        // Console.WriteLine(i);
+                    for (int i = (int)lb; i <= (int)ub; i++)
+                    {
                         constr = Zen.Or(constr, variable == (Real)i);
                     }
                     this.ConstraintExprs.Add(constr);
@@ -115,10 +124,12 @@ namespace MetaOptimize
                     throw new Exception("invalid variable type");
             }
             this.Variables.Add(variable);
-            if (ub < double.PositiveInfinity) {
+            if (ub < double.PositiveInfinity)
+            {
                 this.ConstraintExprs.Add(variable <= new Real((int)(ub * precision), precision));
             }
-            if (lb > double.NegativeInfinity) {
+            if (lb > double.NegativeInfinity)
+            {
                 this.ConstraintExprs.Add(variable >= new Real((int)(lb * precision), precision));
             }
             return variable;
@@ -130,7 +141,8 @@ namespace MetaOptimize
         /// <returns>The value as a double.</returns>
         public double GetVariable(ZenSolution solution, Zen<Real> variable, int solutionNumber = 0)
         {
-            if (solutionNumber != 0) {
+            if (solutionNumber != 0)
+            {
                 throw new Exception("not implemented yet");
             }
 
@@ -150,7 +162,8 @@ namespace MetaOptimize
         /// <summary>
         /// Get the resulting value assigned to a variable.
         /// </summary>
-        public double GetDualVariable(ZenSolution solution, string constraintName) {
+        public double GetDualVariable(ZenSolution solution, string constraintName)
+        {
             throw new Exception("not implemented yet!!!");
         }
 
@@ -189,6 +202,7 @@ namespace MetaOptimize
         /// Add a equal to zero constraint (Quadratic).
         /// Following constraints; A * B + C == 0.
         /// </summary>
+        /// TODO: add an implementation and test, it seems rather streightforward for zen actually.
         public string AddEqZeroConstraint(IList<Polynomial<Zen<Real>>> coeffPolyList, IList<Zen<Real>> variableList,
             Polynomial<Zen<Real>> linearPoly, VariableType coeffVarType = VariableType.BINARY,
             VariableType varType = VariableType.CONTINUOUS)
@@ -211,34 +225,43 @@ namespace MetaOptimize
         /// <summary>
         /// Add a = max(b, c) constraint.
         /// </summary>
-        public void AddMaxConstraint(Zen<Real> LHS, Polynomial<Zen<Real>> maxItem1, Polynomial<Zen<Real>> maxItem2) {
+        /// TODO: add implementation, seems relatively simple?
+        public void AddMaxConstraint(Zen<Real> LHS, Polynomial<Zen<Real>> maxItem1, Polynomial<Zen<Real>> maxItem2)
+        {
             throw new Exception("Not implemented yet....");
         }
 
         /// <summary>
         /// Add a = max(b, constant) constraint.
         /// </summary>
-        public void AddMaxConstraint(Zen<Real> LHS, Zen<Real> var1, double constant) {
+        /// TODO: add
+        public void AddMaxConstraint(Zen<Real> LHS, Zen<Real> var1, double constant)
+        {
             throw new Exception("Not implemented yet");
         }
 
         /// <summary>
         /// Add a = max(b, constant) constraint.
         /// </summary>
-        public void AddMaxConstraint(Zen<Real> LHS, Zen<Real> var1, Zen<Real> var2) {
+        /// TODO: add
+        public void AddMaxConstraint(Zen<Real> LHS, Zen<Real> var1, Zen<Real> var2)
+        {
             throw new Exception("Not implemented yet");
         }
 
         /// <summary>
         /// Add a = max(b, constant) constraint.
         /// </summary>
-        public void AddMaxConstraint(Zen<Real> LHS, Polynomial<Zen<Real>> var1, double constant) {
+        /// TODO: add
+        public void AddMaxConstraint(Zen<Real> LHS, Polynomial<Zen<Real>> var1, double constant)
+        {
             throw new Exception("Not implemented yet.");
         }
 
         /// <summary>
         /// Logistic constraint y = 1/(1 + exp(-x)).
         /// </summary>
+        /// TODO: add.
         public void AddLogisticConstraint(Zen<Real> xVar, Zen<Real> yVar, string name, double FuncPieces = -1, double FuncPeiceError = 0.01,
             double FuncPieceLength = 0.01, double FuncPieceRatio = -1.0)
         {
@@ -248,6 +271,7 @@ namespace MetaOptimize
         /// <summary>
         /// power constraint y = x^a.
         /// </summary>
+        /// TODO: add
         public void AddPowerConstraint(Zen<Real> xVar, Zen<Real> yVar, int a, string name, double FuncPieces = -1, double FuncPeiceError = 0.01,
             double FuncPieceLength = 0.01, double FuncPieceRatio = -1.0)
         {
@@ -257,6 +281,7 @@ namespace MetaOptimize
         /// <summary>
         /// polynomial constraint y = p0 x^d + p1 x^{d-1} + ... + pd.
         /// </summary>
+        /// TODO:add
         public void AddPolynomialConstraint(Zen<Real> xVar, Zen<Real> yVar, double[] p, string name, double FuncPieces = -1, double FuncPeiceError = 0.01,
             double FuncPieceLength = 0.01, double FuncPieceRatio = -1.0)
         {
@@ -266,6 +291,7 @@ namespace MetaOptimize
         /// <summary>
         /// polynomial constraint y = norm_d(x_1, ..., x_n).
         /// </summary>
+        /// TODO: add
         public void AddNormConstraint(Zen<Real>[] xVar, Zen<Real> yVar, double which, string name, double FuncPieces = -1, double FuncPeiceError = 0.01,
             double FuncPieceLength = 0.01, double FuncPieceRatio = -1.0)
         {
@@ -276,6 +302,7 @@ namespace MetaOptimize
         /// Remove a constraint.
         /// </summary>
         /// <param name="constraintName">name of the constraint in the string format.</param>
+        /// TODO: add
         public void RemoveConstraint(string constraintName)
         {
             throw new Exception("Not Implemented yet....");
@@ -286,6 +313,7 @@ namespace MetaOptimize
         /// </summary>
         /// <param name="constraintName">name of the constraint in the string format.</param>
         /// <param name="newRHS">new RHS of the constraint.</param>
+        /// TODO: add
         public void ChangeConstraintRHS(string constraintName, double newRHS)
         {
             throw new Exception("Not Implemented yet....");
@@ -295,6 +323,7 @@ namespace MetaOptimize
         /// Combine the constraints and variables of another solver into this one.
         /// </summary>
         /// <param name="otherSolver">The other solver.</param>
+        /// TODO: I think we decided to remove this? double ceck and remove.
         public void CombineWith(ISolver<Zen<Real>, ZenSolution> otherSolver)
         {
             if (otherSolver is SolverZen s)
@@ -318,24 +347,27 @@ namespace MetaOptimize
         /// <summary>
         /// Call the model update to apply new constraints and objectives.
         /// </summary>
+        /// TODO: add.
         public void ModelUpdate()
         {
             throw new Exception("not implemented!");
         }
 
         /// <summary>
-        /// Get the resulting value assigned to a variable.
+        /// Set the objective polynomial in the internal variable that tracks it.
         /// </summary>
         /// <param name="objective">The solver solution.</param>
-        public void SetObjective(Polynomial<Zen<Real>> objective) {
+        public void SetObjective(Polynomial<Zen<Real>> objective)
+        {
             this._objective = objective;
         }
 
         /// <summary>
-        /// Get the resulting value assigned to a variable.
+        /// Set the objective polynomial in the internal variable that tracks it.
         /// </summary>
         /// <param name="objective">The solver solution.</param>
-        public void SetObjective(Zen<Real> objective) {
+        public void SetObjective(Zen<Real> objective)
+        {
             this._objective = new Polynomial<Zen<Real>>(new Term<Zen<Real>>(1, objective));
         }
 
@@ -368,6 +400,7 @@ namespace MetaOptimize
         /// <summary>
         /// find the top $k$ solutions.
         /// </summary>
+        /// TODO: add.
         public virtual ZenSolution Maximize(Polynomial<Zen<Real>> objective, bool reset, int solutionCount)
         {
             throw new Exception("Not implemented yet.");
@@ -377,6 +410,7 @@ namespace MetaOptimize
         /// Maximize the objective with objective as input.
         /// </summary>
         /// <returns>A solution.</returns>
+        /// TODO: with this function and the ones bellow it, write a better comment that differentiates between it and the others.
         public virtual ZenSolution Maximize(Polynomial<Zen<Real>> objective)
         {
             SetObjective(objective);
@@ -398,12 +432,13 @@ namespace MetaOptimize
         /// reset the callback timer.
         /// </summary>
         /// <returns>A solution.</returns>
-        public ZenSolution MaximizeQuadPow2(IList<Polynomial<Zen<Real>>> quadObjective, IList<double> quadCoeff, Polynomial<Zen<Real>> linObjective, bool reset = false) {
+        public ZenSolution MaximizeQuadPow2(IList<Polynomial<Zen<Real>>> quadObjective, IList<double> quadCoeff, Polynomial<Zen<Real>> linObjective, bool reset = false)
+        {
             throw new Exception("not implemented!");
         }
 
         /// <summary>
-        /// Check feasibility.
+        /// Check whether we can find a feasible solution given the constraints.
         /// </summary>
         public ZenSolution CheckFeasibility(double objectiveValue)
         {

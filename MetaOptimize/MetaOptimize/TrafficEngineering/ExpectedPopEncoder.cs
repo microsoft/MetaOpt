@@ -66,13 +66,16 @@ namespace MetaOptimize
         public ExpectedPopEncoder(ISolver<TVar, TSolution> solver, int k, int numSamples, int numPartitionsPerSample,
                 IList<IDictionary<(string, string), int>> demandPartitionsList)
         {
-            if (numSamples <= 0) {
+            if (numSamples <= 0)
+            {
                 throw new ArgumentOutOfRangeException("number of samples should be positive but got " + numSamples);
             }
-            if (numPartitionsPerSample <= 0) {
+            if (numPartitionsPerSample <= 0)
+            {
                 throw new ArgumentOutOfRangeException("number of paritions per sample should be positive but got" + numPartitionsPerSample);
             }
-            if (demandPartitionsList.Count != numSamples) {
+            if (demandPartitionsList.Count != numSamples)
+            {
                 throw new Exception("number of samples does not match the available partitionings in demandPartitionsList");
             }
             this.Solver = solver;
@@ -82,7 +85,8 @@ namespace MetaOptimize
             this.DemandParitionsList = demandPartitionsList;
             this.PoPEncoders = new PopEncoder<TVar, TSolution>[this.NumSamples];
 
-            for (int i = 0; i < this.NumSamples; i++) {
+            for (int i = 0; i < this.NumSamples; i++)
+            {
                 this.PoPEncoders[i] = new PopEncoder<TVar, TSolution>(solver, k, this.numPartitionsPerSample, this.DemandParitionsList[i]);
             }
         }
@@ -92,7 +96,8 @@ namespace MetaOptimize
         {
             // establish the demand variables.
             this.DemandVariables = preDemandVariables;
-            if (this.DemandVariables == null) {
+            if (this.DemandVariables == null)
+            {
                 this.DemandVariables = new Dictionary<(string, string), Polynomial<TVar>>();
                 foreach (var pair in this.Topology.GetNodePairs())
                 {
@@ -109,7 +114,7 @@ namespace MetaOptimize
         /// <returns>The constraints and maximization objective.</returns>
         public OptimizationEncoding<TVar, TSolution> Encoding(Topology topology, Dictionary<(string, string), Polynomial<TVar>> preDemandVariables = null,
             Dictionary<(string, string), double> demandEqualityConstraints = null, bool noAdditionalConstraints = false,
-            InnerEncodingMethodChoice innerEncoding = InnerEncodingMethodChoice.KKT,
+            InnerRewriteMethodChoice innerEncoding = InnerRewriteMethodChoice.KKT,
             PathType pathType = PathType.KSP, Dictionary<(string, string), string[][]> selectedPaths = null,
             Dictionary<(int, string, string), double> historicDemandConstraints = null,
             int numProcesses = -1, bool verbose = false)
@@ -131,7 +136,8 @@ namespace MetaOptimize
             // }
             // Encoding each of the PoP samples
             var encodings = new OptimizationEncoding<TVar, TSolution>[this.NumSamples];
-            for (int i = 0; i < this.NumSamples; i++) {
+            for (int i = 0; i < this.NumSamples; i++)
+            {
                 Utils.logger(string.Format("generating pop encoding for sample {0}.", i), verbose);
                 encodings[i] = this.PoPEncoders[i].Encoding(this.Topology, this.DemandVariables,
                                                             demandEqualityConstraints, noAdditionalConstraints, innerEncoding,
@@ -140,7 +146,8 @@ namespace MetaOptimize
             // computing the objective value
             var objectiveVariable = this.Solver.CreateVariable("average_objective_pop");
             var objective = new Polynomial<TVar>(new Term<TVar>(-1 * this.NumSamples, objectiveVariable));
-            foreach (var encdoing in encodings) {
+            foreach (var encdoing in encodings)
+            {
                 objective.Add(new Term<TVar>(1, encdoing.GlobalObjective));
             }
             this.Solver.AddEqZeroConstraint(objective);
@@ -167,13 +174,15 @@ namespace MetaOptimize
             foreach (var (pair, poly) in this.DemandVariables)
             {
                 demands[pair] = 0;
-                foreach (var term in poly.GetTerms()) {
+                foreach (var term in poly.GetTerms())
+                {
                     demands[pair] += this.Solver.GetVariable(solution, term.Variable.Value) * term.Coefficient;
                 }
             }
 
             var eachSampleTotalDemandMet = new List<double>();
-            foreach (var instance in solutions) {
+            foreach (var instance in solutions)
+            {
                 eachSampleTotalDemandMet.Add(instance.MaxObjective);
             }
 
