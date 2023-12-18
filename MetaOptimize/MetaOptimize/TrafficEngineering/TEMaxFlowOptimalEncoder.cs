@@ -202,23 +202,23 @@ namespace MetaOptimize
 
             // Ensure that sum_k f_k = total_demand.
             Utils.logger("ensuring sum_k f_k = total demand", verbose);
-            var total_flow_equality = new Polynomial<TVar>();
+            var totalFlowEquality = new Polynomial<TVar>();
             foreach (var pair in this.Topology.GetNodePairs())
             {
                 if (!IsDemandValid(pair))
                 {
                     continue;
                 }
-                total_flow_equality.Add(new Term<TVar>(1, this.FlowVariables[pair]));
+                totalFlowEquality.Add(new Term<TVar>(1, this.FlowVariables[pair]));
             }
 
-            total_flow_equality.Add(new Term<TVar>(-1, this.TotalDemandMetVariable));
+            totalFlowEquality.Add(new Term<TVar>(-1, this.TotalDemandMetVariable));
 
             // TODO: we seem to re-use the kkt encoder when we don't want to do any rewrite (there is a condition in the KKT rewrite block that checks if
             // we want to do a rewrite or not i think). We should probably seperate that into its on instance of the rewrite interface and initiate the inner problem
             // encoder depending on whether we have an aligned follower or not.
             // TODO: when we want to re-factor this we should first write a test case, then create a deprecated instance of this file and check they produce the same answer.
-            this.innerProblemEncoder.AddEqZeroConstraint(total_flow_equality);
+            this.innerProblemEncoder.AddEqZeroConstraint(totalFlowEquality);
 
             // TODO: will commenting this out cause problems if/when someone wants to use Z3 for their solver? if yes, we should add it back properly.
             // Ensure that the demands are finite.
