@@ -260,7 +260,7 @@ namespace MetaOptimize
                 return 0;
             }
             foreach (var demandlvl in DemandVar.GetTerms()) {
-                if (Math.Abs(demandlvl.Coefficient - demandValue) <= 0.001) {
+                if (Math.Abs(demandlvl.Coefficient - demandValue) <= 0.0001) {
                     return demandlvl.Coefficient;
                 }
             }

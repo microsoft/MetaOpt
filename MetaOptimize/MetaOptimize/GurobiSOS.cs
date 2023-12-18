@@ -104,20 +104,6 @@ namespace MetaOptimize
             this._env = null;
         }
 
-        /// <summary>
-        /// Connects to Gurobi.
-        /// </summary>
-        /// <returns>an env.</returns>
-        public static GRBEnv SetupGurobi()
-        {
-            // for 8.1 and later
-            GRBEnv env = new GRBEnv(true);
-            env.Set("LogFile", "maxFlowSolver.log");
-            env.TokenServer = "10.137.70.76"; // ishai-z420
-            env.Start();
-            return env;
-        }
-
         private GurobiCallback guorbiCallback;
         // private GurobiTerminationCallback gurobiTerminationCallback;
         // private GurobiStoreProgressCallback gurobiStoreProgressCallback;
