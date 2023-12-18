@@ -162,16 +162,17 @@ namespace MetaOptimize
         /// <summary>
         /// Encoder the problem.
         /// </summary>
-        public OptimizationEncoding<TVar, TSolution> Encoding(Bins bins, Dictionary<int, List<TVar>> preDemandVariables = null,
-            Dictionary<int, List<double>> demandEqualityConstraints = null,
-            Dictionary<int, int> demandPlacementEqualityConstraints = null,
+        public OptimizationEncoding<TVar, TSolution> Encoding(Bins bins,
+            Dictionary<int, List<TVar>> preInputVariables = null,
+            Dictionary<int, List<double>> inputEqualityConstraints = null,
+            Dictionary<int, int> inputPlacementEqualityConstraints = null,
             bool verbose = false)
         {
             Utils.logger("break symmetry " + this.BreakSymmetry, verbose);
             Utils.logger("initialize variables", verbose);
             this.bins = bins;
-            InitializeVariables(preDemandVariables, demandEqualityConstraints,
-                demandPlacementEqualityConstraints);
+            InitializeVariables(preInputVariables, inputEqualityConstraints,
+                inputPlacementEqualityConstraints);
 
             Utils.logger("ensure capacity constraints are respected", verbose);
             var binSizeList = this.bins.getBinSizes();

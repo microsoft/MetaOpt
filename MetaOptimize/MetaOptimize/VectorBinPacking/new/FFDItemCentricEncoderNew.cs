@@ -168,15 +168,16 @@ namespace MetaOptimize
         /// <summary>
         /// Encoder the problem.
         /// </summary>
-        public OptimizationEncoding<TVar, TSolution> Encoding(Bins bins, Dictionary<int, List<TVar>> preDemandVariables = null,
-            Dictionary<int, List<double>> demandEqualityConstraints = null,
-            Dictionary<int, int> demandPlacementEqualityConstraints = null,
+        public OptimizationEncoding<TVar, TSolution> Encoding(Bins bins,
+            Dictionary<int, List<TVar>> preInputVariables = null,
+            Dictionary<int, List<double>> inputEqualityConstraints = null,
+            Dictionary<int, int> inputPlacementEqualityConstraints = null,
             bool verbose = false)
         {
             Utils.logger("initialize variables", verbose);
             this.bins = bins;
-            InitializeVariables(preDemandVariables, demandEqualityConstraints,
-                    demandPlacementEqualityConstraints);
+            InitializeVariables(preInputVariables, inputEqualityConstraints,
+                    inputPlacementEqualityConstraints);
 
             Utils.logger("ensuring demand constraints are respected", verbose);
             foreach (var (itemID, demandConstant) in this.DemandConstraints)
