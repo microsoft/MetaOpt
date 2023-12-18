@@ -26,19 +26,16 @@ namespace MetaOptimize
         public static void impactOfDPThresholdOnGap()
         {
             var topologies = new Dictionary<string, string>();
-            topologies["B4"] = @"..\Topologies\b4-teavar.json";
-            topologies["SWAN"] = @"..\Topologies\swan.json";
-            topologies["Abilene"] = @"..\Topologies\abilene.json";
+            topologies["B4"] = @"../Topologies/b4-teavar.json";
+            // topologies["SWAN"] = @"../Topologies/swan.json";
+            // topologies["Abilene"] = @"../Topologies/abilene.json";
             Heuristic heuristicName = Heuristic.DemandPinning;
-            string logDir = @"..\logs\demand_pinning_sweep_thresh\" + Utils.GetFID() + @"\";
-
-            // TODO: these parameters should not be specific to this function. ideally take them as parameters?
-            // Problem parameters.
+            string logDir = @"../logs/demand_pinning_sweep_thresh/" + Utils.GetFID() + @"\";
             double timeToTerminate = 1800;
             int numPaths = 2;
-            double start = 0;
+            double start = 5;
             double step = 2.5;
-            double end = 15;
+            double end = 6;
             int numProcessors = 16;
 
             ISolver<GRBVar, GRBModel> solver = (ISolver<GRBVar, GRBModel>)new GurobiSOS(verbose: 1, timeToTerminateNoImprovement: timeToTerminate);
@@ -49,16 +46,14 @@ namespace MetaOptimize
                 var topology = Parser.ReadTopologyJson(topoPath);
                 var maxThreshold = topology.MinCapacity();
                 string logFile = topoName + @"_" + heuristicName + ".txt";
-                Utils.CreateFile(logDir, logFile, removeIfExist: true);
-                Utils.AppendToFile(logDir, logFile, maxThreshold.ToString());
-                for (double i = start; i <= end; i += step)
-                {
-                    // TODO: fix the constant and replace it with a variable that tracks the value of the const.
+                // Utils.CreateFile(logDir, logFile, removeIfExist: true);
+                // Utils.AppendToFile(logDir, logFile, maxThreshold.ToString());
+                for (double i = start; i <= end; i += step) {
                     var threshold = i * maxThreshold / 100;
                     var (optimal, heuristic, demands) = CliUtils.maximizeOptimalityGapDemandPinning<GRBVar, GRBModel>(
                             solver: solver, topology: topology, numPaths: numPaths, threshold: threshold, numProcessors: numProcessors);
                     var gap = optimal - heuristic;
-                    Utils.AppendToFile(logDir, logFile, i + ", " + threshold + ", " + optimal + ", " + heuristic + ", " + gap);
+                    // Utils.AppendToFile(logDir, logFile, i + ", " + threshold + ", " + optimal + ", " + heuristic + ", " + gap);
                     Console.WriteLine("==== Gap --> " + " i=" + i + " threshold=" + threshold + " optimal=" + optimal + " heuristic=" + heuristic + " gap=" + gap);
                 }
             }

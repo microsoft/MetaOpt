@@ -6,6 +6,7 @@ namespace MetaOptimize
 {
     using System;
     using System.Collections.Generic;
+    using System.Diagnostics;
     using System.Linq;
     using ZenLib;
 
@@ -155,6 +156,7 @@ namespace MetaOptimize
             {
                 throw new Exception("Only KSP works for now.");
             }
+            Debug.Assert(historicInputConstraints == null);
             this.Topology = topology;
             this.ReducedTopology = topology.SplitCapacity(this.NumPartitions);
             InitializeVariables(preDemandVariables, demandEqualityConstraints);

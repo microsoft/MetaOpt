@@ -258,12 +258,18 @@ namespace MetaOptimize
         /// Encode the problem.
         /// </summary>
         /// <returns>The constraints and maximization objective.</returns>
-        public OptimizationEncoding<TVar, TSolution> Encoding(Topology topology, Dictionary<(string, string), Polynomial<TVar>> preDemandVariables = null,
+        public OptimizationEncoding<TVar, TSolution> Encoding(Topology topology, Dictionary<(string, string),
+            Polynomial<TVar>> preDemandVariables = null,
             Dictionary<(string, string), double> demandConstraints = null, bool noAdditionalConstraints = false,
             InnerRewriteMethodChoice innerEncoding = InnerRewriteMethodChoice.KKT,
             PathType pathType = PathType.KSP, Dictionary<(string, string), string[][]> selectedPaths = null,
-            Dictionary<(int, string, string), double> historicInputConstraints = null, int numProcesses = -1, bool verbose = false)
+            Dictionary<(int, string, string), double> historicInputConstraints = null,
+            int numProcesses = -1, bool verbose = false)
         {
+            if (pathType != PathType.KSP || selectedPaths != null) {
+                throw new Exception("Not implemented yet.");
+            }
+
             Utils.logger("Demand Pinning with threshold = " + this.Threshold, verbose);
             this.Topology = topology;
             InitializeVariables(preDemandVariables, demandConstraints, innerEncoding, numProcesses, verbose);
@@ -424,12 +430,12 @@ namespace MetaOptimize
                 // this.innerProblemEncoder.AddConstantVar(MaxAuxVariables[pair]);
             }
 
-            double alpha = Math.Ceiling(this.Topology.TotalCapacity() * 2);
+            double alpha = Math.Ceiling(this.Topology.TotalCapacity() * 1.1);
             Console.WriteLine("$$$$$$ alpha value for demand pinning objective = " + alpha);
             foreach (var (pair, maxVar) in MaxAuxVariables)
             {
                 objectiveFunction.Add(new Term<TVar>(-1 * alpha, maxVar));
-                this.Solver.AddGlobalTerm(this.DemandVariables[pair].Multiply(Math.Round(-1 / alpha, 3)));
+                // this.Solver.AddGlobalTerm(this.DemandVariables[pair].Multiply(Math.Round(-1 / alpha, 3)));
             }
         }
 

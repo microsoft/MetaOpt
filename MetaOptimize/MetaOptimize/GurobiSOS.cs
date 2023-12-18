@@ -640,7 +640,9 @@ namespace MetaOptimize
         public void AddLogisticConstraint(GRBVar xVar, GRBVar yVar, string name, double FuncPieces = -1, double FuncPeiceError = 0.01,
             double FuncPieceLength = 0.01, double FuncPieceRatio = -1.0)
         {
-            throw new Exception("Not implemented");
+            string options = String.Format("FuncPieces={0} FuncPieceError={1} FuncPieceLength={2} FuncPieceRatio={3}",
+                FuncPieces, FuncPeiceError, FuncPieceLength, FuncPieceRatio);
+            this._model.AddGenConstrLogistic(xVar, yVar, name, options);
         }
 
         /// <summary>
@@ -833,8 +835,8 @@ namespace MetaOptimize
             // this._model.Parameters.QCPDual = 1;
             // this._model.Set(GRB.DoubleParam.IntFeasTol, this._tolerance);
             // this._model.Set(GRB.DoubleParam.FeasibilityTol, this._tolerance);
-            // this._model.Parameters.PreSparsify = 2;
-            // this._model.Parameters.Symmetry = 2;
+            this._model.Parameters.PreSparsify = 2;
+            this._model.Parameters.Symmetry = 2;
             // string exhaust_dir_name = @"../logs/grbsos_exhaust/rand_" + (new Random()).Next(1000) + @"/";
             // Directory.CreateDirectory(exhaust_dir_name);
             // this._model.Write($"{exhaust_dir_name}/model_" + DateTime.Now.Millisecond + ".lp");
