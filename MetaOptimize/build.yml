@@ -6,7 +6,7 @@ pool:
 steps:
 - task: CredScan@2
   inputs:
-   toolMajorVersion: 'V2'
+   toolMajorVersion: 'V3'
 
 - task: Semmle@1
   inputs:
