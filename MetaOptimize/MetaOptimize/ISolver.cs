@@ -248,5 +248,11 @@ namespace MetaOptimize
         /// append as the next line of the store progress file.
         /// </summary>
         public void AppendToStoreProgressFile(double time_ms, double gap, bool reset = false);
+
+        /// <summary>
+        /// writes the model to a file.
+        /// </summary>
+        /// <param name="location"></param>
+        public void WriteModel(string location);
     }
 }

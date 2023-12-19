@@ -625,5 +625,13 @@ namespace MetaOptimize
         {
             throw new Exception("Not implemented yet.");
         }
+        /// <summary>
+        /// writes the model to a file.
+        /// </summary>
+        /// <param name="location"></param>
+        public virtual void WriteModel(string location)
+        {
+            this._model.Write($"{location}\\model_" + DateTime.Now.Millisecond + ".lp");
+        }
     }
 }

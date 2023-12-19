@@ -764,7 +764,14 @@ namespace MetaOptimize
         {
             this._model.GetConstrByName(constraintName).Set(GRB.DoubleAttr.RHS, newRHS);
         }
-
+        /// <summary>
+        /// Writes model to file.
+        /// </summary>
+        /// <param name="location"></param>
+        public virtual void WriteModel(string location)
+        {
+            this._model.Write($"{location}\\model_" + DateTime.Now.Millisecond + ".lp");
+        }
         /// <summary>
         /// check feasibility of optimization.
         /// </summary>
