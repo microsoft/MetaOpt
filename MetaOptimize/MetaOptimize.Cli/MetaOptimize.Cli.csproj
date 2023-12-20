@@ -26,5 +26,4 @@
     <ProjectReference Include="..\MetaOptimize\MetaOptimize.csproj" />
   </ItemGroup>
 
-  </ItemGroup>
 </Project>
