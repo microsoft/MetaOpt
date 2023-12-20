@@ -11,7 +11,7 @@ steps:
 - task: Semmle@1
   inputs:
     sourceCodeDirectory: '$(Build.SourcesDirectory)//MetaOptimize'
-    language: 'CSharp'
+    language: 'csharp'
     querySuite: 'Recommended'
     timeout: '1800'
     ram: '16384'
