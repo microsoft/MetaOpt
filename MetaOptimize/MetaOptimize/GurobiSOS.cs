@@ -770,7 +770,9 @@ namespace MetaOptimize
         /// <param name="location"></param>
         public virtual void WriteModel(string location)
         {
-            this._model.Write($"{location}\\model_" + DateTime.Now.Millisecond + ".lp");
+            Directory.CreateDirectory(location);
+            var path = Path.Combine(location, "model_" + Utils.GetFID() + DateTime.Now.Millisecond + ".lp");
+            this._model.Write(path);
         }
         /// <summary>
         /// check feasibility of optimization.

@@ -371,5 +371,24 @@ namespace MetaOptimize
             // Console.WriteLine(expected + " " + actual + " " + Math.Abs(expected - actual) / actual);
             return Math.Abs(expected - actual) / Math.Abs(actual) < threshold;
         }
+        /// <summary>
+        /// Determines if a number is approximately equal to a number in a set.
+        /// </summary>
+        /// <param name="setNumbers">a set of numbers.</param>
+        /// <param name="target">target number to search for.</param>
+        /// <param name="threshold">A configurable threshold parameter.</param>
+        /// <returns>True if the difference is below the threshold.</returns>
+        public static bool IsApproximatelyInSet(ISet<float> setNumbers, float target, double threshold = 0.001)
+        {
+            var listNumbers = setNumbers.ToArray();
+            foreach (var number in listNumbers)
+            {
+                if (IsApproximately(target, number, threshold))
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
     }
 }
