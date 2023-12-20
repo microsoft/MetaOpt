@@ -8,6 +8,11 @@ steps:
   inputs:
    toolMajorVersion: 'V3'
 
+- task: DotNetCoreCLI@2
+  inputs:
+    command: 'dotnet build'
+    projects: '**/*.csproj'
+
 - task: Semmle@1
   inputs:
     sourceCodeDirectory: '$(Build.SourcesDirectory)//MetaOptimize'

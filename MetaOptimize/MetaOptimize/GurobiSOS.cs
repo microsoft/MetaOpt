@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection.Metadata.Ecma335;
+using System.Runtime.ExceptionServices;
 using System.Text;
 using System.Threading.Tasks;
 using Gurobi;
@@ -258,18 +259,10 @@ namespace MetaOptimize
                 throw new Exception("no name for variable");
             }
 
-            try
-            {
-                var new_name = $"{name}_{this._variables.Count}";
-                var variable = _model.AddVar(lb, ub, 0, type, new_name);
-                this._variables.Add(new_name, variable);
-                return variable;
-            }
-            catch (GRBException ex)
-            {
-                Console.WriteLine(ex.ToString());
-                throw (ex);
-            }
+            var new_name = $"{name}_{this._variables.Count}";
+            var variable = _model.AddVar(lb, ub, 0, type, new_name);
+            this._variables.Add(new_name, variable);
+            return variable;
         }
 
         /// <summary>
@@ -764,7 +757,14 @@ namespace MetaOptimize
         {
             this._model.GetConstrByName(constraintName).Set(GRB.DoubleAttr.RHS, newRHS);
         }
-
+        /// <summary>
+        /// writes the model to a file.
+        /// </summary>
+        /// <param name="location"></param>
+        public virtual void WriteModel(string location)
+        {
+            this._model.Write($"{location}\\model_" + Utils.GetFID() + DateTime.Now.Millisecond + ".lp");
+        }
         /// <summary>
         /// check feasibility of optimization.
         /// </summary>
