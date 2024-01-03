@@ -511,5 +511,59 @@ namespace MetaOptimize {
             solver.AddEqZeroConstraint(constr1);
             return output;
         }
+
+        /// <summary>
+        /// output should be less than or equal to 0 if x > y.
+        /// bigM should be > max(|x - y|).
+        /// </summary>
+        public static void UpperBoundByZeroIfGreater(ISolver<TVar, TSolution> solver,
+            Polynomial<TVar> BinaryOutput, Polynomial<TVar> x, double y, double bigM)
+        {
+            var polyY = new Polynomial<TVar>(new Term<TVar>(y));
+            UpperBoundByZeroIfGreater(solver, BinaryOutput, x, polyY, bigM);
+        }
+        /// <summary>
+        /// output should be less than or equal to 0 if x > y.
+        /// bigM should be > max(|x - y|).
+        /// </summary>
+        public static void UpperBoundByZeroIfGreater(ISolver<TVar, TSolution> solver,
+            Polynomial<TVar> BinaryOutput, Polynomial<TVar> x, Polynomial<TVar> y, double bigM)
+        {
+            double epsilon = 1.0 / bigM;
+            // z <= 1 + epsilon * (y - x)
+            var constr1 = new Polynomial<TVar>(new Term<TVar>(-1));
+            constr1.Add(BinaryOutput);
+            constr1.Add(x.Multiply(epsilon));
+            constr1.Add(y.Multiply(-epsilon));
+            solver.AddLeqZeroConstraint(constr1);
+        }
+
+        /// <summary>
+        /// output should be less than or equal to 0 if x \geq y.
+        /// bigM should be > max(|x - y|).
+        /// miu should be less than min non zero(|x - y|).
+        /// </summary>
+        public static void UpperBoundByZeroIfGeq(ISolver<TVar, TSolution> solver,
+            Polynomial<TVar> BinaryOutput, double x, Polynomial<TVar> y, double bigM, double miu)
+        {
+            var polyX = new Polynomial<TVar>(new Term<TVar>(x));
+            UpperBoundByZeroIfGeq(solver, BinaryOutput, polyX, y, bigM, miu);
+        }
+        /// <summary>
+        /// output should be less than or equal to 0 if x \geq y.
+        /// bigM should be > max(|x - y|).
+        /// miu should be less than min non zero(|x - y|).
+        /// </summary>
+        public static void UpperBoundByZeroIfGeq(ISolver<TVar, TSolution> solver,
+            Polynomial<TVar> BinaryOutput, Polynomial<TVar> x, Polynomial<TVar> y, double bigM, double miu)
+        {
+            double epsilon = 1.0 / bigM;
+            // z <= 1 + epsilon * (y - x - miu)
+            var constr1 = new Polynomial<TVar>(new Term<TVar>(-1 + epsilon * miu));
+            constr1.Add(BinaryOutput);
+            constr1.Add(x.Multiply(epsilon));
+            constr1.Add(y.Multiply(-epsilon));
+            solver.AddLeqZeroConstraint(constr1);
+        }
     }
 }
