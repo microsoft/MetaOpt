@@ -352,3 +352,6 @@ MigrationBackup/
 logs/*
 figs/*
 Topologies/partition_log/*
+
+# Gurobi models
+*.lp

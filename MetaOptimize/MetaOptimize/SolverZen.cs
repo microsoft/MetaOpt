@@ -460,5 +460,13 @@ namespace MetaOptimize
         {
             throw new Exception("Not implemented yet.");
         }
+        /// <summary>
+        /// writes the model to a file.
+        /// </summary>
+        /// <param name="location"></param>
+        public virtual void WriteModel(string location)
+        {
+            throw new Exception("not implemented yet.");
+        }
     }
 }
