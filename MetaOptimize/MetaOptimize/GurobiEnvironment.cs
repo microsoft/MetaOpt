@@ -15,10 +15,13 @@ namespace MetaOptimize
                 {
                     // for 8.1 and later
                     _env = new GRBEnv(true);
-                    _env.Set("LogFile", "maxFlowSolver.log");
-                    File.WriteAllText(
-                        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "gurobi.lic"),
-                        "TOKENSERVER=10.137.59.115"); // ishai-z420, as of June 8th 2023
+                    if (!Environment.UserName.Contains("solal", StringComparison.OrdinalIgnoreCase))
+                    {
+                        _env.Set("LogFile", "maxFlowSolver.log");
+                        File.WriteAllText(
+                           Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "gurobi.lic"),
+                           "TOKENSERVER=10.137.59.115"); // ishai-z420, as of June 8th 2023
+                    }
                     try
                     {
                         _env.Start();
