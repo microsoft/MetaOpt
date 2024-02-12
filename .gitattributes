@@ -8,3 +8,5 @@
 *.jpg filter=lfs diff=lfs merge=lfs -text
 *.png filter=lfs diff=lfs merge=lfs -text
 * !text !filter !merge !diff
+MetaOptimize/**/cpu_util_bin_clf_thold_65.json filter=lfs diff=lfs merge=lfs -text
+MetaOptimize/**/memory_utilization_train.json filter=lfs diff=lfs merge=lfs -text
