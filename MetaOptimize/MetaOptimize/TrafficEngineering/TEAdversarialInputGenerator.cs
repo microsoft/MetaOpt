@@ -51,8 +51,11 @@ namespace MetaOptimize
             this.NumProcesses = numProcesses;
         }
 
-        // TODO: need a comment that describes what this function is doing. Also is this the only way you can simplify?
-        // OR are there other ways?
+        /// <summary>
+        /// This function tries to find the demand which causes a gap that is "at least" a certain pre-specified value.
+        /// It also tries to find a demand matrix that achieves that gap that has the smallest number of non-zero elements.
+        /// </summary>
+        // TODO-research: are there other ways of simplifying that we should explore?
         private TSolution SimplifyAdversarialInputs(bool simplify, IEncoder<TVar, TSolution> optimalEncoder, IEncoder<TVar, TSolution> heuristicEncoder,
             TSolution solution, Polynomial<TVar> objective)
         {
@@ -70,11 +73,29 @@ namespace MetaOptimize
             return solution;
         }
         /// <summary>
-        /// Find an adversarial input that maximizes the optimality gap between two optimizations.
+        /// Maximizes the optimality gap between two TE algorithms.
+        /// It takes as input two encoders that represent a "reference" (e.g. optimal) algorithm
+        /// and a "heuristic" algorithm. The function produces a data structure that returns the
+        /// input that causes the maximum gap between the two algorithms and the gap itself.
         /// </summary>
-        /// TODO: need a better comment here that describes what this function is actually doing.
-        /// Is this gap generator really only specific to TE?
-        /// TODO: need to describe the inputs.
+        /// <param name="optimalEncoder">The encoder for the optimal algorithm.</param>
+        /// <param name="heuristicEncoder">The encoder for the heuristic algorithm.</param>
+        /// <param name="demandUB">The upper bound on the demand variables.</param>
+        /// <param name="innerEncoding">The rewrite method to use whether KKT or primal-dual.</param>
+        /// <param name="demandList">The list of demands to consider for the primal-dual approach.</param>
+        /// <param name="constrainedDemands">prespecified demand values.</param>
+        /// <param name="simplify">Whether to simplify the adversarial inputs.</param>
+        /// <param name="verbose">Whether to print verbose output.</param>
+        /// <param name="cleanUpSolver">Whether to clean up the solver before running the optimization.</param>
+        /// <param name="perDemandUB">The upper bound on each demand variable.</param>
+        /// <param name="demandInits">The initial values for the demand variables.</param>
+        /// <param name="density">The density of the demand matrix.</param>
+        /// <param name="LargeDemandLB">The demand value that separates large from small demands.</param>
+        /// <param name="LargeMaxDistance">The maximum distance for large demands.</param>
+        /// <param name="SmallMaxDistance">The maximum distance for small demands.</param>
+        /// <param name="pathType">The type of path computation to use to find the candidate paths. KSP is the default and runs K shortest paths.</param>
+        /// <param name="selectedPaths">The selected paths for each demand pair.</param>
+        /// <param name="historicDemandConstraints">The historic demand constraints that constrain demands based on the past observations.</param>
         public virtual (TEOptimizationSolution, TEOptimizationSolution) MaximizeOptimalityGap(
             IEncoder<TVar, TSolution> optimalEncoder,
             IEncoder<TVar, TSolution> heuristicEncoder,
