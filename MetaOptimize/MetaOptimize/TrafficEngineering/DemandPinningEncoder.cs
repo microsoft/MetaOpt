@@ -74,8 +74,8 @@ namespace MetaOptimize
         private double capacityTolerance = Math.Pow(10, -4);
         /// <summary>
         /// scale factor.
-        /// TODO: you are not using the scale factor when solving opt and this was introducing a bug
-        /// in the test cases.
+        /// TODO -- Engineering: right-now the scale factor is set to zero.
+        /// To use the scale factor you need to ensure that OPT also uses a similar factor.
         /// </summary>
         protected double _scale = Math.Pow(10, 0);
 
@@ -146,7 +146,22 @@ namespace MetaOptimize
             }
         }
 
-        // TODO: needs a comment that describes how this function works.
+        /// <summary>
+        /// Initializes the optimization variables for the Demand Pinning encoder.
+        /// These variables are: the demand constraints which is a dictionary from (source, target) which are both strings to
+        /// a double value. If the operator provides demand constraints as input (which is essentially pre-set values for the demands)
+        /// then that would be the demand constraints, otherwise it initializes to an empty value set.
+        /// The paths and the input demand variables are also set here (for example, pre-demand variables are sent into this function from the adversarial input generator).
+        /// The demand variables --- the "input" to this problem.
+        /// The function also creates variables for flow variables and other auxiliary variables.
+        /// It also specifies the inner rewrite method choice.
+        /// </summary>
+        /// <param name="preDemandVariables"></param>
+        /// <param name="demandConstraints"></param>
+        /// <param name="innerEncoding"></param>
+        /// <param name="numProcesses"></param>
+        /// <param name="verbose"></param>
+        /// <exception cref="Exception"></exception>
         private void InitializeVariables(Dictionary<(string, string), Polynomial<TVar>> preDemandVariables, Dictionary<(string, string), double> demandConstraints,
                 InnerRewriteMethodChoice innerEncoding = InnerRewriteMethodChoice.KKT, int numProcesses = -1, bool verbose = false)
         {
@@ -396,10 +411,8 @@ namespace MetaOptimize
         }
 
         /// <summary>
-        /// add Demand Pinning Constraints.
-        /// </summary>
-        /// TODO: it is not clear from the code and the comments why this is equivalent to the DP if constraints.
-        /// You need a comment here that explains why.
+        /// The demand pinning constraints, this is equivalent to the Appendix section A.3 in the MetaOpt paper.
+        /// </summary>.
         protected virtual void GenerateDPConstraints(Polynomial<TVar> objectiveFunction, bool verbose)
         {
             // generating the max constraints that achieve pinning.
@@ -414,8 +427,6 @@ namespace MetaOptimize
                 maxNonPinnedLB.Add(new Term<TVar>(-1, MaxAuxVariables[pair]));
                 this.innerProblemEncoder.AddLeqZeroConstraint(maxNonPinnedLB);
 
-                // TODO: need a comment here about what exactly this is doing and what is happening.
-                // TODO: need to rename polyTerm to something that is more descriptive of the constraint.
                 // sum non shortest flows \leq MaxAuxVariables
                 sumNonShortestPoly.Add(new Term<TVar>(-1, MaxAuxVariables[pair]));
                 this.innerProblemEncoder.AddLeqZeroConstraint(sumNonShortestPoly);
@@ -460,11 +471,10 @@ namespace MetaOptimize
         }
 
         /// <summary>
-        /// placeholder for getsolution.
+        /// The function that parses the solution.
         /// </summary>
         /// <param name="solution"></param>
         /// <returns></returns>
-        /// TODO: why is this a placeholder?
         public OptimizationSolution GetSolution(TSolution solution)
         {
             var demands = new Dictionary<(string, string), double>();

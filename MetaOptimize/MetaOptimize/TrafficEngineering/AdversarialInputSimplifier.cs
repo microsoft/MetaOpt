@@ -31,10 +31,9 @@ namespace MetaOptimize
         protected Dictionary<(string, string), Polynomial<TVar>> DemandVariables { get; set; }
 
         /// <summary>
-        /// Constructor.
+        /// This class simplifies the TE problem and is written to be specific to TE.
+        /// The idea is you find a gap and then try to find the demand that has the minimum number of non-zero elements that achieves the gap.
         /// </summary>
-        /// TODO: is this class general or does it only apply to TE? Judging by K TE? if so you should clearly
-        /// specify that in the class name and in the constructor.
         public TEAdversarialInputSimplifier(Topology topology, int maxNumPath, Dictionary<(string, string), Polynomial<TVar>> DemandVariables)
         {
             this.Topology = topology;
@@ -46,7 +45,8 @@ namespace MetaOptimize
         /// find minimum number of non-zero demands that achieves the desiredGap
         /// using Gurobi Direct Optimzation form.
         /// </summary>
-        /// TODO: can you write this in a more general way so that others outside of TE can use it too?
+        /// TODO - Engineering: Later add a version of this to a utility
+        /// class so that other encoders can use it too.
         public Polynomial<TVar> AddDirectMinConstraintsAndObjectives(
             ISolver<TVar, TSolution> solver,
             Polynomial<TVar> gapObjective,

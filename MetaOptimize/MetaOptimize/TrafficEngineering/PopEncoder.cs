@@ -32,9 +32,11 @@ namespace MetaOptimize
 
         /// <summary>
         /// The reduced capacity topology for the network.
+        /// PoP partitions the network into identical topologies where
+        /// each topology has an equal fraction of the link capacities from
+        /// the original topology. Because of that we only need to keep
+        /// one instance instead of n.
         /// </summary>
-        /// TODO: we need to improve the comment here.
-        /// My guess is that you mean the capacity of the links after we do pop partitioning, but it wasn't clear.
         public Topology ReducedTopology { get; set; }
 
         /// <summary>
@@ -64,8 +66,11 @@ namespace MetaOptimize
 
         /// <summary>
         /// The demand constraints in terms of constant values.
+        /// Speficically, PoP also partitions the demand matrix, so that each partition
+        /// routes a sub-set of the demands. This dictionary maps the demands for each partition
+        /// so that we track which demands the partition is serving and it is also tracking how large these
+        /// demands are.
         /// </summary>
-        /// TODO: we need a better comment for this one, it is not clear what each element of the dictionary means.
         public Dictionary<int, Dictionary<(string, string), double>> perPartitionDemandConstraints { get; set; }
 
         /// <summary>
@@ -85,8 +90,7 @@ namespace MetaOptimize
             }
             if (numPartitions > 10)
             {
-                // TODO: you need a more expressive error to be thrown here. It is not clear what the user is supposed to do.
-                throw new ArgumentOutOfRangeException("You need to adjust the max demand allowed.");
+                throw new ArgumentOutOfRangeException("Right now we only support up to 10 partitions.");
             }
 
             Console.WriteLine("========= parition sensitivity: " + partitionSensitivity);
@@ -141,11 +145,13 @@ namespace MetaOptimize
         }
 
         /// <summary>
-        /// Encode the problem.
+        /// Encodes the POP optimization problem.
+        /// The PoP heuristic is described in the following paper
+        /// by Abouzaid et al: https://dl.acm.org/doi/10.1145/3477132.3483588
+        /// The pathType encodes how we find the shortest path sets to use for
+        /// the multi-commodity flow problem.
         /// </summary>
         /// <returns>The constraints and maximization objective.</returns>
-        /// TODO: need a better comment here to describe what this function does.
-        /// TODO: define each variable, KSP == k shortest path for example.
         public OptimizationEncoding<TVar, TSolution> Encoding(Topology topology, Dictionary<(string, string), Polynomial<TVar>> preDemandVariables = null,
             Dictionary<(string, string), double> demandEqualityConstraints = null, bool noAdditionalConstraints = false,
             InnerRewriteMethodChoice innerEncoding = InnerRewriteMethodChoice.KKT,
@@ -202,15 +208,6 @@ namespace MetaOptimize
                     partitionToTotalDemand[partitionID] = new Polynomial<TVar>();
                 }
                 partitionToTotalDemand[partitionID].Add(demandVariables[pair]);
-                // var demandVariable = this.Solver.CreateVariable("demand_pop_" + pair.Item1 + "_" + pair.Item2);
-                // var polynomial = new Polynomial<TVar>(new Term<TVar>(-1, demandVariable));
-
-                // foreach (var encoder in this.PartitionEncoders)
-                // {
-                // polynomial.Terms.Add(new Term<TVar>(1, encoder.DemandVariables[pair]));
-                // }
-                // this.Solver.AddEqZeroConstraint(polynomial);
-                // demandVariables[pair] = demandVariable;
             }
 
             // enforce sensitivity
