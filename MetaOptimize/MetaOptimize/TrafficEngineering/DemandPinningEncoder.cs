@@ -9,12 +9,14 @@ namespace MetaOptimize
     using System;
     using System.Collections.Generic;
     using System.Linq;
+    using NLog;
     using ZenLib;
     /// <summary>
     /// Encodes demand pinning solution.
     /// </summary>
     public class DemandPinningEncoder<TVar, TSolution> : IEncoder<TVar, TSolution>
     {
+        private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
         /// <summary>
         /// The solver being used.
         /// </summary>
@@ -285,7 +287,7 @@ namespace MetaOptimize
                 throw new Exception("Not implemented yet.");
             }
 
-            Utils.logger("Demand Pinning with threshold = " + this.Threshold, verbose);
+            Logger.Info("Demand Pinning with threshold = " + this.Threshold);
             this.Topology = topology;
             InitializeVariables(preDemandVariables, demandConstraints, innerEncoding, numProcesses, verbose);
 
@@ -416,7 +418,7 @@ namespace MetaOptimize
         protected virtual void GenerateDPConstraints(Polynomial<TVar> objectiveFunction, bool verbose)
         {
             // generating the max constraints that achieve pinning.
-            Utils.logger("Generating DP constraints.", verbose);
+            Logger.Info("Generating DP constraints.");
             foreach (var (pair, sumNonShortestPoly) in sumNonShortestDict)
             {
                 // MaxAuxVariables \geq 0
@@ -442,7 +444,7 @@ namespace MetaOptimize
             }
 
             double alpha = Math.Ceiling(this.Topology.TotalCapacity() * 1.1);
-            Console.WriteLine("$$$$$$ alpha value for demand pinning objective = " + alpha);
+            Logger.Debug("$$$$$$ alpha value for demand pinning objective = " + alpha);
             foreach (var (pair, maxVar) in MaxAuxVariables)
             {
                 objectiveFunction.Add(new Term<TVar>(-1 * alpha, maxVar));
@@ -463,8 +465,8 @@ namespace MetaOptimize
                 }
                 if (demand <= this.Threshold && Math.Abs(flows[pair] - demand) > 0.001)
                 {
-                    Console.WriteLine($"{pair.Item1},{pair.Item2},{demand},{flows[pair]}");
-                    Console.WriteLine($"max aux variable {this.Solver.GetVariable(solution, this.MaxAuxVariables[pair])}");
+                    Logger.Debug($"{pair.Item1},{pair.Item2},{demand},{flows[pair]}");
+                    Logger.Debug($"max aux variable {this.Solver.GetVariable(solution, this.MaxAuxVariables[pair])}");
                     throw new Exception("does not match");
                 }
             }

@@ -8,6 +8,8 @@ namespace MetaOptimize
     using System.Collections.Generic;
     using System.Diagnostics;
     using System.Linq;
+    using NLog;
+
     /// <summary>
     /// The Pop encoder for splitting a network capacity into pieces.
     /// This encoder assumes the inner problem is the average performance
@@ -15,6 +17,7 @@ namespace MetaOptimize
     /// </summary>
     public class ExpectedPopEncoder<TVar, TSolution> : IEncoder<TVar, TSolution>
     {
+        private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
         /// <summary>
         /// The solver being used.
         /// </summary>
@@ -124,7 +127,7 @@ namespace MetaOptimize
             }
             Debug.Assert(historicDemandConstraints == null);
             this.Topology = topology;
-            Utils.logger("initializing variables for pop encoder.", verbose);
+            Logger.Info("initializing variables for pop encoder.");
             InitializeVariables(preDemandVariables, demandEqualityConstraints);
 
             // Enforcing demands to be zero
@@ -138,7 +141,7 @@ namespace MetaOptimize
             var encodings = new OptimizationEncoding<TVar, TSolution>[this.NumSamples];
             for (int i = 0; i < this.NumSamples; i++)
             {
-                Utils.logger(string.Format("generating pop encoding for sample {0}.", i), verbose);
+                Logger.Info(string.Format("generating pop encoding for sample {0}.", i));
                 encodings[i] = this.PoPEncoders[i].Encoding(this.Topology, this.DemandVariables,
                                                             demandEqualityConstraints, noAdditionalConstraints, innerEncoding,
                                                             numProcesses: numProcesses, verbose: verbose);

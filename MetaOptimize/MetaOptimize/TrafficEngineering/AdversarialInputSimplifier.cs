@@ -9,6 +9,7 @@ namespace MetaOptimize
     using System.Diagnostics;
     using System.Linq;
     using Gurobi;
+    using NLog;
 
     /// <summary>
     /// Meta-optimization utility functions for simplifying optimality gaps.

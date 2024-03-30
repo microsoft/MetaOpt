@@ -8,6 +8,7 @@ namespace MetaOptimize
     using System.Collections.Generic;
     using System.Linq;
     using Gurobi;
+    using NLog;
     using ZenLib;
 
     /// <summary>
@@ -15,6 +16,7 @@ namespace MetaOptimize
     /// </summary>
     public class TECombineHeuristicsEncoder<TVar, TSolution> : IEncoder<TVar, TSolution>
     {
+        private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
         /// <summary>
         /// The solver being used.
         /// </summary>
@@ -105,7 +107,7 @@ namespace MetaOptimize
             this.HeuristicEncodingDict = new Dictionary<IEncoder<TVar, TSolution>, OptimizationEncoding<TVar, TSolution>>();
 
             // get all the separate encodings.
-            Utils.logger("generating encoding for heuristics.", verbose);
+            Logger.Debug("generating encoding for heuristics.");
             foreach (var heruisticEncoder in this.HeuristicEncoderList)
             {
                 var encoding = heruisticEncoder.Encoding(this.Topology, this.DemandVariables, demandEqualityConstraints,
@@ -168,7 +170,7 @@ namespace MetaOptimize
             foreach (var (heuristicEncoder, heurisicEncoding) in this.HeuristicEncodingDict)
             {
                 var chosen = this.Solver.GetVariable(solution, this.WhichHeuristicBinary[heurisicEncoding]);
-                Console.WriteLine(chosen);
+                Logger.Debug(chosen);
                 if (chosen == 1)
                 {
                     chosenHeuristic = heuristicEncoder;

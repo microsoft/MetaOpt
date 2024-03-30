@@ -11,6 +11,7 @@ namespace MetaOptimize
     using System.Diagnostics;
     using System.Linq;
     using System.Threading;
+    using NLog;
     using QuikGraph;
     using QuikGraph.Algorithms.ShortestPath;
     using ZenLib;
@@ -20,6 +21,7 @@ namespace MetaOptimize
     /// </summary>
     public class Topology
     {
+        private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
         /// <summary>
         /// A random number generator.
         /// </summary>
@@ -163,12 +165,12 @@ namespace MetaOptimize
             {
                 case PathType.KSP:
                     Debug.Assert(selectedPaths == null);
-                    Utils.logger("Using K shortest paths with K = " + K, verbose);
+                    Logger.Info("Using K shortest paths with K = " + K);
                     paths = this.MultiProcessAllPairsKShortestPath(K, numProcesses: numProcesses, verbose: verbose);
                     break;
                 case PathType.Predetermined:
                     Debug.Assert(selectedPaths != null && selectedPaths.Count == this.GetNumNodePairs());
-                    Utils.logger("Using predetermined paths", verbose);
+                    Logger.Info("Using predetermined paths");
                     paths = selectedPaths;
                     break;
                 default:
@@ -293,7 +295,6 @@ namespace MetaOptimize
                     this.paths[maxNumPaths][(source, dest)] = new string[0][];
                 }
             }
-            // Utils.logger(Newtonsoft.Json.JsonConvert.SerializeObject(this.paths[k][(source, dest)], Newtonsoft.Json.Formatting.Indented), true);
             return this.paths[maxNumPaths][(source, dest)];
         }
 
@@ -309,15 +310,14 @@ namespace MetaOptimize
                 IDictionary<(string, string), string[][]> output, int pid = -1, bool verbose = false)
         {
             var path_dict = new Dictionary<(string, string), string[][]>();
-            Utils.logger("processor with pid " + pid + " starting to compute paths...", verbose);
+            Logger.Info("processor with pid " + pid + " starting to compute paths...");
             foreach (var pair in nodePairList)
             {
                 var paths = this.ShortestKPaths(maxNumPaths, pair.Item1, pair.Item2);
-                // Utils.logger("pid=" + pid + ": finding the paths between " + pair.Item1 + " and " + pair.Item2, verbose);
                 path_dict[pair] = paths;
             }
             path_dict.ToList().ForEach(pair => output[pair.Key] = pair.Value);
-            Utils.logger("processor with pid " + pid + " done with paths...", verbose);
+            Logger.Info("processor with pid " + pid + " done with paths...");
         }
 
         /// <summary>
@@ -326,18 +326,17 @@ namespace MetaOptimize
         /// <param name="maxNumPaths">The maximum number of paths.</param>
         /// <param name="numProcesses">The number of processors to use.</param>
         /// <param name="verbose">To show detailed logs.</param>
-        /// TODO: add unit tests for this.
         public Dictionary<(string, string), string[][]> MultiProcessAllPairsKShortestPath(int maxNumPaths,
                 int numProcesses = -1, bool verbose = false)
         {
             if (this.paths.ContainsKey(maxNumPaths))
             {
-                Utils.logger("found paths in " + this.pathFile, verbose);
+                Logger.Info("found paths in " + this.pathFile);
                 return this.paths[maxNumPaths];
             }
             else
             {
-                Utils.logger("did not found paths in " + this.pathFile, verbose);
+                Logger.Info("did not found paths in " + this.pathFile);
                 this.paths[maxNumPaths] = new Dictionary<(string, string), string[][]>();
             }
             var output = new ConcurrentDictionary<(string, string), string[][]>();
@@ -350,7 +349,7 @@ namespace MetaOptimize
                                            entry => entry.Value);
             }
             // dividing pairs among processes
-            Utils.logger("dividing pairs among processes", verbose);
+            Logger.Info("dividing pairs among processes");
             var processToPairList = new Dictionary<int, List<(string, string)>>();
             int pid = 0;
             // Round robin assigns a pair of nodes to a process.
@@ -367,28 +366,25 @@ namespace MetaOptimize
             var threadlist = new List<Thread>();
             foreach (var pid1 in processToPairList.Keys)
             {
-                Utils.logger(
-                    string.Format("creating process {0} with {1} pairs", pid1, processToPairList[pid1].Count()),
-                    verbose);
+                Logger.Info(
+                    string.Format("creating process {0} with {1} pairs", pid1, processToPairList[pid1].Count()));
                 threadlist.Add(new Thread(() => ShortestKPathsForPairList(maxNumPaths, processToPairList[pid1], output, pid: pid1, verbose: verbose)));
-                Utils.logger(
-                    string.Format("starting process {0} with {1} pairs", pid1, processToPairList[pid1].Count()),
-                    verbose);
+                Logger.Info(
+                    string.Format("starting process {0} with {1} pairs", pid1, processToPairList[pid1].Count()));
                 threadlist[pid1].Start();
                 Thread.Sleep(1000);
             }
             foreach (var pid1 in processToPairList.Keys)
             {
-                Utils.logger(
-                    string.Format("waiting for process {0}", pid1),
-                    verbose);
+                Logger.Info(
+                    string.Format("waiting for process {0}", pid1));
                 threadlist[pid1].Join();
             }
             this.paths[maxNumPaths] = output.ToDictionary(entry => entry.Key,
                                                 entry => entry.Value);
             if (!String.IsNullOrEmpty(this.pathFile))
             {
-                Utils.logger("storing the paths in the file " + this.pathFile, verbose);
+                Logger.Info("storing the paths in the file " + this.pathFile);
                 Utils.writePathsToFile(this.pathFile, this.paths);
             }
             return output.ToDictionary(entry => entry.Key,
@@ -528,7 +524,7 @@ namespace MetaOptimize
             foreach (var edge in this.GetAllEdges())
             {
                 t.AddEdge(edge.Source, edge.Target, edge.Capacity * scaleFactor);
-                Console.WriteLine(t.GetEdge(edge.Source, edge.Target).Capacity);
+                Logger.Debug(t.GetEdge(edge.Source, edge.Target).Capacity);
             }
 
             return t;
@@ -562,7 +558,7 @@ namespace MetaOptimize
             {
                 throw new Exception("radix should be positive.");
             }
-            Console.WriteLine("Creating random graph.");
+            Logger.Debug("Creating random graph.");
             var rng = new Random(seed);
             bool found = false;
             Topology t = null;

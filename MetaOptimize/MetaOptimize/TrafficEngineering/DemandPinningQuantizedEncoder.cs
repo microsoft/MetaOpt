@@ -9,12 +9,14 @@ namespace MetaOptimize
     using System;
     using System.Collections.Generic;
     using System.Linq;
+    using NLog;
     using ZenLib;
     /// <summary>
     /// Encodes demand pinning solution.
     /// </summary>
     public class DemandPinningQuantizedEncoder<TVar, TSolution> : DemandPinningEncoder<TVar, TSolution>
     {
+        private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
         /// <summary>
         /// Auxilary variable used to encode DP.
         /// </summary>
@@ -61,7 +63,7 @@ namespace MetaOptimize
                 }
                 if (demand <= this.Threshold && Math.Abs(flows[pair] - demand) > 0.001)
                 {
-                    Console.WriteLine($"{pair.Item1},{pair.Item2},{demand},{flows[pair]}");
+                    Logger.Debug($"{pair.Item1},{pair.Item2},{demand},{flows[pair]}");
                     throw new Exception("does not match");
                 }
                 bool found = false;
@@ -73,7 +75,6 @@ namespace MetaOptimize
                 {
                     foreach (var demandlvl in this.DemandVariables[pair].GetTerms())
                     {
-                        // Console.WriteLine("_" + demandlvl.Coefficient + " " + demand);
                         if (Math.Abs(demand - demandlvl.Coefficient) <= 0.001)
                         {
                             found = true;
@@ -82,7 +83,7 @@ namespace MetaOptimize
                 }
                 if (!found)
                 {
-                    Console.WriteLine($"{pair.Item1},{pair.Item2},{demand},{flows[pair]}");
+                    Logger.Debug($"{pair.Item1},{pair.Item2},{demand},{flows[pair]}");
                     throw new Exception("does not match");
                 }
             }
@@ -94,7 +95,7 @@ namespace MetaOptimize
         protected override void GenerateDPConstraints(Polynomial<TVar> objectiveFunction, bool verbose)
         {
             // generating the max constraints that achieve pinning.
-            Utils.logger("Generating Quantized DP constraints.", verbose);
+            Logger.Info("Generating Quantized DP constraints.");
             foreach (var (pair, polyTerm) in sumNonShortestDict)
             {
                 // shortest path flows \geq quantized demand with coefficient less than equal threshold
@@ -102,12 +103,6 @@ namespace MetaOptimize
                 shortestPathUB.Add(new Term<TVar>(-1, shortestFlowVariables[pair]));
                 this.innerProblemEncoder.AddLeqZeroConstraint(shortestPathUB);
             }
-
-            // double alpha = Math.Ceiling(this.Topology.TotalCapacity() * 1.1);
-            // Console.WriteLine("$$$$$$ alpha value for demand pinning objective = " + alpha);
-            // foreach (var (pair, demandVar) in DemandVariables) {
-            //     this.Solver.AddGlobalTerm(demandVar.Multiply(Math.Round(-1 / alpha, 3)));
-            // }
         }
     }
 }

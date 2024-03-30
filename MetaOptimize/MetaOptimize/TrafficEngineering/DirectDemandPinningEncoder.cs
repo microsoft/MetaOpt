@@ -9,12 +9,14 @@ namespace MetaOptimize
     using System;
     using System.Collections.Generic;
     using System.Linq;
+    using NLog;
     using ZenLib;
     /// <summary>
     /// Encodes demand pinning solution.
     /// </summary>
     public class DirectDemandPinningEncoder<TVar, TSolution> : IEncoder<TVar, TSolution>
     {
+        private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
         private double _threshold_tolerance = Math.Pow(10, -6);
         /// <summary>
         /// The solver being used.
@@ -138,7 +140,6 @@ namespace MetaOptimize
                 }
                 if (demand <= Threshold + this._threshold_tolerance)
                 {
-                    // Console.WriteLine(pair.Item1 + " " + pair.Item2 + " " + demand + " " + Threshold);
                     var shortestPaths = this.Topology.ShortestKPaths(1, pair.Item1, pair.Item2);
                     if (shortestPaths.Count() <= 0)
                     {
@@ -150,7 +151,7 @@ namespace MetaOptimize
                         this.link_to_cap_mapping[edge] -= demand;
                         if (this.link_to_cap_mapping[edge] < -1 * this._threshold_tolerance)
                         {
-                            Console.WriteLine(edge.Item1 + " " + edge.Item2 + " " + this.link_to_cap_mapping[edge]);
+                            Logger.Debug(edge.Item1 + " " + edge.Item2 + " " + this.link_to_cap_mapping[edge]);
                             throw new DemandPinningLinkNegativeException("negative link capacity", edge, this.Threshold);
                         }
                         else
@@ -158,12 +159,11 @@ namespace MetaOptimize
                             this.link_to_cap_mapping[edge] = Math.Max(0, this.link_to_cap_mapping[edge]);
                         }
                     }
-                    // Console.WriteLine("pinned " + demand);
                     this.totalDemandPinned += demand;
                     this.DemandConstraints[pair] = 0;
                 }
             }
-            Console.WriteLine("Total Demand pinned = " + this.totalDemandPinned);
+            Logger.Debug("Total Demand pinned = " + this.totalDemandPinned);
             this.Paths = this.Topology.MultiProcessAllPairsKShortestPath(this.K, numProcesses: numProcesses, verbose: verbose);
             foreach (var pair in this.Topology.GetNodePairs())
             {
@@ -312,7 +312,6 @@ namespace MetaOptimize
 
             foreach (var (edge, total) in sumPerEdge)
             {
-                // Console.WriteLine("cap " + edge.Source + " " + edge.Target + " " + this.link_to_cap_mapping[(edge.Source, edge.Target)]);
                 total.Add(new Term<TVar>(-1 * this.link_to_cap_mapping[(edge.Source, edge.Target)]));
                 this.Solver.AddLeqZeroConstraint(total);
             }

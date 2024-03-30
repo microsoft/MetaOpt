@@ -7,12 +7,14 @@ namespace MetaOptimize
     using System;
     using System.Collections.Generic;
     using System.Diagnostics;
+    using NLog;
 
     /// <summary>
     /// A class for the optimal encoding.
     /// </summary>
     public class TEMaxFlowOptimalEncoder<TVar, TSolution> : IEncoder<TVar, TSolution>
     {
+        private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
         /// <summary>
         /// The solver being used.
         /// </summary>
@@ -91,9 +93,19 @@ namespace MetaOptimize
             return true;
         }
 
-        // TODO: this needs a comment that describes what it does and what each input is.
+        /// <summary>
+        /// Initializes the variables for the optimal encoding.
+        /// </summary>
+        /// <param name="preDemandVariables">Pre-specified demand variables.</param>
+        /// <param name="demandEqualityConstraints">pre-specified demands.</param>
+        /// <param name="rewriteMethod">What encoding to use (KKT or Primal-dual).</param>
+        /// <param name="pathType">what algorithm to use to compute the set of candidate paths.</param>
+        /// <param name="selectedPaths">Pre-selected paths for each demand.</param>
+        /// <param name="numProcesses">Number of processes to use.</param>
+        /// <param name="verbose">to remove.</param>
+        /// <exception cref="Exception"></exception>
         private void InitializeVariables(Dictionary<(string, string), Polynomial<TVar>> preDemandVariables,
-                Dictionary<(string, string), double> demandEqualityConstraints, InnerRewriteMethodChoice encodingMethod,
+                Dictionary<(string, string), double> demandEqualityConstraints, InnerRewriteMethodChoice rewriteMethod,
                 PathType pathType, Dictionary<(string, string), string[][]> selectedPaths,
                 int numProcesses, bool verbose)
         {
@@ -163,7 +175,7 @@ namespace MetaOptimize
                 }
             }
 
-            switch (encodingMethod)
+            switch (rewriteMethod)
             {
                 case InnerRewriteMethodChoice.KKT:
                     this.innerProblemEncoder = new KKTRewriteGenerator<TVar, TSolution>(this.Solver, this.variables, demandVariables);
@@ -180,10 +192,10 @@ namespace MetaOptimize
         }
 
         /// <summary>
-        /// Encode the problem.
+        /// The encoder for the optimal TE problem.
+        /// This solves the full form of the multi-commodity flow problem.
         /// </summary>
         /// <returns>The constraints and maximization objective.</returns>
-        /// TODO: need a better comment that describes the function and what each input variable is.
         public OptimizationEncoding<TVar, TSolution> Encoding(Topology topology, Dictionary<(string, string), Polynomial<TVar>> preInputVariables = null,
             Dictionary<(string, string), double> inputEqualityConstraints = null, bool noAdditionalConstraints = false,
             InnerRewriteMethodChoice innerEncoding = InnerRewriteMethodChoice.KKT,
@@ -191,7 +203,7 @@ namespace MetaOptimize
             int numProcesses = -1, bool verbose = false)
         {
             // Initialize Variables for the encoding
-            Utils.logger("initializing variables", verbose);
+            Logger.Info("initializing variables");
             this.Topology = topology;
             InitializeVariables(preInputVariables, inputEqualityConstraints,
                 innerEncoding, pathType, selectedPaths, numProcesses, verbose);
@@ -201,7 +213,7 @@ namespace MetaOptimize
             // var maxDemand = this.Topology.MaxCapacity() * this.K * 2;
 
             // Ensure that sum_k f_k = total_demand.
-            Utils.logger("ensuring sum_k f_k = total demand", verbose);
+            Logger.Info("ensuring sum_k f_k = total demand");
             var totalFlowEquality = new Polynomial<TVar>();
             foreach (var pair in this.Topology.GetNodePairs())
             {
@@ -215,21 +227,13 @@ namespace MetaOptimize
             totalFlowEquality.Add(new Term<TVar>(-1, this.TotalDemandMetVariable));
 
             // TODO: we seem to re-use the kkt encoder when we don't want to do any rewrite (there is a condition in the KKT rewrite block that checks if
-            // we want to do a rewrite or not i think). We should probably seperate that into its on instance of the rewrite interface and initiate the inner problem
+            // we want to do a rewrite or not i think). We should probably seperate that into its own instance of the rewrite interface and initiate the inner problem
             // encoder depending on whether we have an aligned follower or not.
             // TODO: when we want to re-factor this we should first write a test case, then create a deprecated instance of this file and check they produce the same answer.
             this.innerProblemEncoder.AddEqZeroConstraint(totalFlowEquality);
 
-            // TODO: will commenting this out cause problems if/when someone wants to use Z3 for their solver? if yes, we should add it back properly.
-            // Ensure that the demands are finite.
-            // This is needed because Z3 can return any value if demands can be infinite.
-            // foreach (var (_, variable) in this.DemandVariables)
-            // {
-            //     this.kktEncoder.AddLeqZeroConstraint(new Polynomial<TVar>(new Term<TVar>(1, variable), new Term<TVar>(-1 * maxDemand)));
-            // }
-
             // Ensure that the demand constraints are respected
-            Utils.logger("ensuring demand constraints are respected", verbose);
+            Logger.Info("ensuring demand constraints are respected");
             foreach (var (pair, constant) in this.DemandConstraints)
             {
                 if (constant <= 0)
@@ -243,7 +247,7 @@ namespace MetaOptimize
 
             // Ensure that f_k geq 0.
             // Ensure that f_k leq d_k.
-            Utils.logger("ensuring flows are within a correct range.", verbose);
+            Logger.Info("ensuring flows are within a correct range.");
             foreach (var (pair, variable) in this.FlowVariables)
             {
                 // this.kktEncoder.AddLeqZeroConstraint(new Polynomial<TVar>(new Term<TVar>(-1, variable)));
@@ -253,7 +257,7 @@ namespace MetaOptimize
             }
 
             // Ensure that f_k^p geq 0.
-            Utils.logger("ensuring sum_k f_k^p geq 0", verbose);
+            Logger.Info("ensuring sum_k f_k^p geq 0");
             foreach (var (pair, paths) in this.Paths)
             {
                 if (!IsDemandValid(pair))
@@ -268,7 +272,7 @@ namespace MetaOptimize
 
             // Ensure that nodes that are not connected have no flow or demand.
             // This is needed for not fully connected topologies.
-            Utils.logger("ensuring disconnected nodes do not have any flow", verbose);
+            Logger.Info("ensuring disconnected nodes do not have any flow");
             foreach (var (pair, paths) in this.Paths)
             {
                 if (!IsDemandValid(pair))
@@ -283,7 +287,7 @@ namespace MetaOptimize
             }
 
             // Ensure that the flow f_k = sum_p f_k^p.
-            Utils.logger("ensuring f_k = sum_p f_k^p", verbose);
+            Logger.Info("ensuring f_k = sum_p f_k^p");
             foreach (var (pair, paths) in this.Paths)
             {
                 if (!IsDemandValid(pair))
@@ -303,12 +307,8 @@ namespace MetaOptimize
             // Ensure the capacity constraints hold.
             // The sum of flows over all paths through each edge are bounded by capacity.
             var sumPerEdge = new Dictionary<Edge, Polynomial<TVar>>();
-            // foreach (var edge in this.Topology.GetAllEdges())
-            // {
-            //     sumPerEdge[edge] = new Polynomial<TVar>(new Term<TVar>(0));
-            // }
 
-            Utils.logger("ensuring capacity constraints", verbose);
+            Logger.Info("ensuring capacity constraints");
             foreach (var (pair, paths) in this.Paths)
             {
                 if (!IsDemandValid(pair))
@@ -338,10 +338,10 @@ namespace MetaOptimize
                 this.innerProblemEncoder.AddLeqZeroConstraint(total);
             }
 
-            Utils.logger("generating full constraints", verbose);
+            Logger.Info("generating full constraints");
             // Generate the full constraints.
             var objective = new Polynomial<TVar>(new Term<TVar>(1, this.TotalDemandMetVariable));
-            Utils.logger("calling inner encoder", verbose);
+            Logger.Info("calling inner encoder");
             this.innerProblemEncoder.AddMaximizationConstraints(objective, noAdditionalConstraints, verbose);
 
             // Optimization objective is the total demand met.

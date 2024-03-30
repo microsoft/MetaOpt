@@ -10,12 +10,14 @@ namespace MetaOptimize
     using System.Linq;
     using System.Threading;
     using Gurobi;
+    using NLog;
 
     /// <summary>
     /// Meta-optimization utility functions for maximizing optimality gaps.
     /// </summary>
     public class TEAdversarialInputGenerator<TVar, TSolution>
     {
+        private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
         /// <summary>
         /// The topology for the network.
         /// </summary>
@@ -146,27 +148,27 @@ namespace MetaOptimize
                 solver.CleanAll();
             }
 
-            Utils.logger("creating demand variables.", verbose);
-            Utils.logger("max large demand distance: " + LargeMaxDistance, verbose);
-            Utils.logger("max small demand distance: " + SmallMaxDistance, verbose);
-            Utils.logger("large demand lb: " + LargeDemandLB, verbose);
+            Logger.Info("creating demand variables.");
+            Logger.Info("max large demand distance: " + LargeMaxDistance);
+            Logger.Info("max small demand distance: " + SmallMaxDistance);
+            Logger.Info("large demand lb: " + LargeDemandLB);
 
             (this.DemandEnforcers, this.LocalityConstrainedDemands) =
                         CreateDemandVariables(solver, innerEncoding, demandList, demandInits, LargeDemandLB, LargeMaxDistance, SmallMaxDistance);
 
-            Utils.logger("generating optimal encoding.", verbose);
+            Logger.Info("generating optimal encoding.");
             var optimalEncoding = optimalEncoder.Encoding(this.Topology, preInputVariables: this.DemandEnforcers,
                     innerEncoding: innerEncoding, numProcesses: this.NumProcesses, verbose: verbose,
                     inputEqualityConstraints: LocalityConstrainedDemands, noAdditionalConstraints: true,
                     pathType: pathType, selectedPaths: selectedPaths, historicInputConstraints: historicDemandConstraints);
-            Utils.logger("generating heuristic encoding.", verbose);
+            Logger.Info("generating heuristic encoding.");
             var heuristicEncoding = heuristicEncoder.Encoding(this.Topology, preInputVariables: this.DemandEnforcers,
                     innerEncoding: innerEncoding, numProcesses: this.NumProcesses, verbose: verbose,
                     inputEqualityConstraints: LocalityConstrainedDemands,
                     pathType: pathType, selectedPaths: selectedPaths, historicInputConstraints: historicDemandConstraints);
 
             // ensures that demand in both problems is the same and lower than demand upper bound constraint.
-            Utils.logger("adding constraints for upper bound on demands.", verbose);
+            Logger.Info("adding constraints for upper bound on demands.");
             if (perDemandUB != null)
             {
                 EnsureDemandUB(solver, perDemandUB);
@@ -175,13 +177,12 @@ namespace MetaOptimize
             {
                 EnsureDemandUB(solver, demandUB);
             }
-            // TODO: modify this to only print in debug mode.
-            Utils.logger("adding equality constraints for specified demands.", verbose);
+            Logger.Info("adding equality constraints for specified demands.");
             EnsureDemandEquality(solver, constrainedDemands);
-            Utils.logger("Adding density constraint: max density = " + density, verbose);
+            Logger.Info("Adding density constraint: max density = " + density);
             EnsureDensityConstraint(solver, density);
 
-            Utils.logger("setting the objective.", verbose);
+            Logger.Info("setting the objective.");
 
             // var objective = new Polynomial<TVar>();
             // objective.Add(optimalEncoding.MaximizationObjective.Copy());
@@ -193,7 +194,7 @@ namespace MetaOptimize
                         new Term<TVar>(-1, heuristicEncoding.GlobalObjective));
             var solution = solver.Maximize(objective, reset: true);
 
-            // TODO: what is the implication of this on scale?
+            // TODO-Research: what is the implication of this on scale?
             solution = SimplifyAdversarialInputs(simplify, optimalEncoder, heuristicEncoder, solution, objective);
 
             var optSol = (TEOptimizationSolution)optimalEncoder.GetSolution(solution);
@@ -259,25 +260,25 @@ namespace MetaOptimize
                 solver.CleanAll();
             }
 
-            Utils.logger("creating demand variables.", verbose);
-            Utils.logger("max large demand distance: " + LargeMaxDistance, verbose);
-            Utils.logger("max small demand distance: " + SmallMaxDistance, verbose);
-            Utils.logger("large demand lb: " + LargeDemandLB, verbose);
+            Logger.Info("creating demand variables.");
+            Logger.Info("max large demand distance: " + LargeMaxDistance);
+            Logger.Info("max small demand distance: " + SmallMaxDistance);
+            Logger.Info("large demand lb: " + LargeDemandLB);
             (this.DemandEnforcers, this.LocalityConstrainedDemands) =
                         CreateDemandVariables(solver, innerEncoding, demandList, demandInits, LargeDemandLB, LargeMaxDistance, SmallMaxDistance);
-            Utils.logger("generating optimal encoding.", verbose);
+            Logger.Info("generating optimal encoding.");
             var optimalEncoding = optimalEncoder.Encoding(this.Topology, preInputVariables: this.DemandEnforcers,
                     innerEncoding: innerEncoding, numProcesses: this.NumProcesses, verbose: verbose,
                     inputEqualityConstraints: LocalityConstrainedDemands, noAdditionalConstraints: true,
                     pathType: pathType, selectedPaths: selectedPaths, historicInputConstraints: historicDemandConstraints);
-            Utils.logger("generating heuristic encoding.", verbose);
+            Logger.Info("generating heuristic encoding.");
             var heuristicEncoding = heuristicEncoder.Encoding(this.Topology, preInputVariables: this.DemandEnforcers,
                     innerEncoding: innerEncoding, numProcesses: this.NumProcesses, verbose: verbose,
                     inputEqualityConstraints: LocalityConstrainedDemands,
                     pathType: pathType, selectedPaths: selectedPaths, historicInputConstraints: historicDemandConstraints);
 
             // ensures that demand in both problems is the same and lower than demand upper bound constraint.
-            Utils.logger("adding constraints for upper bound on demands.", verbose);
+            Logger.Info("adding constraints for upper bound on demands.");
             if (perDemandUB != null)
             {
                 EnsureDemandUB(solver, perDemandUB);
@@ -286,17 +287,17 @@ namespace MetaOptimize
             {
                 EnsureDemandUB(solver, demandUB);
             }
-            Utils.logger("adding equality constraints for specified demands.", verbose);
+            Logger.Info("adding equality constraints for specified demands.");
             EnsureDemandEquality(solver, constrainedDemands);
-            Utils.logger("Adding density constraint: max density = " + density, verbose);
+            Logger.Info("Adding density constraint: max density = " + density);
             EnsureDensityConstraint(solver, density);
 
-            Utils.logger("setting the objective of OPT.", verbose);
+            Logger.Info("setting the objective of OPT.");
             var optPoly = optimalEncoding.MaximizationObjective.Negate();
             optPoly.Add(new Term<TVar>(-optimalObj));
             solver.AddEqZeroConstraint(optPoly);
 
-            Utils.logger("setting the objective of MetaOpt.", verbose);
+            Logger.Info("setting the objective of MetaOpt.");
             var objective = heuristicEncoding.MaximizationObjective.Negate();
             var solution = solver.Maximize(objective, reset: true, solutionCount: solutionCount);
 
@@ -312,8 +313,16 @@ namespace MetaOptimize
             return solList;
         }
 
-        // TODO: this function is missing a comment.
-        // TODO: you have not defined what is small and large flow anywhere? it should be explicit in the comments.
+        /// <summary>
+        /// Checks whether the density and locality constraints make sense.
+        /// </summary>
+        /// <param name="innerEncoding"></param>
+        /// <param name="density"></param>
+        /// <param name="LargeDemandLB"></param>
+        /// <param name="LargeMaxDistance"></param>
+        /// <param name="SmallMaxDistance"></param>
+        /// <param name="randomInitialization"></param>
+        /// <exception cref="Exception"></exception>
         private static void CheckDensityAndLocalityInputs(
             InnerRewriteMethodChoice innerEncoding,
             double density,
@@ -342,7 +351,8 @@ namespace MetaOptimize
             {
                 if (innerEncoding == InnerRewriteMethodChoice.KKT)
                 {
-                    // TODO: why? because of the "if" constraints?
+                    // We use primal-dual to encode locality and sparsity constraints, if we use KKT, we won't be able to use Gurobi to
+                    // solve the problem.
                     throw new Exception("to apply locality or sparsity constraints, the encoding should be primal-dual.");
                 }
                 if (randomInitialization)
@@ -469,25 +479,25 @@ namespace MetaOptimize
             {
                 solver.AppendToStoreProgressFile(timer.ElapsedMilliseconds, currGap, reset: false);
             }
-            Utils.logger("creating demand variables.", verbose);
+            Logger.Info("creating demand variables.");
             (this.DemandEnforcers, this.LocalityConstrainedDemands) =
                         CreateDemandVariables(solver, innerEncoding, demandList,
                                 LargeDemandLB: LargeDemandLB, LargeMaxDistance: LargeMaxDistance, SmallMaxDistance: SmallMaxDistance);
-            Utils.logger("generating optimal encoding.", verbose);
+            Logger.Info("generating optimal encoding.");
             var optimalEncoding = optimalEncoder.Encoding(this.Topology, preInputVariables: this.DemandEnforcers,
                     innerEncoding: innerEncoding, numProcesses: this.NumProcesses, verbose: verbose,
                     inputEqualityConstraints: this.LocalityConstrainedDemands, noAdditionalConstraints: true);
-            Utils.logger("generating heuristic encoding.", verbose);
+            Logger.Info("generating heuristic encoding.");
             var heuristicEncoding = heuristicEncoder.Encoding(this.Topology, preInputVariables: this.DemandEnforcers,
                     innerEncoding: innerEncoding, numProcesses: this.NumProcesses, verbose: verbose,
                     inputEqualityConstraints: LocalityConstrainedDemands);
 
             // ensures that demand in both problems is the same and lower than demand upper bound constraint.
-            Utils.logger("adding constraints for upper bound on demands.", verbose);
+            Logger.Info("adding constraints for upper bound on demands.");
             EnsureDemandUB(solver, demandUB);
-            Utils.logger("adding equality constraints for specified demands.", verbose);
+            Logger.Info("adding equality constraints for specified demands.");
             EnsureDemandEquality(solver, constrainedDemands);
-            Utils.logger("Adding density constraint: max density = " + density, verbose);
+            Logger.Info("Adding density constraint: max density = " + density);
             EnsureDensityConstraint(solver, density);
 
             if (demandUB < 0)
@@ -498,7 +508,7 @@ namespace MetaOptimize
             var pairNameToConstraintMapping = new Dictionary<(string, string), string>();
             if (!randomInitialization)
             {
-                Utils.logger("Initialize all demands with zero!", verbose);
+                Logger.Info("Initialize all demands with zero!");
                 foreach (var (pair, demandVar) in this.DemandEnforcers)
                 {
                     if (checkIfPairIsConstrained(constrainedDemands, pair))
@@ -512,7 +522,7 @@ namespace MetaOptimize
             else
             {
                 Debug.Assert(innerEncoding == InnerRewriteMethodChoice.PrimalDual);
-                Utils.logger("Randomly Initialize Demands!", verbose);
+                Logger.Info("Randomly Initialize Demands!");
                 foreach (var (pair, demandVar) in this.DemandEnforcers)
                 {
                     if (checkIfPairIsConstrained(constrainedDemands, pair))
@@ -550,9 +560,8 @@ namespace MetaOptimize
             foreach (var cluster in clusters)
             {
                 var consideredPairs = new HashSet<(string, string)>();
-                Utils.logger(
-                    string.Format("finding adversarial demand for cluster with {0} nodes and {1} edges", cluster.GetAllNodes().Count(), cluster.GetAllEdges().Count()),
-                    verbose);
+                Logger.Info(
+                    string.Format("finding adversarial demand for cluster with {0} nodes and {1} edges", cluster.GetAllNodes().Count(), cluster.GetAllEdges().Count()));
                 foreach (var pair in cluster.GetNodePairs())
                 {
                     if (checkIfPairIsConstrained(constrainedDemands, pair))
@@ -569,7 +578,7 @@ namespace MetaOptimize
                     }
                     consideredPairs.Add(pair);
                 }
-                Utils.logger("setting the objective.", verbose);
+                Logger.Info("setting the objective.");
                 var objective = new Polynomial<TVar>(
                             new Term<TVar>(1, optimalEncoding.GlobalObjective),
                             new Term<TVar>(-1, heuristicEncoding.GlobalObjective));
@@ -597,9 +606,8 @@ namespace MetaOptimize
                         }
                         numPairs += 1;
                     }
-                    Utils.logger(
-                        string.Format("fraction of non zero demands {0}", numNonZeroDemands / numPairs),
-                        verbose);
+                    Logger.Info(
+                        string.Format("fraction of non zero demands {0}", numNonZeroDemands / numPairs));
                 }
             }
 
@@ -608,9 +616,8 @@ namespace MetaOptimize
                 for (int cid2 = cid1 + 1; cid2 < clusters.Count(); cid2++)
                 {
                     var consideredPairs = new HashSet<(string, string)>();
-                    Utils.logger(
-                        string.Format("inter-cluster adversarial demand between cluster {0} and cluster {1}", cid1, cid2),
-                        verbose);
+                    Logger.Info(
+                        string.Format("inter-cluster adversarial demand between cluster {0} and cluster {1}", cid1, cid2));
                     var cluster1Nodes = clusters[cid1].GetAllNodes().ToList();
                     var cluster2Nodes = clusters[cid2].GetAllNodes().ToList();
                     bool neighbor = false;
@@ -631,7 +638,7 @@ namespace MetaOptimize
                     }
                     if (!neighbor)
                     {
-                        Utils.logger("skipping the cluster pairs since they are not neighbors", verbose);
+                        Logger.Debug("skipping the cluster pairs since they are not neighbors");
                         continue;
                     }
                     foreach (var node1 in cluster1Nodes)
@@ -667,7 +674,7 @@ namespace MetaOptimize
                             consideredPairs.Add((node2, node1));
                         }
                     }
-                    Utils.logger("setting the objective.", verbose);
+                    Logger.Info("setting the objective.");
                     var objective = new Polynomial<TVar>(
                                 new Term<TVar>(1, optimalEncoding.GlobalObjective),
                                 new Term<TVar>(-1, heuristicEncoding.GlobalObjective));
@@ -692,7 +699,7 @@ namespace MetaOptimize
                 }
             }
             var output = GetGap(optimalEncoder, heuristicEncoder, demandMatrix, innerEncoding, demandList);
-            Utils.logger("Final gap: " + output.Item1, verbose);
+            Logger.Info("Final gap: " + output.Item1);
             return output.Item2;
         }
 
@@ -740,7 +747,7 @@ namespace MetaOptimize
             foreach (var cluster in clusters)
             {
                 optimalEncoder.Solver.CleanAll();
-                Utils.logger("Cluster with " + cluster.GetAllNodes().Count() + " nodes and " + cluster.GetAllEdges().Count() + " edges", verbose);
+                Logger.Info("Cluster with " + cluster.GetAllNodes().Count() + " nodes and " + cluster.GetAllEdges().Count() + " edges");
                 var adversarialInputGenerator = new TEAdversarialInputGenerator<TVar, TSolution>(cluster, this.maxNumPath, this.NumProcesses);
                 var clusterResult = adversarialInputGenerator.MaximizeOptimalityGap(optimalEncoder, heuristicEncoder, demandUB, innerEncoding, demandList: demandList,
                         simplify: simplify, verbose: verbose);
@@ -772,25 +779,25 @@ namespace MetaOptimize
                         }
                     }
                     var preInterCluster = GetGap(optimalEncoder, heuristicEncoder, preDemandMatrix, innerEncoding, demandList);
-                    Utils.logger("pre inter-cluster gap: " + preInterCluster.Item1, verbose);
+                    Logger.Info("pre inter-cluster gap: " + preInterCluster.Item1);
                 }
                 var solver = optimalEncoder.Solver;
                 solver.CleanAll();
-                Utils.logger("creating demand variables.", verbose);
+                Logger.Info("creating demand variables.");
                 (this.DemandEnforcers, this.LocalityConstrainedDemands) = CreateDemandVariables(solver, innerEncoding, demandList);
-                Utils.logger("generating optimal encoding.", verbose);
+                Logger.Info("generating optimal encoding.");
                 var optimalEncoding = optimalEncoder.Encoding(this.Topology, preInputVariables: this.DemandEnforcers,
                                         inputEqualityConstraints: demandMatrix, innerEncoding: innerEncoding,
                                         numProcesses: this.NumProcesses, verbose: verbose, noAdditionalConstraints: true);
-                Utils.logger("generating heuristic encoding.", verbose);
+                Logger.Info("generating heuristic encoding.");
                 var heuristicEncoding = heuristicEncoder.Encoding(this.Topology, preInputVariables: this.DemandEnforcers,
                                         inputEqualityConstraints: demandMatrix, innerEncoding: innerEncoding,
                                         numProcesses: this.NumProcesses, verbose: verbose);
 
                 // ensures that demand in both problems is the same and lower than demand upper bound constraint.
-                Utils.logger("adding constraints for upper bound on demands.", verbose);
+                Logger.Info("adding constraints for upper bound on demands.");
                 EnsureDemandUB(solver, demandUB);
-                Utils.logger("adding equality constraints for specified demands.", verbose);
+                Logger.Info("adding equality constraints for specified demands.");
                 EnsureDemandEquality(solver, constrainedDemands);
 
                 var pairNameToConstraintMapping = new Dictionary<(string, string), string>();
@@ -809,8 +816,8 @@ namespace MetaOptimize
                 var rng = new Random();
                 for (int l = 0; l < numInterClusterSamples; l++)
                 {
-                    Utils.logger(
-                        string.Format("trying the {0}-th set of inter-cluster nodes each of size {1}", l, numNodePerCluster), verbose);
+                    Logger.Info(
+                        string.Format("trying the {0}-th set of inter-cluster nodes each of size {1}", l, numNodePerCluster));
                     solver.ModelUpdate();
                     var interClusterNodes = new List<List<string>>();
                     foreach (var cluster in clusters)
@@ -853,7 +860,7 @@ namespace MetaOptimize
                         }
                     }
 
-                    Utils.logger("setting the objective.", verbose);
+                    Logger.Info("setting the objective.");
                     var objective = new Polynomial<TVar>(
                                 new Term<TVar>(1, optimalEncoding.GlobalObjective),
                                 new Term<TVar>(-1, heuristicEncoding.GlobalObjective));
@@ -879,9 +886,6 @@ namespace MetaOptimize
                             var ratePoly = this.DemandEnforcers[pair].Copy();
                             ratePoly.Add(new Term<TVar>(-1 * demandMatrix[pair]));
                             solver.AddEqZeroConstraint(ratePoly);
-                            // Utils.logger(
-                            //     string.Format("demand from {0} to {1} is: {2}", pair.Item1, pair.Item2, demandMatrix[pair]),
-                            //     verbose);
                         }
                     }
                 }
@@ -900,7 +904,7 @@ namespace MetaOptimize
             completeOpt.MaximizeOptimalityGap(optimalEncoder, heuristicEncoder, demandUB, innerEncoding, demandList, constrainedDemands, simplify,
                     verbose, demandInits: demandMatrix);
             var output = GetGap(optimalEncoder, heuristicEncoder, demandMatrix, innerEncoding, demandList);
-            Utils.logger("Final gap: " + output.Item1, verbose);
+            Logger.Info("Final gap: " + output.Item1);
             return output.Item2;
         }
 
@@ -950,7 +954,7 @@ namespace MetaOptimize
             foreach (var cluster in clusters)
             {
                 optimalEncoder.Solver.CleanAll();
-                Utils.logger("Cluster with " + cluster.GetAllNodes().Count() + " nodes and " + cluster.GetAllEdges().Count() + " edges", verbose);
+                Logger.Info("Cluster with " + cluster.GetAllNodes().Count() + " nodes and " + cluster.GetAllEdges().Count() + " edges");
                 var clusterAdversarialInputGenerator = new TEAdversarialInputGenerator<TVar, TSolution>(cluster, this.maxNumPath, this.NumProcesses);
                 var clusterResult = clusterAdversarialInputGenerator.MaximizeOptimalityGap(optimalEncoder, heuristicEncoder, demandUB, innerEncoding,
                         demandList: demandList, simplify: simplify, verbose: verbose);
@@ -979,16 +983,16 @@ namespace MetaOptimize
                     }
                 }
                 var preInterCluster = GetGap(optimalEncoder, heuristicEncoder, preDemandMatrix, innerEncoding, demandList);
-                Utils.logger("pre inter-cluster gap: " + preInterCluster.Item1, verbose);
+                Logger.Info("pre inter-cluster gap: " + preInterCluster.Item1);
             }
 
-            Utils.logger("starting to model abstracted topology", verbose);
+            Logger.Info("starting to model abstracted topology");
             var abstractTopology = new Topology();
             var clusterToNoteID = new Dictionary<Topology, string>();
             var clusterIDToCluster = new Dictionary<string, Topology>();
             var nodeID = 0;
             var clusterNumNodeList = new List<int>();
-            Utils.logger("creating abstracted topology", verbose);
+            Logger.Info("creating abstracted topology");
             foreach (var cluster in clusters)
             {
                 abstractTopology.AddNode(nodeID.ToString());
@@ -1035,17 +1039,15 @@ namespace MetaOptimize
                     {
                         abstractTopology.AddEdge(nodeID1, nodeID2, cap1To2);
                         pairToDemandUB[(nodeID1, nodeID2)] = cluster1Nodes.Count() * cluster2Nodes.Count();
-                        Utils.logger(
-                            string.Format("abstract topology edge from {0} to {1} with cap {2}", nodeID1, nodeID2, cap1To2),
-                            verbose);
+                        Logger.Info(
+                            string.Format("abstract topology edge from {0} to {1} with cap {2}", nodeID1, nodeID2, cap1To2));
                     }
                     if (cap2To1 > 0)
                     {
                         abstractTopology.AddEdge(nodeID2, nodeID1, cap2To1);
                         pairToDemandUB[(nodeID2, nodeID1)] = cluster1Nodes.Count() * cluster2Nodes.Count();
-                        Utils.logger(
-                            string.Format("abstract topology edge from {1} to {0} with cap {2}", nodeID1, nodeID2, cap2To1),
-                            verbose);
+                        Logger.Info(
+                            string.Format("abstract topology edge from {1} to {0} with cap {2}", nodeID1, nodeID2, cap2To1));
                     }
                 }
             }
@@ -1061,7 +1063,7 @@ namespace MetaOptimize
                 }
             }
 
-            Utils.logger("computing updated demand list", verbose);
+            Logger.Info("computing updated demand list");
             var demandlvls = demandList.demandList;
             demandlvls.Add(0);
             var abstractDemandList = new Dictionary<(string, string), ISet<double>>();
@@ -1098,24 +1100,23 @@ namespace MetaOptimize
                     finalClusterPairAbstractDemandList = perClusterPairAbstractDemandList;
                 }
                 abstractDemandList[(clusterToNoteID[cluster1], clusterToNoteID[cluster2])] = finalClusterPairAbstractDemandList;
-                Utils.logger(
+                Logger.Info(
                     string.Format(
                         "new demand list between abstract node {0} and {1} = {2}",
                         clusterToNoteID[cluster1],
                         clusterToNoteID[cluster2],
-                        string.Join("_", finalClusterPairAbstractDemandList)),
-                    verbose);
+                        string.Join("_", finalClusterPairAbstractDemandList)));
             }
 
-            Utils.logger("Abstract topology with " + abstractTopology.GetAllNodes().Count() +
-                    " nodes and " + abstractTopology.GetAllEdges().Count() + " edges", verbose);
+            Logger.Info("Abstract topology with " + abstractTopology.GetAllNodes().Count() +
+                    " nodes and " + abstractTopology.GetAllEdges().Count() + " edges");
             optimalEncoder.Solver.CleanAll();
             var adversarialInputGenerator = new TEAdversarialInputGenerator<TVar, TSolution>(abstractTopology, this.maxNumPath, this.NumProcesses);
             var abstractResult = adversarialInputGenerator.MaximizeOptimalityGap(optimalEncoder, heuristicEncoder,
                     innerEncoding: innerEncoding, demandList: new PairwiseDemandList(abstractDemandList),
                     simplify: simplify, verbose: verbose, cleanUpSolver: false, perDemandUB: pairToDemandUB);
 
-            Utils.logger("Assigning Demands randomly...", verbose);
+            Logger.Info("Assigning Demands randomly...");
             if (demandUB < 0)
             {
                 demandUB = this.maxNumPath * this.Topology.MaxCapacity();
@@ -1127,9 +1128,8 @@ namespace MetaOptimize
                 var nodeCluster1 = clusterIDToCluster[pair.Item1].GetAllNodes().ToList();
                 var nodeCluster2 = clusterIDToCluster[pair.Item2].GetAllNodes().ToList();
                 var remDemand = abstractResult.Item1.Demands[pair];
-                Utils.logger(
-                    string.Format("demand from {0} to {1} in abstract topo = {2}", pair.Item1, pair.Item2, remDemand),
-                    verbose);
+                Logger.Info(
+                    string.Format("demand from {0} to {1} in abstract topo = {2}", pair.Item1, pair.Item2, remDemand));
                 while (remDemand > 0.001)
                 {
                     var node1 = nodeCluster1[rng.Next(nodeCluster1.Count())];
@@ -1140,9 +1140,8 @@ namespace MetaOptimize
                         continue;
                     }
                     demandMatrix[(node1, node2)] = demand;
-                    Utils.logger(
-                        string.Format("adding demand from {0} to {1} = {2}", node1, node2, demand),
-                        verbose);
+                    Logger.Info(
+                        string.Format("adding demand from {0} to {1} = {2}", node1, node2, demand));
                     remDemand -= demand;
                 }
             }
@@ -1155,7 +1154,7 @@ namespace MetaOptimize
                 }
             }
             var output = GetGap(optimalEncoder, heuristicEncoder, demandMatrix, innerEncoding, demandList);
-            Utils.logger("Final gap: " + output.Item1, verbose);
+            Logger.Info("Final gap: " + output.Item1);
             return output.Item2;
         }
 
@@ -1254,9 +1253,12 @@ namespace MetaOptimize
             }
         }
 
-        // TODO: I think somewhere I asked about the Zen requirement that we have to upper bound the demand
-        // variables. this addresses that comment, we should remove the commented out code in the other place
-        // and leave a comment that describes what is happening here.
+        /// <summary>
+        /// Adds constraints to upper-bound the demand.
+        /// </summary>
+        /// <param name="solver"></param>
+        /// <param name="demandUB"></param>
+        /// <exception cref="Exception"></exception>
         private void EnsureDemandUB(
             ISolver<TVar, TSolution> solver,
             IDictionary<(string, string), double> demandUB)
@@ -1304,7 +1306,13 @@ namespace MetaOptimize
             solver.AddLeqZeroConstraint(poly);
         }
 
-        // TODO: needs a comment describing what it does.
+        /// <summary>
+        /// If we want certain demands to take specific values we use this function
+        /// to pre-set those demand's values.
+        /// </summary>
+        /// <param name="solver"></param>
+        /// <param name="constrainedDemands"></param>
+        /// <exception cref="Exception"></exception>
         private void EnsureDemandEquality(
             ISolver<TVar, TSolution> solver,
             IDictionary<(string, string), double> constrainedDemands)
@@ -1326,8 +1334,11 @@ namespace MetaOptimize
             }
         }
 
-        // TODO: need a comment that describes what this function does.
-        // TODO: seems like it just controls how many demand variables can be non-zero.
+        /// <summary>
+        /// Enforces that the demand matrix satisfies density requirements from the user.
+        /// </summary>
+        /// <param name="solver"></param>
+        /// <param name="density"></param>
         private void EnsureDensityConstraint(
             ISolver<TVar, TSolution> solver,
             double density)
@@ -1349,12 +1360,13 @@ namespace MetaOptimize
             solver.AddLeqZeroConstraint(densityConstraint);
         }
 
-        // TODO: this function requires a comment.
-        // Is demandList the list of quantization levels for the demand variable? if yes, we need to rename it to something tht is more clear.
+        /// <summary>
+        /// Creates demand variables.
+        /// </summary>
         private (Dictionary<(string, string), Polynomial<TVar>>, Dictionary<(string, string), double>) CreateDemandVariables(
                 ISolver<TVar, TSolution> solver,
                 InnerRewriteMethodChoice innerEncoding,
-                IDemandList demandList,
+                IDemandList quantizationThresholdsForDemands,
                 IDictionary<(string, string), double> demandInits = null,
                 double LargeDemandLB = -1,
                 int LargeMaxDistance = -1,
@@ -1386,8 +1398,7 @@ namespace MetaOptimize
             var demandEnforcers = new Dictionary<(string, string), Polynomial<TVar>>();
             var LocalityConstrainedDemands = new Dictionary<(string, string), double>();
 
-            // TODO: add a debug, info and other logging levels. dont use things like this.
-            Console.WriteLine("[INFO] In total " + this.Topology.GetNodePairs().Count() + " pairs");
+            Logger.Debug("[INFO] In total " + this.Topology.GetNodePairs().Count() + " pairs");
 
             foreach (var pair in this.Topology.GetNodePairs())
             {
@@ -1398,9 +1409,9 @@ namespace MetaOptimize
                         break;
                     case InnerRewriteMethodChoice.PrimalDual:
                         // get demands lvls
-                        var demands = demandList.GetDemandsForPair(pair.Item1, pair.Item2);
+                        var demands = quantizationThresholdsForDemands.GetDemandsForPair(pair.Item1, pair.Item2);
 
-                        // TODO: why do you remove the first item in the list?
+                        // TODO-Behnaz's question: why do you remove the first item in the list?
                         demands.Remove(0);
                         // get distance
                         var distance = this.Topology.ShortestKPaths(1, pair.Item1, pair.Item2)[0].Length - 1;
@@ -1635,7 +1646,6 @@ namespace MetaOptimize
             Random rng = new Random(seed);
             double timeout_ms = timeout * 1000;
             Stopwatch timer = Stopwatch.StartNew();
-            // Utils.StoreProgress(logPath, timer.ElapsedMilliseconds + ", " + currMaxGap, storeProgress);
 
             foreach (int i in Enumerable.Range(0, numTrials))
             {
@@ -1671,23 +1681,23 @@ namespace MetaOptimize
                         break;
                     }
                 } while (!feasible);
-                Utils.WriteToConsole("===========================================================", verbose);
-                Utils.WriteToConsole("===========================================================", verbose);
-                Utils.WriteToConsole("===========================================================", verbose);
-                Utils.WriteToConsole("======== try " + i + " found a solution with gap " + currGap, verbose);
+                Logger.Debug("===========================================================");
+                Logger.Debug("===========================================================");
+                Logger.Debug("===========================================================");
+                Logger.Debug("======== try " + i + " found a solution with gap " + currGap);
                 if (currGap > currMaxGap)
                 {
-                    Utils.WriteToConsole("updating the max gap from " + currMaxGap + " to " + currGap, verbose);
+                    Logger.Debug("updating the max gap from " + currMaxGap + " to " + currGap);
                     currMaxGap = currGap;
                     worstResult = result;
                 }
                 else
                 {
-                    Utils.WriteToConsole("the max gap remains the same =" + currMaxGap, verbose);
+                    Logger.Debug("the max gap remains the same =" + currMaxGap);
                 }
-                Utils.WriteToConsole("===========================================================", verbose);
-                Utils.WriteToConsole("===========================================================", verbose);
-                Utils.WriteToConsole("===========================================================", verbose);
+                Logger.Debug("===========================================================");
+                Logger.Debug("===========================================================");
+                Logger.Debug("===========================================================");
                 Utils.StoreProgress(logPath, timer.ElapsedMilliseconds + ", " + currMaxGap, storeProgress);
                 if (timer.ElapsedMilliseconds > timeout_ms)
                 {
@@ -1755,7 +1765,6 @@ namespace MetaOptimize
             Random rng = new Random(seed);
             double timeout_ms = timeout * 1000;
             Stopwatch timer = Stopwatch.StartNew();
-            // Utils.StoreProgress(logPath, timer.ElapsedMilliseconds + ", " + currMaxGap, storeProgress);
 
             bool timeoutReached = false;
             foreach (int i in Enumerable.Range(0, numTrials))
@@ -1852,10 +1861,10 @@ namespace MetaOptimize
                         // check if better advers input
                         if (neighborGap > currGap)
                         {
-                            Utils.WriteToConsole("===========================================================", verbose);
-                            Utils.WriteToConsole("===========================================================", verbose);
-                            Utils.WriteToConsole("===========================================================", verbose);
-                            Utils.WriteToConsole("======== try " + i + " neighbor " + j + " found a neighbor with gap " + neighborGap + " higher than " + currGap, verbose);
+                            Logger.Debug("===========================================================");
+                            Logger.Debug("===========================================================");
+                            Logger.Debug("===========================================================");
+                            Logger.Debug("======== try " + i + " neighbor " + j + " found a neighbor with gap " + neighborGap + " higher than " + currGap);
                             currDemands = neighborDemands;
                             currResult = neighborResult;
                             currGap = neighborGap;
@@ -1863,10 +1872,10 @@ namespace MetaOptimize
                         }
                         else
                         {
-                            Utils.WriteToConsole("===========================================================", verbose);
-                            Utils.WriteToConsole("===========================================================", verbose);
-                            Utils.WriteToConsole("===========================================================", verbose);
-                            Utils.WriteToConsole("======== try " + i + " neighbor " + j + " has a lower gap " + neighborGap + " than curr gap " + currGap, verbose);
+                            Logger.Debug("===========================================================");
+                            Logger.Debug("===========================================================");
+                            Logger.Debug("===========================================================");
+                            Logger.Debug("======== try " + i + " neighbor " + j + " has a lower gap " + neighborGap + " than curr gap " + currGap);
                         }
                         Utils.StoreProgress(logPath, timer.ElapsedMilliseconds + ", " + Math.Max(currGap, currMaxGap), storeProgress);
                         if (timer.ElapsedMilliseconds > timeout_ms)
@@ -1877,19 +1886,19 @@ namespace MetaOptimize
                     }
                 } while (!localMax);
 
-                Utils.WriteToConsole("===========================================================", verbose);
-                Utils.WriteToConsole("===========================================================", verbose);
-                Utils.WriteToConsole("===========================================================", verbose);
-                Utils.WriteToConsole("======== try " + i + " found a local maximum with gap " + currGap, verbose);
+                Logger.Debug("===========================================================");
+                Logger.Debug("===========================================================");
+                Logger.Debug("===========================================================");
+                Logger.Debug("======== try " + i + " found a local maximum with gap " + currGap);
                 if (currGap > currMaxGap)
                 {
-                    Utils.WriteToConsole("updating the max gap from " + currMaxGap + " to " + currGap, verbose);
+                    Logger.Debug("updating the max gap from " + currMaxGap + " to " + currGap);
                     currMaxGap = currGap;
                     worstResult = currResult;
                 }
                 else
                 {
-                    Utils.WriteToConsole("the max gap remains the same =" + currMaxGap, verbose);
+                    Logger.Debug("the max gap remains the same =" + currMaxGap);
                 }
                 if (timeoutReached)
                 {
@@ -2154,11 +2163,11 @@ namespace MetaOptimize
                     // check if better advers input
                     if (neighborGap > currGap)
                     {
-                        Utils.WriteToConsole("===========================================================", verbose);
-                        Utils.WriteToConsole("===========================================================", verbose);
-                        Utils.WriteToConsole("===========================================================", verbose);
-                        Utils.WriteToConsole("======== try " + p + " neighbor " + Mp + " found a neighbor with gap " + neighborGap + " higher than " + currGap +
-                            " max gap = " + currMaxGap, verbose);
+                        Logger.Debug("===========================================================");
+                        Logger.Debug("===========================================================");
+                        Logger.Debug("===========================================================");
+                        Logger.Debug("======== try " + p + " neighbor " + Mp + " found a neighbor with gap " + neighborGap + " higher than " + currGap +
+                            " max gap = " + currMaxGap);
                         currDemands = neighborDemands;
                         currResult = neighborResult;
                         currGap = neighborGap;
@@ -2170,19 +2179,19 @@ namespace MetaOptimize
                     }
                     else
                     {
-                        Utils.WriteToConsole("===========================================================", verbose);
-                        Utils.WriteToConsole("===========================================================", verbose);
-                        Utils.WriteToConsole("===========================================================", verbose);
-                        Utils.WriteToConsole("======== try " + p + " neighbor " + Mp + " has a lower gap " + neighborGap + " than curr gap " + currGap +
-                            " max gap = " + currMaxGap, verbose);
+                        Logger.Debug("===========================================================");
+                        Logger.Debug("===========================================================");
+                        Logger.Debug("===========================================================");
+                        Logger.Debug("======== try " + p + " neighbor " + Mp + " has a lower gap " + neighborGap + " than curr gap " + currGap +
+                            " max gap = " + currMaxGap);
                         double currProbability = Math.Exp((neighborGap - currGap) / currTmp);
                         double randomNumber = rng.NextDouble();
-                        Utils.WriteToConsole("current temperature is " + currTmp, verbose);
-                        Utils.WriteToConsole("current gap difference is " + (neighborGap - currGap), verbose);
-                        Utils.WriteToConsole("current probability is " + currProbability + " and the random number is " + randomNumber, verbose);
+                        Logger.Debug("current temperature is " + currTmp);
+                        Logger.Debug("current gap difference is " + (neighborGap - currGap));
+                        Logger.Debug("current probability is " + currProbability + " and the random number is " + randomNumber);
                         if (randomNumber <= currProbability)
                         {
-                            Utils.WriteToConsole("accepting the lower gap", verbose);
+                            Logger.Debug("accepting the lower gap");
                             currDemands = neighborDemands;
                             currResult = neighborResult;
                             currGap = neighborGap;

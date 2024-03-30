@@ -8,6 +8,7 @@ namespace MetaOptimize
     using System.Collections.Generic;
     using System.Diagnostics;
     using System.Linq;
+    using NLog;
     using ZenLib;
 
     /// <summary>
@@ -15,6 +16,7 @@ namespace MetaOptimize
     /// </summary>
     public class PopEncoder<TVar, TSolution> : IEncoder<TVar, TSolution>
     {
+        private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
         /// <summary>
         /// The solver being used.
         /// </summary>
@@ -93,7 +95,7 @@ namespace MetaOptimize
                 throw new ArgumentOutOfRangeException("Right now we only support up to 10 partitions.");
             }
 
-            Console.WriteLine("========= parition sensitivity: " + partitionSensitivity);
+            Logger.Debug("========= parition sensitivity: " + partitionSensitivity);
             if (partitionSensitivity != -1 & (partitionSensitivity < 0 | partitionSensitivity > 1))
             {
                 throw new Exception("production sensitivity should be between 0 and 1");
@@ -173,7 +175,7 @@ namespace MetaOptimize
             // get all the separate encodings.
             for (int i = 0; i < this.NumPartitions; i++)
             {
-                Utils.logger(string.Format("generating pop encoding for partition {0}.", i), verbose);
+                Logger.Info(string.Format("generating pop encoding for partition {0}.", i), verbose);
                 Dictionary<(string, string), Polynomial<TVar>> partitionPreDemandVariables = null;
                 partitionPreDemandVariables = new Dictionary<(string, string), Polynomial<TVar>>();
                 foreach (var (pair, partitionID) in this.DemandPartitions)

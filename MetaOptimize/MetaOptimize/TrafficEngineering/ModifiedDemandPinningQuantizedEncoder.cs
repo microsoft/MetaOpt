@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using NLog;
 
 namespace MetaOptimize
 {
@@ -15,6 +16,7 @@ namespace MetaOptimize
     /// </summary>
     public class ModifiedDemandPinningQuantizedEncoder<TVar, TSolution> : DemandPinningQuantizedEncoder<TVar, TSolution>
     {
+        private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
         /// <summary>
         /// Auxilary variable used to encode DP.
         /// </summary>
@@ -78,7 +80,7 @@ namespace MetaOptimize
                 {
                     if (demand <= this.Threshold && Math.Abs(flows[pair] - demand) > 0.001)
                     {
-                        Console.WriteLine($"{pair.Item1},{pair.Item2},{demand},{flows[pair]}");
+                        Logger.Debug($"{pair.Item1},{pair.Item2},{demand},{flows[pair]}");
                         throw new Exception("does not match");
                     }
                 }
@@ -99,7 +101,7 @@ namespace MetaOptimize
                 }
                 if (!found)
                 {
-                    Console.WriteLine($"{pair.Item1},{pair.Item2},{demand},{flows[pair]}");
+                    Logger.Debug($"{pair.Item1},{pair.Item2},{demand},{flows[pair]}");
                     throw new Exception("does not match");
                 }
             }
@@ -110,7 +112,7 @@ namespace MetaOptimize
         /// </summary>
         protected override void GenerateDPConstraints(Polynomial<TVar> objectiveFunction, bool verbose)
         {
-            Utils.logger("Generating Modified Quantized DP constraints.", verbose);
+            Logger.Info("Generating Modified Quantized DP constraints.");
             // generating the max constraints that achieve pinning.
             foreach (var (pair, polyTerm) in sumNonShortestDict)
             {
