@@ -309,7 +309,7 @@ namespace MetaOptimize
 
             return new VBPOptimizationSolution
             {
-                Demands = demands,
+                Items = demands,
                 Placement = placements,
                 TotalNumBinsUsed = Convert.ToInt32(this.Solver.GetVariable(solution, this.TotalNumBinsUsedVariable)),
             };

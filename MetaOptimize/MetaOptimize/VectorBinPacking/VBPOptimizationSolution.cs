@@ -19,7 +19,7 @@ namespace MetaOptimize
         /// <summary>
         /// The demands for the problem.
         /// </summary>
-        public IDictionary<int, List<double>> Demands { get; set; }
+        public IDictionary<int, List<double>> Items { get; set; }
 
         /// <summary>
         /// The flow allocation for the problem.

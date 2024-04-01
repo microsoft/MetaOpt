@@ -551,7 +551,7 @@ namespace MetaOptimize
                     itemSizes[itemID] = new List<double>();
                     for (var dimID = 0; dimID < this.NumDimensions; dimID++) {
                         var demandlvl = DiscoverMatchingDemandLvl(this.DemandToBinaryPoly[itemID][dimID],
-                                            optimalSolution.Demands[itemID][dimID]);
+                                            optimalSolution.Items[itemID][dimID]);
                         itemSizes[itemID].Add(demandlvl);
                     }
                     AddSingleDemandEquality(solver, itemID, itemSizes[itemID]);
