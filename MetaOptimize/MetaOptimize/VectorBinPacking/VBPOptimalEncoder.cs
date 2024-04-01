@@ -8,12 +8,15 @@ namespace MetaOptimize
     using System.Collections.Generic;
     using System.Diagnostics;
     using Gurobi;
+    using NLog;
+    using NLog.Config;
 
     /// <summary>
     /// A class for the VBP optimal encoding.
     /// </summary>
     public class VBPOptimalEncoder<TVar, TSolution> : IEncoder<TVar, TSolution>
     {
+        private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
         /// <summary>
         /// The solver being user.
         /// </summary>
@@ -102,7 +105,6 @@ namespace MetaOptimize
             if (this.BreakSymmetry) {
                 maxBinID = Math.Min(maxBinID, itemID);
             }
-            // Console.WriteLine(maxBinID);
             return maxBinID;
         }
 
@@ -168,13 +170,13 @@ namespace MetaOptimize
             Dictionary<int, int> inputPlacementEqualityConstraints = null,
             bool verbose = false)
         {
-            Utils.logger("break symmetry " + this.BreakSymmetry, verbose);
-            Utils.logger("initialize variables", verbose);
+            Logger.Info("break symmetry " + this.BreakSymmetry);
+            Logger.Info("initialize variables");
             this.bins = bins;
             InitializeVariables(preInputVariables, inputEqualityConstraints,
                 inputPlacementEqualityConstraints);
 
-            Utils.logger("ensure capacity constraints are respected", verbose);
+            Logger.Info("ensure capacity constraints are respected");
             var binSizeList = this.bins.getBinSizes();
             for (int binId = 0; binId < this.bins.GetNum(); binId++) {
                 var binSize = binSizeList[binId];
@@ -198,7 +200,7 @@ namespace MetaOptimize
                 }
             }
 
-            Utils.logger("ensure only one demandPerBinVariable is non-zero", verbose);
+            Logger.Info("ensure only one demandPerBinVariable is non-zero");
             foreach (int itemID in this.DemandVariables.Keys) {
                 if (!IsDemandValid(itemID)) {
                     continue;
@@ -219,7 +221,7 @@ namespace MetaOptimize
                 }
             }
 
-            Utils.logger("ensure each item ends up in exactly one bin + break symmetry", verbose);
+            Logger.Info("ensure each item ends up in exactly one bin + break symmetry");
             var num_bins = this.bins.GetNum();
             foreach (var itemID in this.DemandVariables.Keys) {
                 if (!IsDemandValid(itemID)) {
@@ -233,7 +235,7 @@ namespace MetaOptimize
                 this.Solver.AddEqZeroConstraint(placePoly);
             }
 
-            Utils.logger("ensuring demand constraints are respected", verbose);
+            Logger.Info("ensuring demand constraints are respected");
             foreach (var (itemID, demandConstant) in this.DemandConstraints)
             {
                 if (!IsDemandValid(itemID)) {
@@ -250,7 +252,7 @@ namespace MetaOptimize
                 }
             }
 
-            Utils.logger("ensure demand placement constraints are respected", verbose);
+            Logger.Info("ensure demand placement constraints are respected");
             foreach (var (itemID, placementConstant) in this.DemandPlacementConstraints)
             {
                 if (!IsDemandValid(itemID)) {
@@ -262,7 +264,7 @@ namespace MetaOptimize
                 this.Solver.AddEqZeroConstraint(poly);
             }
 
-            Utils.logger("ensure objective == total bins used", verbose);
+            Logger.Info("ensure objective == total bins used");
             var objPoly = new Polynomial<TVar>(new Term<TVar>(-1, this.TotalNumBinsUsedVariable));
             foreach (var binUsedVar in BinUsedVariables) {
                 objPoly.Add(new Term<TVar>(1, binUsedVar));

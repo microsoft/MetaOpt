@@ -10,12 +10,14 @@ namespace MetaOptimize
     using System.Linq;
     using System.Threading;
     using Gurobi;
+    using NLog;
 
     /// <summary>
     /// Meta-optimization utility functions for maximizing optimality gaps.
     /// </summary>
     public class VBPAdversarialInputGenerator<TVar, TSolution>
     {
+        private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
         private double smallestDemandUnit = 2 * Math.Pow(10, -2);
         /// <summary>
         /// The bins to fill.
@@ -245,18 +247,18 @@ namespace MetaOptimize
                 solver.CleanAll();
             }
 
-            Utils.logger("creating demand variables.", verbose);
+            Logger.Info("creating demand variables.");
             this.DemandVariables = CreateDemandVariables(solver);
             CreateBinaryDemandLevels(solver, demandList, verbose);
 
-            Utils.logger("generating optimal encoding.", verbose);
+            Logger.Info("generating optimal encoding.");
             // var optBins = this.Bins.GetFirstKBins(numBinsUsedOptimal);
             var optimalEncoding = optimalEncoder.Encoding(Bins, preInputVariables: this.DemandVariables, verbose: verbose);
-            Utils.logger("generating heuristic encoding.", verbose);
+            Logger.Info("generating heuristic encoding.");
             var heuristicEncoding = heuristicEncoder.Encoding(Bins, preInputVariables: this.DemandVariables, verbose: verbose);
 
             // ensures that demand in both problems is the same and lower than demand upper bound constraint.
-            Utils.logger("adding constraints for upper bound on demands.", verbose);
+            Logger.Info("adding constraints for upper bound on demands.");
             if (perDemandUB != null)
             {
                 EnsureDemandUB(solver, perDemandUB);
@@ -265,7 +267,7 @@ namespace MetaOptimize
             {
                 EnsureDemandUB(solver, demandUB);
             }
-            Utils.logger("adding equality constraints for specified demands.", verbose);
+            Logger.Info("adding equality constraints for specified demands.");
             EnsureDemandEquality(solver, constrainedDemands);
             AddFFDWeightConstraints(solver, ffdMethod, verbose);
 
@@ -276,7 +278,7 @@ namespace MetaOptimize
                 solver.AddEqZeroConstraint(optimalBinsPoly);
             }
 
-            Utils.logger("setting the objective.", verbose);
+            Logger.Info("setting the objective.");
             var objective = new Polynomial<TVar>(
                         new Term<TVar>(-1, optimalEncoding.GlobalObjective),
                         new Term<TVar>(1, heuristicEncoding.GlobalObjective));
@@ -290,10 +292,10 @@ namespace MetaOptimize
             switch (ffdMethod)
             {
                 case FFDMethodChoice.FF:
-                    Utils.logger("Using FF Heuristic.", verbose);
+                    Logger.Info("Using FF Heuristic.");
                     break;
                 case FFDMethodChoice.FFDSum:
-                    Utils.logger("Using FFDSum Heuristic.", verbose);
+                    Logger.Info("Using FFDSum Heuristic.");
                     for (int itemID = 0; itemID < this.NumItems - 1; itemID++)
                     {
                         var poly = new Polynomial<TVar>();
@@ -306,7 +308,7 @@ namespace MetaOptimize
                     }
                     break;
                 case FFDMethodChoice.FFDProd:
-                    Utils.logger("Using FFDProd Heuristic.", verbose);
+                    Logger.Info("Using FFDProd Heuristic.");
                     var itemIDToProd = new Dictionary<int, Polynomial<TVar>>();
                     for (int itemID = 0; itemID < this.NumItems; itemID++)
                     {
@@ -327,7 +329,7 @@ namespace MetaOptimize
                     }
                     break;
                 case FFDMethodChoice.FFDDiv:
-                    Utils.logger("Using FFDDiv Heuristic.", verbose);
+                    Logger.Info("Using FFDDiv Heuristic.");
                     Debug.Assert(this.NumDimensions == 2);
                     for (int itemID = 0; itemID < this.NumItems; itemID++)
                     {
@@ -358,7 +360,7 @@ namespace MetaOptimize
             this.DemandToBinaryPoly = new Dictionary<int, List<Polynomial<TVar>>>();
             if (demandList == null)
             {
-                Utils.logger("demand List is null.", verbose);
+                Logger.Info("demand List is null.");
                 foreach (var (itemID, demandVar) in this.DemandVariables)
                 {
                     this.DemandToBinaryPoly[itemID] = new List<Polynomial<TVar>>();
@@ -381,7 +383,7 @@ namespace MetaOptimize
             }
             else
             {
-                Utils.logger("demand List specified.", verbose);
+                Logger.Info("demand List specified.");
                 foreach (var (itemID, demandVar) in this.DemandVariables)
                 {
                     this.DemandToBinaryPoly[itemID] = new List<Polynomial<TVar>>();
@@ -485,18 +487,18 @@ namespace MetaOptimize
                 solver.CleanAll();
             }
 
-            Utils.logger("creating demand variables.", verbose);
+            Logger.Info("creating demand variables.");
             this.DemandVariables = CreateDemandVariables(solver);
             CreateBinaryDemandLevels(solver, demandList, verbose);
 
-            Utils.logger("generating optimal encoding.", verbose);
+            Logger.Info("generating optimal encoding.");
             // var optBins = this.Bins.GetFirstKBins(numBinsUsedOptimal);
             var optimalEncoding = optimalEncoder.Encoding(Bins, preInputVariables: this.DemandVariables, verbose: verbose);
-            Utils.logger("generating heuristic encoding.", verbose);
+            Logger.Info("generating heuristic encoding.");
             var heuristicEncoding = heuristicEncoder.Encoding(Bins, preInputVariables: this.DemandVariables, verbose: verbose);
 
             // ensures that demand in both problems is the same and lower than demand upper bound constraint.
-            Utils.logger("adding constraints for upper bound on demands.", verbose);
+            Logger.Info("adding constraints for upper bound on demands.");
             if (perDemandUB != null)
             {
                 EnsureDemandUB(solver, perDemandUB);
@@ -505,10 +507,10 @@ namespace MetaOptimize
             {
                 EnsureDemandUB(solver, demandUB);
             }
-            Utils.logger("adding equality constraints for specified demands.", verbose);
+            Logger.Info("adding equality constraints for specified demands.");
             EnsureDemandEquality(solver, constrainedDemands);
 
-            Utils.logger("Initialize all demands with zero!", verbose);
+            Logger.Info("Initialize all demands with zero!");
             var itemToConstraintMapping = new Dictionary<int, List<string>>();
             foreach (var (itemID, ListDemandVar) in this.DemandVariables) {
                 var listConstrNames = new List<string>();
@@ -524,7 +526,7 @@ namespace MetaOptimize
 
             var optimalUBConstraintName = "";
             if (maxNumOptBinEachIteration > 0) {
-                Utils.logger("Add Upper bound on the number of bins optimal uses.", verbose);
+                Logger.Info("Add Upper bound on the number of bins optimal uses.");
                 var optimalBinsPoly = new Polynomial<TVar>();
                 optimalBinsPoly.Add(new Term<TVar>(-1 * maxNumOptBinEachIteration));
                 optimalBinsPoly.Add(new Term<TVar>(1, optimalEncoding.GlobalObjective));
@@ -536,7 +538,7 @@ namespace MetaOptimize
             int numOptBinsSoFar = 0;
             var itemSizes = new Dictionary<int, List<double>>();
             while (lastItemPlaced + 1 < this.NumItems) {
-                Utils.logger(
+                Logger.Info(
                     string.Format("Placing Items {0} - {1}", lastItemPlaced + 1, lastItemPlaced + numItemsEachIteration),
                     verbose);
                 var consideredItems = new HashSet<int>();
@@ -555,7 +557,7 @@ namespace MetaOptimize
                     solver.ChangeConstraintRHS(optimalUBConstraintName, numOptBinsSoFar + maxNumOptBinEachIteration);
                 }
 
-                Utils.logger("setting the objective.", verbose);
+                Logger.Info("setting the objective.");
                 var objective = new Polynomial<TVar>(
                             new Term<TVar>(-1, optimalEncoding.GlobalObjective),
                             new Term<TVar>(1, heuristicEncoding.GlobalObjective));
@@ -576,7 +578,7 @@ namespace MetaOptimize
             }
             // Console.WriteLine(Newtonsoft.Json.JsonConvert.SerializeObject(itemSizes, Newtonsoft.Json.Formatting.Indented));
             var output = GetGap(optimalEncoder, heuristicEncoder, itemSizes);
-            Utils.logger("Final gap: " + output.Item1, verbose);
+            Logger.Info("Final gap: " + output.Item1);
             return output.Item2;
         }
     }

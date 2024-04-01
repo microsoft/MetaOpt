@@ -8,12 +8,14 @@ namespace MetaOptimize
     using System.Collections.Generic;
     using System.Diagnostics;
     using Gurobi;
+    using NLog;
 
     /// <summary>
     /// A class for the VBP optimal encoding.
     /// </summary>
     public class FFDItemCentricEncoderV2<TVar, TSolution> : IEncoder<TVar, TSolution>
     {
+        private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
         private double bigM = Math.Pow(10, 3);
         private double Epsilon = Math.Pow(10, -3);
 
@@ -164,11 +166,11 @@ namespace MetaOptimize
         public OptimizationEncoding<TVar, TSolution> Encoding(Bins bins, Dictionary<int, List<TVar>> preDemandVariables = null,
             Dictionary<int, List<double>> demandEqualityConstraints = null, bool verbose = false)
         {
-            Utils.logger("initialize variables", verbose);
+            Logger.Info("initialize variables");
             this.bins = bins;
             InitializeVariables(preDemandVariables, demandEqualityConstraints);
 
-            Utils.logger("ensuring demand constraints are respected", verbose);
+            Logger.Info("ensuring demand constraints are respected");
             foreach (var (itemID, demandConstant) in this.DemandConstraints)
             {
                 for (int dimension = 0; dimension < this.NumDimensions; dimension++) {
@@ -182,7 +184,7 @@ namespace MetaOptimize
                 }
             }
 
-            Utils.logger("ensure each item ends up in exactly one bin", verbose);
+            Logger.Info("ensure each item ends up in exactly one bin");
             foreach (var itemID in this.DemandVariables.Keys) {
                 var placePoly = new Polynomial<TVar>(new Term<TVar>(-1));
                 for (int binId = 0; binId < this.bins.GetNum(); binId++) {
@@ -191,7 +193,7 @@ namespace MetaOptimize
                 this.Solver.AddEqZeroConstraint(placePoly);
             }
 
-            Utils.logger("ensure each item placed in a bin if it is not placed in any prior bins", verbose);
+            Logger.Info("ensure each item placed in a bin if it is not placed in any prior bins");
             foreach (var itemID in this.DemandVariables.Keys) {
                 for (int binId = 0; binId < this.bins.GetNum(); binId++) {
                     var coeff = (1 + binId);
@@ -208,7 +210,7 @@ namespace MetaOptimize
                 }
             }
 
-            Utils.logger("ensure each item can fit in the right bin", verbose);
+            Logger.Info("ensure each item can fit in the right bin");
             var binSizeList = this.bins.getBinSizes();
             foreach (var itemID in this.DemandVariables.Keys) {
                 for (int binId = 0; binId < this.bins.GetNum(); binId++) {
@@ -235,7 +237,7 @@ namespace MetaOptimize
                 }
             }
 
-            Utils.logger("ensure only one demandPerBinVariable is non-zero", verbose);
+            Logger.Info("ensure only one demandPerBinVariable is non-zero");
             foreach (int itemID in this.DemandVariables.Keys) {
                 for (int dimension = 0; dimension < this.NumDimensions; dimension++) {
                     var sumPoly = new Polynomial<TVar>();
@@ -252,7 +254,7 @@ namespace MetaOptimize
                 }
             }
 
-            Utils.logger("ensure bin used = 1 if any item in bin", verbose);
+            Logger.Info("ensure bin used = 1 if any item in bin");
             for (int binId = 0; binId < this.bins.GetNum(); binId++) {
                 var sumPoly = new Polynomial<TVar>();
                 foreach (int itemID in this.DemandVariables.Keys) {
@@ -266,7 +268,7 @@ namespace MetaOptimize
                 this.Solver.AddLeqZeroConstraint(sumPoly);
             }
 
-            Utils.logger("ensure objective == total bins used", verbose);
+            Logger.Info("ensure objective == total bins used");
             var objPoly = new Polynomial<TVar>(new Term<TVar>(-1, this.TotalNumBinsUsedVariable));
             foreach (var binUsedVar in BinUsedVariables) {
                 objPoly.Add(new Term<TVar>(1, binUsedVar));
