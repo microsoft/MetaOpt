@@ -353,24 +353,24 @@ namespace MetaOptimize.Cli
         }
 
         /// <summary>
-        /// Experiments for sigcomm.
+        /// Experiments for NSDI.
         /// </summary>
-        public static void SigcommMain(string[] args)
+        public static void NSDIMain(string[] args)
         {
-            // SigcommExp.compareGapDelayDiffMethodsDP();
-            // SigcommExp.compareLargeScaleGapDelayDiffMethodsDP();
-            // SigcommExp.compareGapDelayDiffMethodsPop();
-            // SigcommExp.AblationStudyClusteringOnDP();
-            // SigcommExp.BlackBoxParameterTunning();
-            SigcommExp.AddRealisticConstraintsDP();
-            // SigcommExp.gapThresholdDemandPinningForDifferentTopologies();
-            // SigcommExp.ImpactNumPathsPartitionsExpectedPop();
-            // SigcommExp.AblationStudyClusteringOnDP();
-            // SigcommExp.BlackBoxParameterTunning();
-            // SigcommExp.AnalyzeModifiedDP();
-            // SigcommExp.ImpactNumNodesRadixSmallWordTopoDemandPinning();
-            // SigcommExp.ImpactNumSamplesExpectedPop();
-            // SigcommExp.AnalyzeParallelHeuristics();
+            // NSDIExp.compareGapDelayDiffMethodsDP();
+            // NSDIExp.compareLargeScaleGapDelayDiffMethodsDP();
+            // NSDIExp.compareGapDelayDiffMethodsPop();
+            // NSDIExp.AblationStudyClusteringOnDP();
+            // NSDIExp.BlackBoxParameterTunning();
+            NSDIExp.AddRealisticConstraintsDP();
+            // NSDIExp.gapThresholdDemandPinningForDifferentTopologies();
+            // NSDIExp.ImpactNumPathsPartitionsExpectedPop();
+            // NSDIExp.AblationStudyClusteringOnDP();
+            // NSDIExp.BlackBoxParameterTunning();
+            // NSDIExp.AnalyzeModifiedDP();
+            // NSDIExp.ImpactNumNodesRadixSmallWordTopoDemandPinning();
+            // NSDIExp.ImpactNumSamplesExpectedPop();
+            // NSDIExp.AnalyzeParallelHeuristics();
         }
 
         /// <summary>
