@@ -76,7 +76,7 @@ namespace MetaOptimize
         private double capacityTolerance = Math.Pow(10, -4);
         /// <summary>
         /// scale factor.
-        /// TODO -- Engineering: right-now the scale factor is set to zero.
+        /// TODO -- Engineering: right-now the scale factor is set to one.
         /// To use the scale factor you need to ensure that OPT also uses a similar factor.
         /// </summary>
         protected double _scale = Math.Pow(10, 0);

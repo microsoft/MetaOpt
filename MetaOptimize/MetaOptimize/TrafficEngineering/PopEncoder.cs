@@ -12,7 +12,7 @@ namespace MetaOptimize
     using ZenLib;
 
     /// <summary>
-    /// The Pop encoder for splitting a network capacity into pieces.
+    /// The POP encoder for splitting a network capacity into pieces.
     /// </summary>
     public class PopEncoder<TVar, TSolution> : IEncoder<TVar, TSolution>
     {
@@ -34,7 +34,7 @@ namespace MetaOptimize
 
         /// <summary>
         /// The reduced capacity topology for the network.
-        /// PoP partitions the network into identical topologies where
+        /// POP partitions the network into identical topologies where
         /// each topology has an equal fraction of the link capacities from
         /// the original topology. Because of that we only need to keep
         /// one instance instead of n.
@@ -68,7 +68,7 @@ namespace MetaOptimize
 
         /// <summary>
         /// The demand constraints in terms of constant values.
-        /// Speficically, PoP also partitions the demand matrix, so that each partition
+        /// Speficically, POP also partitions the demand matrix, so that each partition
         /// routes a sub-set of the demands. This dictionary maps the demands for each partition
         /// so that we track which demands the partition is serving and it is also tracking how large these
         /// demands are.
@@ -148,8 +148,8 @@ namespace MetaOptimize
 
         /// <summary>
         /// Encodes the POP optimization problem.
-        /// The PoP heuristic is described in the following paper
-        /// by Abouzaid et al: https://dl.acm.org/doi/10.1145/3477132.3483588
+        /// The POP heuristic is described in the following paper
+        /// by Narayanan et al: https://dl.acm.org/doi/10.1145/3477132.3483588
         /// The pathType encodes how we find the shortest path sets to use for
         /// the multi-commodity flow problem.
         /// </summary>
