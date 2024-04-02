@@ -32,7 +32,7 @@
 
 ## Getting Started
 
-We provide multiple example Main functions that you can try in `MetaOptimize.Cli/Program.cs` for different heuristics in vector bin packing, packet scheduling, and traffic engineering.
+We provide multiple example Main functions that you can try in `MetaOptimize.Cli/MainEntry.cs` for different heuristics in vector bin packing, packet scheduling, and traffic engineering.
 
 We also provide many unit-tests that can serve as a starting point in `MetaOptimize.Test`.
 
