@@ -396,3 +396,10 @@ FodyWeavers.xsd
 
 # JetBrains Rider
 *.sln.iml
+
+logs/*
+figs/*
+Topologies/partition_log/*
+
+# Gurobi models
+*.lp

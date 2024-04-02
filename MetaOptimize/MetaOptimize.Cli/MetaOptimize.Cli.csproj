@@ -1,0 +1,29 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net6.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>disable</Nullable>
+    <Platforms>x64</Platforms>
+	<PlatformTarget>x64</PlatformTarget>
+  </PropertyGroup>
+
+  <Import Project="..\.stylecop\StyleCop.props" />
+
+  <ItemGroup>
+    <PackageReference Include="CommandLineParser" Version="2.8.0" />
+    <PackageReference Include="Gurobi.Optimizer" Version="10.0.2" />
+    <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
+    <PackageReference Include="NLog" Version="5.2.8" />
+    <PackageReference Include="QuikGraph" Version="2.3.0" />
+    <PackageReference Include="System.Numerics.Tensors" Version="0.1.0" />
+    <PackageReference Include="ZenLib" Version="2.2.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\MetaOptimize.Test\MetaOptimize.Test.csproj" />
+    <ProjectReference Include="..\MetaOptimize\MetaOptimize.csproj" />
+  </ItemGroup>
+</Project>
