@@ -11,9 +11,9 @@ namespace MetaOptimize
     using Gurobi;
     using MetaOptimize.Cli;
     /// <summary>
-    /// Implements evaluations for SIGCOMM .
+    /// Implements evaluations for NSDI.
     /// </summary>
-    public static class SigcommExp
+    public static class NSDIExp
     {
         /// <summary>
         /// evaluating gap vs time for different methods on DP (large scale with clustering).

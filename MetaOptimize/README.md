@@ -2,7 +2,28 @@
 
 `MetaOpt` is the first general-purpose and scalable tool that enables users to analyze a broad class of heuristics through easy-to-use abstractions that apply to a broad range of practical heuristics. For more information, checkout [MetaOpt's project webpage](https://www.microsoft.com/en-us/research/project/finding-adversarial-inputs-for-heuristics/overview/) and our NSDI'24 paper ([Finding Adversarial Inputs for Heuristics using Multi-level Optimization](https://arxiv.org/abs/2311.12779)).
 
-## How to try MetaOpt
+
+## Code Structure
+```
+├── MetaOptimize               # Implementation of all the main components of MetaOpt.
+|      |                       # (helper functions, solver APIs, rewrites, etc.)
+|      |       
+|      ├── TrafficEngineering  # implementation of TE encoders (OPT, DP, and POP)
+|      |                       # and TE adversarial generator.
+|      |
+|      ├── VectorBinPacking    # implementation of VBP encoders (OPT and variants of FF)
+|      |                       # and VBP adversarial generator.
+|      |
+|      └── PIFO                # implementation of PIFO, SP-PIFO, and AIFO encoders. 
+|
+|
+├── MetaOptimize.Cli           # examples and scripts to reproduce the results in
+|                              # our NSDI24 and HotNet22 papers.
+|
+└── MetaOptimize.Test          # testcases for MetaOpt.
+```
+
+## Getting Started
 
 We provide multiple example Main functions that you can try in `MetaOptimize.Cli/Program.cs` for different heuristics in vector bin packing, packet scheduling, and traffic engineering.
 
@@ -12,7 +33,7 @@ You can use MetaOpt either with the [Gurobi optimization solver](https://www.gur
 or with [Zen](https://dl.acm.org/doi/10.1145/3422604.3425930).
 Make sure you install both solvers and configure the proper Gurobi license. If you are in academia, you can follow the instructions on Gurobi's website to obtain a license.
 
-## How to use MetaOpt to analyze my heuristics
+## Analyzing heuristics using MetaOpt
 
 <p align="center">
 <img src="metaopt_workflow.png" width="100%">
@@ -54,10 +75,10 @@ To see examples of this workflow, we highly recommend looking at the test cases 
 
 ```bibtex
 @inproceedings{10.1145/3563766.3564102,
-author = {Namyar, Pooria and Arzani, Behnaz and Beckett, Ryan and Segarra, Santiago and Raj, Himanshu and Kandula, Srikanth},
-title = {Minding the gap between fast heuristics and their optimal counterparts},
-booktitle = {Proceedings of the 21st ACM Workshop on Hot Topics in Networks},
-year = {2022}
+  author = {Namyar, Pooria and Arzani, Behnaz and Beckett, Ryan and Segarra, Santiago and Raj, Himanshu and Kandula, Srikanth},
+  title = {Minding the gap between fast heuristics and their optimal counterparts},
+  booktitle = {Proceedings of the 21st ACM Workshop on Hot Topics in Networks},
+  year = {2022}
 }
 ```
 
