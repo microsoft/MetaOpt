@@ -275,7 +275,7 @@ namespace MetaOptimize
             {
                 GlobalObjective = this.TotalNumBinsUsedVariable,
                 MaximizationObjective = objective,
-                DemandVariables = this.DemandVariables,
+                ItemVariables = this.DemandVariables,
             };
         }
 
@@ -307,7 +307,7 @@ namespace MetaOptimize
 
             return new VBPOptimizationSolution
             {
-                Demands = demands,
+                Items = demands,
                 Placement = placements,
                 TotalNumBinsUsed = Convert.ToInt32(this.Solver.GetVariable(solution, this.TotalNumBinsUsedVariable)),
             };

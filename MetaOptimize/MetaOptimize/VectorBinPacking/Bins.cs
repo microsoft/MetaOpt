@@ -4,8 +4,6 @@
 
 namespace MetaOptimize
 {
-    // TODO-Engineering: change to add proper logging.
-    // TODO: for Behnaz --- I have not yet read the bin packing, TE, or the Dote code.
     using System;
     using System.Collections.Concurrent;
     using System.Collections.Generic;
@@ -22,6 +20,10 @@ namespace MetaOptimize
 
         /// <summary>
         /// Creates a new instance of the <see cref="Bins"/> class.
+        /// Which captures the bins for VBP. If we want to assume all bins have
+        /// the same size we can use this function to initiate the class:
+        /// you only need to specify the
+        /// number of bins and the size of each bin.
         /// </summary>
         public Bins(int numBins, List<double> binSize)
         {
@@ -33,6 +35,8 @@ namespace MetaOptimize
 
         /// <summary>
         /// Creates a new instance of the <see cref="Bins"/> class.
+        /// Use this function if the bins you want to use have different sizes.
+        /// The input here will have to specify the size of each bin individually.
         /// </summary>
         public Bins(List<List<double>> binList)
         {
@@ -63,7 +67,7 @@ namespace MetaOptimize
         }
 
         /// <summary>
-        /// return max capacity.
+        /// return max capacity across all bins.
         /// </summary>
         public double MaxCapacity(int dim)
         {
@@ -110,7 +114,7 @@ namespace MetaOptimize
         }
 
         /// <summary>
-        /// returns a new bin consisting of the first $k$ bins.
+        /// returns a new bin object consisting of the first $k$ bins from this one.
         /// </summary>
         public Bins GetFirstKBins(int k) {
             Debug.Assert(k <= this.binSizeList.Count);

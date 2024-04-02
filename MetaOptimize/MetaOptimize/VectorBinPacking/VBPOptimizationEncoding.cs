@@ -14,6 +14,6 @@ namespace MetaOptimize
         /// <summary>
         /// The demand expression for any pair of nodes.
         /// </summary>
-        public IDictionary<int, List<TVar>> DemandVariables { get; set; }
+        public IDictionary<int, List<TVar>> ItemVariables { get; set; }
     }
 }

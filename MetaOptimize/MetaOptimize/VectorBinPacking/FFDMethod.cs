@@ -1,7 +1,7 @@
 namespace MetaOptimize
 {
     /// <summary>
-    /// The method for FFD.
+    /// Different weight-types we can use for the FFD encoding.
     /// </summary>
     public enum FFDMethodChoice
     {
