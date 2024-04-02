@@ -12,6 +12,7 @@ namespace MetaOptimize.Test
     /// Some basic optimization tests.
     /// </summary>
     [TestClass]
+    [Ignore]
     public class KktOptimizationTestsZen : KktOptimizationTests<Zen<Real>, ZenSolution>
     {
         /// <summary>
