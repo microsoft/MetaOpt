@@ -173,7 +173,7 @@ namespace MetaOptimize
         }
 
         /// <summary>
-        /// This is where we encode the problem proper.
+        /// This is where we encode the problem properly.
         /// It takes as input the bins (which describe the total number of the bins we have available
         /// and the size of the bin along each dimension). The pre-InputVariables are the input variables
         /// (in this case these are the variables that encode the items and their size along each dimention) that
