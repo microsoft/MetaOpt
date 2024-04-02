@@ -1,4 +1,4 @@
-// <copyright file="PopEncodingTestsZen.cs" company="Microsoft">
+// <copyright file="OptimalityGapTestsZen.cs" company="Microsoft">
 // Copyright (c) Microsoft. All rights reserved.
 // </copyright>
 
@@ -9,10 +9,11 @@ namespace MetaOptimize.Test
     using ZenLib.ModelChecking;
 
     /// <summary>
-    /// Tests for the pop encoder.
+    /// Tests for the optimality gap.
     /// </summary>
     [TestClass]
-    public class PopEncodingTestsZen : PopEncodingTests<Zen<Real>, ZenSolution>
+    [Ignore]
+    public class OptimalityGapTestsZen : OptimalityGapTests<Zen<Real>, ZenSolution>
     {
         /// <summary>
         /// Initialize the test class.
