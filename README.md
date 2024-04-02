@@ -20,7 +20,14 @@
 ├── MetaOptimize.Cli           # examples and scripts to reproduce the results in
 |                              # our NSDI24 and HotNet22 papers.
 |
-└── MetaOptimize.Test          # testcases for MetaOpt.
+├── MetaOptimize.Test          # testcases for MetaOpt.
+|
+├── parsers                    # codes for parsing the log files
+|                              # and ploting some of the results.
+|
+└── Topologies                 # topologies for our TE experiments.
+
+
 ```
 
 ## Getting Started
