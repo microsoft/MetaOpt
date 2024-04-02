@@ -7,6 +7,7 @@
     <Nullable>disable</Nullable>
     <Platforms>x64</Platforms>
 	<PlatformTarget>x64</PlatformTarget>
+	<StartupObject>MetaOptimize.Cli.MainEntry</StartupObject>
   </PropertyGroup>
 
   <Import Project="..\.stylecop\StyleCop.props" />
