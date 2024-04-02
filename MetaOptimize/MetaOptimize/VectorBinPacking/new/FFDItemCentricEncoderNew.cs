@@ -352,7 +352,7 @@ namespace MetaOptimize
             {
                 GlobalObjective = this.TotalNumBinsUsedVariable,
                 MaximizationObjective = objective,
-                DemandVariables = this.DemandVariables,
+                ItemVariables = this.DemandVariables,
             };
         }
 

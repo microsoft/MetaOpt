@@ -32,7 +32,7 @@ We recommend the quantized primal dual approach to achieve better scalability.
 
 To use the quantized primal dual approach you also need to specify the quantization levels.
 
-3- Once you have goth of the encoders in place, you have to write an adversarial input generator. See the TE, and VBP folders for examples.
+3- Once you have both of the encoders in place, you have to write an adversarial input generator. See the TE, and VBP folders for examples.
 To solve the MetaOpt problem, you need to create the "input variables" in the adversarial input generator and pass the SAME input variables to the encoders
 for the algorithms you want to analyze.
 Also notice that the adversarial input generator and the two encoders need to use the same solver instance.

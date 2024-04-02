@@ -11,10 +11,11 @@ using NLog;
 namespace MetaOptimize
 {
     /// <summary>
-    /// Encodes the optimal algorithm that solves the vector bin packing problem.
+    /// Encodes the first fit decreasing algorithm that solves the vector bin packing problem.
     /// The vector bin packing problem is one which takes as input a set of multi-dimensional bins
     /// and a set of multi-dimensional items. The goal of the algorithm is to fit the items in as few bins as possible.
     /// TODO-Engineering: work on changing the variable names to map better to the VBP problem.
+    /// The first fit decreasing problem sorts items by a particular weight value and then places each ball in the first bin that it fits in.
     /// </summary>
     public class FFDItemCentricEncoder<TVar, TSolution> : IEncoder<TVar, TSolution>
     {
@@ -348,7 +349,7 @@ namespace MetaOptimize
             {
                 GlobalObjective = this.TotalNumBinsUsedVariable,
                 MaximizationObjective = objective,
-                DemandVariables = this.IncomingItemVars,
+                ItemVariables = this.IncomingItemVars,
             };
         }
 

@@ -11,7 +11,11 @@ namespace MetaOptimize
     using NLog;
 
     /// <summary>
-    /// A class for the VBP optimal encoding.
+    /// Encodes the first fit decreasing algorithm that solves the vector bin packing problem.
+    /// The vector bin packing problem is one which takes as input a set of multi-dimensional bins
+    /// and a set of multi-dimensional items. The goal of the algorithm is to fit the items in as few bins as possible.
+    /// TODO-Engineering: work on changing the variable names to map better to the VBP problem.
+    /// The first fit decreasing problem sorts items by a particular weight value and then places each ball in the first bin that it fits in.
     /// </summary>
     public class FFDItemCentricEncoderV2<TVar, TSolution> : IEncoder<TVar, TSolution>
     {
@@ -30,19 +34,19 @@ namespace MetaOptimize
         public Bins bins { get; set; }
 
         /// <summary>
-        /// The demand variables.
+        /// Variables that represent the inputs (the sequence of arriving items).
         /// </summary>
-        public Dictionary<int, List<TVar>> DemandVariables { get; set; }
+        public Dictionary<int, List<TVar>> itemVariables { get; set; }
 
         /// <summary>
-        /// The demand variables per bin.
+        /// The items per bin.
         /// </summary>
-        public Dictionary<int, List<List<TVar>>> DemandPerBinVariables { get; set; }
+        public Dictionary<int, List<List<TVar>>> ItemsPerBinVariables { get; set; }
 
         /// <summary>
-        /// The demand constraints in terms of constant values.
+        /// The item constraints in terms of constant values.
         /// </summary>
-        public Dictionary<int, List<double>> DemandConstraints { get; set; }
+        public Dictionary<int, List<double>> itemConstraints { get; set; }
 
         /// <summary>
         /// The number of objects.
@@ -89,9 +93,9 @@ namespace MetaOptimize
             this.NumItems = NumItems;
         }
 
-        private bool IsDemandValid(int itemID) {
-            if (this.DemandConstraints.ContainsKey(itemID)) {
-                foreach (var demand in this.DemandConstraints[itemID]) {
+        private bool IsItemValid(int itemID) {
+            if (this.itemConstraints.ContainsKey(itemID)) {
+                foreach (var demand in this.itemConstraints[itemID]) {
                     if (demand > 0) {
                         return true;
                     }
@@ -101,31 +105,31 @@ namespace MetaOptimize
             return true;
         }
 
-        private void InitializeVariables(Dictionary<int, List<TVar>> preDemandVariables = null,
-            Dictionary<int, List<double>> demandEqualityConstraints = null)
+        private void InitializeVariables(Dictionary<int, List<TVar>> preItemVariables = null,
+            Dictionary<int, List<double>> itemEqualityConstraints = null)
         {
-            this.DemandConstraints = demandEqualityConstraints ?? new Dictionary<int, List<double>>();
-            this.DemandVariables = new Dictionary<int, List<TVar>>();
+            this.itemConstraints = itemEqualityConstraints ?? new Dictionary<int, List<double>>();
+            this.itemVariables = new Dictionary<int, List<TVar>>();
 
-            if (preDemandVariables == null) {
+            if (preItemVariables == null) {
                 for (int id = 0; id < this.NumItems; id++) {
-                    if (!IsDemandValid(id)) {
+                    if (!IsItemValid(id)) {
                         continue;
                     }
-                    this.DemandVariables[id] = new List<TVar>();
+                    this.itemVariables[id] = new List<TVar>();
                     for (int dimension = 0; dimension < this.NumDimensions; dimension++) {
                         var variable = this.Solver.CreateVariable("demand_" + id + "_" + dimension);
-                        this.DemandVariables[id].Add(variable);
+                        this.itemVariables[id].Add(variable);
                     }
                 }
             } else {
-                Debug.Assert(preDemandVariables.Count == this.NumItems);
-                foreach (var (id, variable) in preDemandVariables) {
-                    if (!IsDemandValid(id)) {
+                Debug.Assert(preItemVariables.Count == this.NumItems);
+                foreach (var (id, variable) in preItemVariables) {
+                    if (!IsItemValid(id)) {
                         continue;
                     }
                     Debug.Assert(variable.Count == this.NumDimensions);
-                    this.DemandVariables[id] = variable;
+                    this.itemVariables[id] = variable;
                 }
             }
 
@@ -133,22 +137,22 @@ namespace MetaOptimize
             this.PlacementVariables = new Dictionary<int, List<TVar>>();
             this.FitVariable = new Dictionary<int, List<TVar>>();
             this.FitVariablePerDimension = new Dictionary<int, List<List<TVar>>>();
-            this.DemandPerBinVariables = new Dictionary<int, List<List<TVar>>>();
+            this.ItemsPerBinVariables = new Dictionary<int, List<List<TVar>>>();
 
-            foreach (int id in this.DemandVariables.Keys) {
+            foreach (int id in this.itemVariables.Keys) {
                 this.PlacementVariables[id] = new List<TVar>();
                 this.FitVariable[id] = new List<TVar>();
                 this.FitVariablePerDimension[id] = new List<List<TVar>>();
-                this.DemandPerBinVariables[id] = new List<List<TVar>>();
+                this.ItemsPerBinVariables[id] = new List<List<TVar>>();
                 for (int bid = 0; bid < this.bins.GetNum(); bid++) {
                     this.PlacementVariables[id].Add(this.Solver.CreateVariable("placement_item_" + id + "_bin_" + bid, type: GRB.BINARY));
                     this.FitVariable[id].Add(this.Solver.CreateVariable("fit_item_" + id + "_bin_" + bid, lb: 0));
                     this.FitVariablePerDimension[id].Add(new List<TVar>());
-                    this.DemandPerBinVariables[id].Add(new List<TVar>());
+                    this.ItemsPerBinVariables[id].Add(new List<TVar>());
                     for (int did = 0; did < this.NumDimensions; did++) {
                         this.FitVariablePerDimension[id][bid].Add(
                             this.Solver.CreateVariable("dim_fit_item_" + id + "_bin_" + bid + "_dim_" + did, lb: 0));
-                        this.DemandPerBinVariables[id][bid].Add(
+                        this.ItemsPerBinVariables[id][bid].Add(
                             this.Solver.CreateVariable("dem_per_bin_item_" + id + "_bin_" + bid + "_dim_" + did, lb: 0));
                     }
                 }
@@ -161,7 +165,7 @@ namespace MetaOptimize
         }
 
         /// <summary>
-        /// Encoder the problem.
+        /// This is where we fully describe the Bin Packingfirst fit decreasing problem as a feasibility problem.
         /// </summary>
         public OptimizationEncoding<TVar, TSolution> Encoding(Bins bins, Dictionary<int, List<TVar>> preDemandVariables = null,
             Dictionary<int, List<double>> demandEqualityConstraints = null, bool verbose = false)
@@ -170,22 +174,22 @@ namespace MetaOptimize
             this.bins = bins;
             InitializeVariables(preDemandVariables, demandEqualityConstraints);
 
-            Logger.Info("ensuring demand constraints are respected");
-            foreach (var (itemID, demandConstant) in this.DemandConstraints)
+            Logger.Info("ensuring item constraints are respected");
+            foreach (var (itemID, demandConstant) in this.itemConstraints)
             {
                 for (int dimension = 0; dimension < this.NumDimensions; dimension++) {
                     if (demandConstant[dimension] <= 0) {
                         continue;
                     }
-                    var poly = new Polynomial<TVar>();
-                    poly.Add(new Term<TVar>(1, this.DemandVariables[itemID][dimension]));
-                    poly.Add(new Term<TVar>(-1 * demandConstant[dimension]));
-                    this.Solver.AddEqZeroConstraint(poly);
+                    var itemConstraintPoly = new Polynomial<TVar>();
+                    itemConstraintPoly.Add(new Term<TVar>(1, this.itemVariables[itemID][dimension]));
+                    itemConstraintPoly.Add(new Term<TVar>(-1 * demandConstant[dimension]));
+                    this.Solver.AddEqZeroConstraint(itemConstraintPoly);
                 }
             }
 
             Logger.Info("ensure each item ends up in exactly one bin");
-            foreach (var itemID in this.DemandVariables.Keys) {
+            foreach (var itemID in this.itemVariables.Keys) {
                 var placePoly = new Polynomial<TVar>(new Term<TVar>(-1));
                 for (int binId = 0; binId < this.bins.GetNum(); binId++) {
                     placePoly.Add(new Term<TVar>(1, this.PlacementVariables[itemID][binId]));
@@ -194,7 +198,7 @@ namespace MetaOptimize
             }
 
             Logger.Info("ensure each item placed in a bin if it is not placed in any prior bins");
-            foreach (var itemID in this.DemandVariables.Keys) {
+            foreach (var itemID in this.itemVariables.Keys) {
                 for (int binId = 0; binId < this.bins.GetNum(); binId++) {
                     var coeff = (1 + binId);
                     var placePoly = new Polynomial<TVar>(new Term<TVar>(-1 * coeff));
@@ -212,16 +216,16 @@ namespace MetaOptimize
 
             Logger.Info("ensure each item can fit in the right bin");
             var binSizeList = this.bins.getBinSizes();
-            foreach (var itemID in this.DemandVariables.Keys) {
+            foreach (var itemID in this.itemVariables.Keys) {
                 for (int binId = 0; binId < this.bins.GetNum(); binId++) {
                     var sumAllFitVariablePerDimension = new Polynomial<TVar>();
                     var binSize = binSizeList[binId];
                     for (int dimension = 0; dimension < this.NumDimensions; dimension++) {
                         var residualCap = new Polynomial<TVar>(new Term<TVar>(binSize[dimension], this.BinUsedVariables[binId]));
                         residualCap.Add(new Term<TVar>(this.Epsilon));
-                        residualCap.Add(new Term<TVar>(-1, this.DemandVariables[itemID][dimension]));
+                        residualCap.Add(new Term<TVar>(-1, this.itemVariables[itemID][dimension]));
                         for (var k = 0; k < itemID; k++) {
-                            residualCap.Add(new Term<TVar>(-1, this.DemandPerBinVariables[k][binId][dimension]));
+                            residualCap.Add(new Term<TVar>(-1, this.ItemsPerBinVariables[k][binId][dimension]));
                         }
 
                         // adding B_ij = max(residualCap, 0)
@@ -237,35 +241,31 @@ namespace MetaOptimize
                 }
             }
 
-            Logger.Info("ensure only one demandPerBinVariable is non-zero");
-            foreach (int itemID in this.DemandVariables.Keys) {
+            Logger.Info("ensure only one itemPerBinVariable is non-zero");
+            foreach (int itemID in this.itemVariables.Keys) {
                 for (int dimension = 0; dimension < this.NumDimensions; dimension++) {
-                    var sumPoly = new Polynomial<TVar>();
+                    var totalBinsPerItemPoly = new Polynomial<TVar>();
                     for (int binId = 0; binId < this.bins.GetNum(); binId++) {
-                        var poly = new Polynomial<TVar>();
-                        poly.Add(new Term<TVar>(1, this.DemandPerBinVariables[itemID][binId][dimension]));
-                        poly.Add(new Term<TVar>(-1 * this.bins.MaxCapacity(dimension), this.PlacementVariables[itemID][binId]));
-                        this.Solver.AddLeqZeroConstraint(poly);
+                        var isBinAssignedToItemPoly = new Polynomial<TVar>();
+                        isBinAssignedToItemPoly.Add(new Term<TVar>(1, this.ItemsPerBinVariables[itemID][binId][dimension]));
+                        isBinAssignedToItemPoly.Add(new Term<TVar>(-1 * this.bins.MaxCapacity(dimension), this.PlacementVariables[itemID][binId]));
+                        this.Solver.AddLeqZeroConstraint(isBinAssignedToItemPoly);
 
-                        sumPoly.Add(new Term<TVar>(1, this.DemandPerBinVariables[itemID][binId][dimension]));
+                        totalBinsPerItemPoly.Add(new Term<TVar>(1, this.ItemsPerBinVariables[itemID][binId][dimension]));
                     }
-                    sumPoly.Add(new Term<TVar>(-1, this.DemandVariables[itemID][dimension]));
-                    this.Solver.AddEqZeroConstraint(sumPoly);
+                    totalBinsPerItemPoly.Add(new Term<TVar>(-1, this.itemVariables[itemID][dimension]));
+                    this.Solver.AddEqZeroConstraint(totalBinsPerItemPoly);
                 }
             }
 
             Logger.Info("ensure bin used = 1 if any item in bin");
             for (int binId = 0; binId < this.bins.GetNum(); binId++) {
-                var sumPoly = new Polynomial<TVar>();
-                foreach (int itemID in this.DemandVariables.Keys) {
-                    // var poly = new Polynomial<TVar>();
-                    // poly.Add(new Term<TVar>(1, this.PlacementVariables[itemID][binId]));
-                    // poly.Add(new Term<TVar>(-1, this.BinUsedVariables[binId]));
-                    // this.Solver.AddLeqZeroConstraint(poly);
-                    sumPoly.Add(new Term<TVar>(-1, this.PlacementVariables[itemID][binId]));
+                var totalBinsUsedForItemPoly = new Polynomial<TVar>();
+                foreach (int itemID in this.itemVariables.Keys) {
+                    totalBinsUsedForItemPoly.Add(new Term<TVar>(-1, this.PlacementVariables[itemID][binId]));
                 }
-                sumPoly.Add(new Term<TVar>(1, this.BinUsedVariables[binId]));
-                this.Solver.AddLeqZeroConstraint(sumPoly);
+                totalBinsUsedForItemPoly.Add(new Term<TVar>(1, this.BinUsedVariables[binId]));
+                this.Solver.AddLeqZeroConstraint(totalBinsUsedForItemPoly);
             }
 
             Logger.Info("ensure objective == total bins used");
@@ -281,7 +281,7 @@ namespace MetaOptimize
             {
                 GlobalObjective = this.TotalNumBinsUsedVariable,
                 MaximizationObjective = objective,
-                DemandVariables = this.DemandVariables,
+                ItemVariables = this.itemVariables,
             };
         }
 
@@ -291,16 +291,16 @@ namespace MetaOptimize
         /// <param name="solution">The solution.</param>
         public OptimizationSolution GetSolution(TSolution solution)
         {
-            var demands = new Dictionary<int, List<double>>();
+            var items = new Dictionary<int, List<double>>();
             var placements = new Dictionary<int, List<int>>();
 
-            foreach (var (id, itemDemand) in this.DemandVariables)
+            foreach (var (id, itemDemand) in this.itemVariables)
             {
-                demands[id] = new List<double>();
+                items[id] = new List<double>();
                 for (var dimension = 0; dimension < this.NumDimensions; dimension++) {
-                    demands[id].Add(0.0);
+                    items[id].Add(0.0);
                     var perDimensionDemand = itemDemand[dimension];
-                    demands[id][dimension] = this.Solver.GetVariable(solution, perDimensionDemand);
+                    items[id][dimension] = this.Solver.GetVariable(solution, perDimensionDemand);
                 }
             }
 
@@ -309,7 +309,7 @@ namespace MetaOptimize
                     for (int dim = 0; dim < this.NumDimensions; dim++) {
                         Console.WriteLine(String.Format("=== item id {0}, bin id {1}, dim {2}, beta_ijd {3}, beta_ij {6}, per bin demand {4} placed {5}",
                             id, bid, dim, this.Solver.GetVariable(solution, this.FitVariablePerDimension[id][bid][dim]),
-                            this.Solver.GetVariable(solution, this.DemandPerBinVariables[id][bid][dim]),
+                            this.Solver.GetVariable(solution, this.ItemsPerBinVariables[id][bid][dim]),
                             this.Solver.GetVariable(solution, this.PlacementVariables[id][bid]),
                             this.Solver.GetVariable(solution, this.FitVariable[id][bid])));
                     }
@@ -325,7 +325,7 @@ namespace MetaOptimize
 
             return new VBPOptimizationSolution
             {
-                Items = demands,
+                Items = items,
                 Placement = placements,
                 TotalNumBinsUsed = Convert.ToInt32(this.Solver.GetVariable(solution, this.TotalNumBinsUsedVariable)),
             };
