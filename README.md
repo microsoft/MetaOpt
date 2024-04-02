@@ -32,13 +32,25 @@
 
 ## Getting Started
 
-We provide multiple example Main functions that you can try in `MetaOptimize.Cli/MainEntry.cs` for different heuristics in vector bin packing, packet scheduling, and traffic engineering.
-
-We also provide many unit-tests that can serve as a starting point in `MetaOptimize.Test`.
-
+### Dependencies
 You can use MetaOpt either with the [Gurobi optimization solver](https://www.gurobi.com/documentation/current/examples/cs_examples.html) 
 or with [Zen](https://dl.acm.org/doi/10.1145/3422604.3425930).
-Make sure you install both solvers and configure the proper Gurobi license. If you are in academia, you can follow the instructions on Gurobi's website to obtain a license.
+Make sure you install them. For Gurobi, you can use [NuGet Package Manager](https://www.nuget.org/packages/Gurobi.Optimizer) and run the following command:
+```bash
+dotnet add package Gurobi.Optimizer --version 10.0.2
+```
+
+You also need to configure a proper Gurobi license. If you are in academia, you can follow the instructions on Gurobi's website to obtain one.
+
+### Working Examples
+
+We provide multiple example Main functions that you can try in `MetaOptimize.Cli/MainEntry.cs` for different heuristics in vector bin packing, packet scheduling, and traffic engineering. To run `MainEntry.cs`:
+```bash
+cd MetaOptimize.Cli
+dotnet run
+```
+
+We also provide many unittests that can serve as a starting point in `MetaOptimize.Test`.
 
 ## Analyzing heuristics using MetaOpt
 
