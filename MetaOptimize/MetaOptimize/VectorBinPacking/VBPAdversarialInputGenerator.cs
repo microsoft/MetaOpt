@@ -13,7 +13,14 @@ namespace MetaOptimize
     using NLog;
 
     /// <summary>
-    /// Meta-optimization utility functions for maximizing optimality gaps.
+    /// This is where we solve the MetaOpt problem.
+    /// The MetaOpt adversarialInputGenerators take as input the encoders for the
+    /// two algorithms they want to compare and then encode both problems through these encoders' encoding function.
+    /// Then they maximize the gap between the two algorithms.
+    /// TODO -- research: right now, we have encoded the FFD heuristic by putting constraints on the order of the item's weights.
+    /// This means we assume the items arrive in the order that they will be assigned by FFD. This is fine (does not loose any generality) because
+    /// we can re-shuffle the items after the fact. However, if we want to CHAIN the VBP algorithm with any other algorithm, we have to be careful:
+    /// it may be the case that this assumption would impact the other heuristics that interact with the VBP algorithm. We plan to fix this limitation in future work.
     /// </summary>
     public class VBPAdversarialInputGenerator<TVar, TSolution>
     {
