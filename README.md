@@ -37,7 +37,7 @@ You can use MetaOpt either with the [Gurobi optimization solver](https://www.gur
 or with [Zen](https://dl.acm.org/doi/10.1145/3422604.3425930).
 NEW: MetaOpt also now supports ORTools CSIP solver. Install the solver through [Nuget Package Manager](https://www.nuget.org/packages/Google.OrTools). [Caution: ORTools does not provide all the features that are available in Gurobi.]
 
-Make sure you install them. For Gurobi, you can use [NuGet Package Manager](https://www.nuget.org/packages/Gurobi.Optimizer) and run the following command:
+Make sure you install any solver that you use. For Gurobi, you can also use [NuGet Package Manager](https://www.nuget.org/packages/Gurobi.Optimizer) and run the following command:
 ```bash
 dotnet add package Gurobi.Optimizer --version 10.0.2
 ```
