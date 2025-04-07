@@ -944,7 +944,7 @@ namespace MetaOptimize
                 {
                     this._model.SetTimeLimit((int)(this._timeout * 1000));
                 }
-                this.WriteModel("C:\\Users\\bearzani\\Desktop\\Behnaz_Work\\wanrisk\\MetaOptimize\\Debug");
+                // this.WriteModel("C:\\Users\\bearzani\\Desktop\\Behnaz_Work\\wanrisk\\MetaOptimize\\Debug");
                 Solver.ResultStatus resultStatus = this._model.Solve();
                 if (resultStatus != Solver.ResultStatus.OPTIMAL && resultStatus != Solver.ResultStatus.FEASIBLE)
                 {
