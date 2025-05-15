@@ -51,6 +51,10 @@ namespace MetaOptimize
         /// </summary>
         /// <param name="objective">The solver solution.</param>
         public void SetObjective(Polynomial<TVar> objective);
+        /// <summary>
+        /// Return the timeoout value.
+        /// </summary>
+        public double GetTimeout();
 
         /// <summary>
         /// set the objective.

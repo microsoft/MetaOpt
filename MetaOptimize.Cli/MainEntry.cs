@@ -480,9 +480,9 @@ namespace MetaOptimize.Cli
                         scaleFactor: opts.DownScaleFactor, InnerEncoding: opts.InnerEncoding, maxShortestPathLen: opts.MaxShortestPathLen);
 
             // find an adversarial example and show the time taken.
-            var demandList = new GenericDemandList((opts.DemandList.Split(",")).Select(x => double.Parse(x) * opts.DownScaleFactor).ToHashSet());
+            var demandList = new GenericList((opts.DemandList.Split(",")).Select(x => double.Parse(x) * opts.DownScaleFactor).ToHashSet());
             Utils.logger(
-                string.Format("Demand List:{0}", Newtonsoft.Json.JsonConvert.SerializeObject(demandList.demandList, Newtonsoft.Json.Formatting.Indented)),
+                string.Format("Demand List:{0}", Newtonsoft.Json.JsonConvert.SerializeObject(demandList.List, Newtonsoft.Json.Formatting.Indented)),
                 opts.Verbose);
             var timer = System.Diagnostics.Stopwatch.StartNew();
             Utils.logger("Starting setup", opts.Verbose);

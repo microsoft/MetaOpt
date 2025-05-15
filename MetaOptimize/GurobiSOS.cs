@@ -216,6 +216,13 @@ namespace MetaOptimize
             this._focusBstBd = focusBstBd;
             CleanAll(timeout);
         }
+        /// <summary>
+        /// Return the timeout.
+        /// </summary>
+        public double GetTimeout()
+        {
+            return this._timeout;
+        }
 
         /// <summary>
         /// set the timeout.

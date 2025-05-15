@@ -12,7 +12,7 @@ namespace MetaOptimize
     /// <summary>
     /// A DemandList to specify demand Quantization lvls between every pair.
     /// </summary>
-    public class PairwiseDemandList : IDemandList
+    public class PairwiseDemandList : IList
     {
         /// <summary>
         /// demand quantization lvls.
@@ -30,15 +30,15 @@ namespace MetaOptimize
         /// <summary>
         /// The demand list used for an specific pair.
         /// </summary>
-        public ISet<double> GetDemandsForPair(string src, string dst) {
+        public ISet<double> GetValueForPair(string src, string dst) {
             return this.demandList[(src, dst)];
         }
 
         /// <summary>
         /// get random non-zero demand between specific pair.
         /// </summary>
-        public double GetRandomNonZeroDemandForPair(Random rng, string src, string dst) {
-            var demandlvls = new HashSet<double>(this.GetDemandsForPair(src, dst));
+        public double GetRandomNonZeroValueForPair(Random rng, string src, string dst) {
+            var demandlvls = new HashSet<double>(this.GetValueForPair(src, dst));
             demandlvls.Remove(0);
             var demand = demandlvls.ToList()[rng.Next(demandlvls.Count())];
             return demand;

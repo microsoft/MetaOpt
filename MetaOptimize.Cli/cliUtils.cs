@@ -244,7 +244,7 @@ namespace MetaOptimize.Cli
                 IEncoder<TVar, TSolution> heuristicEncoder,
                 double demandUB,
                 InnerRewriteMethodChoice innerEncoding,
-                GenericDemandList demandList,
+                GenericList demandList,
                 bool enableClustering,
                 int clusterVersion,
                 List<Topology> clusters,

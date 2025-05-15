@@ -36,11 +36,19 @@ namespace MetaOptimize
         /// the paths between every pairs.
         /// </summary>
         public Dictionary<int, Dictionary<(string, string), string[][]>> paths { get; set; }
+        /// <summary>
+        /// For each edge captures how many lags it has.
+        /// </summary>
+        public Dictionary<(string, string), Dictionary<int, (string, double)>>  edgeLinks { get; set; }
 
         /// <summary>
         /// the path to the file storing paths.
         /// </summary>
         private string pathFile;
+        /// <summary>
+        /// Link weights from production to use for path computation.
+        /// </summary>
+        public Dictionary<(string, string), double> Metrics;
 
         /// <summary>
         /// Creates a new instance of the <see cref="Topology"/> class.
@@ -52,6 +60,7 @@ namespace MetaOptimize
             this.paths = new Dictionary<int, Dictionary<(string, string), string[][]>>();
             this.pathFile = pathFile;
             Utils.readPathsFromFile(this.pathFile, this.paths);
+            this.edgeLinks = new Dictionary<(string, string), Dictionary<int, (string, double)>>();
         }
 
         /// <summary>
@@ -62,7 +71,73 @@ namespace MetaOptimize
         {
             this.Graph.AddVertex(node);
         }
-
+         /// <summary>
+        /// Creates a copy of this topology.
+        /// </summary>
+        /// <returns></returns>
+        public Topology Copy()
+        {
+            var t = new Topology();
+            foreach (var node in this.GetAllNodes())
+            {
+                t.AddNode(node);
+            }
+            foreach (var edge in this.GetAllEdges())
+            {
+                t.AddEdge(edge.Source, edge.Target, edge.Capacity);
+            }
+            t.edgeLinks = this.edgeLinks.ToDictionary(entry => entry.Key,
+                                                    entry => entry.Value.ToDictionary(innerEntry => innerEntry.Key,
+                                                                                      innerEntry => (innerEntry.Value.Item1, innerEntry.Value.Item2)));
+            return t;
+        }
+        /// <summary>
+        /// Adds link to edge.
+        /// </summary>
+        /// <param name="source">the source side of the link/lag.</param>
+        /// <param name="target">the target side of the link/lag.</param>
+        /// <param name="linkName">the link name.</param>
+        /// <param name="probability">the probability with which the link fails.</param>
+        /// <param name="addMissingEdges">adds the missing edge.</param>
+        public void AddLinkToEdge(string source, string target, string linkName, double probability, bool addMissingEdges = false)
+        {
+            if (!this.Graph.TryGetEdge(source, target, out var taggedEdge))
+            {
+                if (!addMissingEdges)
+                {
+                    return;
+                }
+                Console.WriteLine("Source {0}, target {1},", source, target);
+                Logger.Log(LogLevel.Warn, "Source and target are not in the topology so adding an extra edge before going further");
+                if (!this.GetAllNodes().Contains(source))
+                {
+                    this.AddNode(source);
+                }
+                if (!this.GetAllNodes().Contains(target))
+                {
+                    this.AddNode(target);
+                }
+                this.AddEdge(source, target, this.MaxCapacity());
+            }
+            if (!this.edgeLinks.ContainsKey((source, target)))
+            {
+                this.edgeLinks[(source, target)] = new Dictionary<int, (string, double)>();
+            }
+            if (this.edgeLinks[(source, target)].Values.Select(x => x.Item1).Contains(linkName))
+            {
+                Console.WriteLine($"source is {source} and destination is {target} and linkname is {linkName}");
+                throw new Exception("Lag already exists.");
+            }
+            this.edgeLinks[(source, target)][this.edgeLinks[(source, target)].Count] = (linkName, probability);
+        }
+        /// <summary>
+        /// Adds metrics to the class.
+        /// </summary>
+        /// <param name="metrics"></param>
+        public void AddMetrics(Dictionary<(string, string), double> metrics)
+        {
+            this.Metrics = metrics;
+        }
         /// <summary>
         /// Add a directed edge to the graph.
         /// </summary>
@@ -99,7 +174,31 @@ namespace MetaOptimize
             }
             return false;
         }
-
+        /// <summary>
+        /// Whether the graph contains the specified edge.
+        /// </summary>
+        /// <param name="source">The source of the edge.</param>
+        /// <param name="target">The target of the edge.</param>
+        /// <param name="capacity">The capacity of the edge.</param>
+        /// <returns></returns>
+        public bool ContainsEdge(string source, string target, double capacity)
+        {
+            return this.Graph.ContainsEdge(new EquatableTaggedEdge<string, double>(source, source, capacity));
+        }
+        /// <summary>
+        /// Whether the graph contains a specified edge without knowing the capacity.
+        /// </summary>
+        public bool ContainsEdge(string source, string target)
+        {
+            foreach (var edge in this.GetAllEdges())
+            {
+                if (edge.Source == source || edge.Target == target)
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
         /// <summary>
         /// Get all the nodes in the topology.
         /// </summary>

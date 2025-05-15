@@ -109,7 +109,13 @@ namespace MetaOptimize
         {
             this._model = new GRBModel(GurobiEnvironment.Instance);
         }
-
+        /// <summary>
+        /// Get the timeout value.
+        /// </summary>
+        public double GetTimeout()
+        {
+            throw new Exception("This solver does not use a timeout yet");
+        }
         /// <summary>
         /// set the timeout.
         /// </summary>

@@ -131,7 +131,7 @@ namespace MetaOptimize
                 demandSet.Add(demandPinningThreshold);
             }
             demandSet.Add(demandUB);
-            var demandList = new GenericDemandList(demandSet);
+            var demandList = new GenericList(demandSet);
             string logDir = @"../logs/gap_vs_time/" + topoName + "_" + numClusters + "_" + heuristicName
                                 + "_" + demandUB + "_" + demandPinningThreshold + "_" + numPaths + "_";
             logDir = logDir + Utils.GetFID() + @"/";
@@ -291,7 +291,7 @@ namespace MetaOptimize
                     demandSet.Add(0.0);
                     demandSet.Add(threshold);
                     demandSet.Add(demandUB);
-                    var demandList = new GenericDemandList(demandSet);
+                    var demandList = new GenericList(demandSet);
                     var (heuristicEncoder, _, _) = CliUtils.getHeuristic<GRBVar, GRBModel>(solver: solver, topology: topology,
                                                     h: heuristicName, numPaths: numPaths, demandPinningThreshold: threshold,
                                                     InnerEncoding: innerEncoding);
@@ -356,7 +356,7 @@ namespace MetaOptimize
                     demandSet.Add(0.0);
                     demandSet.Add(threshold);
                     demandSet.Add(demandUB);
-                    var demandList = new GenericDemandList(demandSet);
+                    var demandList = new GenericList(demandSet);
                     var (heuristicEncoder, _, _) = CliUtils.getHeuristic<GRBVar, GRBModel>(solver: solver, topology: topology,
                                                     h: heuristicName, numPaths: numPaths, demandPinningThreshold: threshold,
                                                     InnerEncoding: innerEncoding);
@@ -431,7 +431,7 @@ namespace MetaOptimize
                     var demandSet = new HashSet<double>();
                     demandSet.Add(0.0);
                     demandSet.Add(demandUB);
-                    var demandList = new GenericDemandList(demandSet);
+                    var demandList = new GenericList(demandSet);
                     // comment to go to hill climber and others
                     (TEOptimizationSolution, TEOptimizationSolution) result = CliUtils.getMetaOptResult(adversarialInputGenerator, optimalEncoder, heuristicEncoder,
                                 demandUB, innerEncoding, demandList, false, -1, null, -1, -1, -1, false, true, 1.0, -1, -1, -1, false, null);
@@ -495,7 +495,7 @@ namespace MetaOptimize
                 var demandSet = new HashSet<double>();
                 demandSet.Add(0.0);
                 demandSet.Add(demandUB);
-                var demandList = new GenericDemandList(demandSet);
+                var demandList = new GenericList(demandSet);
                 // comment to go to hill climber and others
                 (TEOptimizationSolution, TEOptimizationSolution) result = CliUtils.getMetaOptResult(adversarialInputGenerator, optimalEncoder, heuristicEncoder,
                             demandUB, innerEncoding, demandList, false, -1, null, -1, -1, -1, false, true, 1.0, -1, -1, -1, false, null);
@@ -643,7 +643,7 @@ namespace MetaOptimize
                 demandSet.Add(demandPinningThreshold);
             }
             demandSet.Add(demandUB);
-            var demandList = new GenericDemandList(demandSet);
+            var demandList = new GenericList(demandSet);
             // Primal-Dual
             string logDir = @"../logs/realistic_constraints/" + topoName + "_" + numClusters + "_" + heuristicName
                     + "_" + demandUB + "_" + demandPinningThreshold + "_" + numPaths + "_";
@@ -792,7 +792,7 @@ namespace MetaOptimize
                     demandSet.Add(0);
                     demandSet.Add(demandPinningThreshold);
                     demandSet.Add(demandUB);
-                    var demandList = new GenericDemandList(demandSet);
+                    var demandList = new GenericList(demandSet);
                     // Primal-Dual
                     string logDir = @"../logs/parameter_tuning/primal_dual/" + topoName + "_" + heuristicName
                             + "_" + demandUB + "_" + demandPinningThreshold + "_" + numPaths + "_";
@@ -1050,7 +1050,7 @@ namespace MetaOptimize
             demandSet.Add(0);
             demandSet.Add(demandPinningThreshold);
             demandSet.Add(demandUB);
-            var demandList = new GenericDemandList(demandSet);
+            var demandList = new GenericList(demandSet);
             string logDir = @"../logs/modified_dp/" + topoName + "_" + heuristicName
                     + "_" + demandUB + "_" + demandPinningThreshold + "_" + numPaths + "_";
             logDir = logDir + fid + @"/";
@@ -1187,7 +1187,7 @@ namespace MetaOptimize
                     demandSet.Add(demandPinningThreshold);
                 }
                 demandSet.Add(demandUB);
-                var demandList = new GenericDemandList(demandSet);
+                var demandList = new GenericList(demandSet);
                 ISolver<GRBVar, GRBModel> solver = (ISolver<GRBVar, GRBModel>)new GurobiSOS(perClusterTimeout, verbose, numThreads, recordProgress: true,
                                                     logPath: Path.Combine(logDir, progressFile), focusBstBd: false);
                 var (heuristicEncoder, _, _) = CliUtils.getHeuristic<GRBVar, GRBModel>(solver: solver, topology: topology,

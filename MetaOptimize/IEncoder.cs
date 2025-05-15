@@ -24,6 +24,51 @@ namespace MetaOptimize
         {
             throw new System.Exception("Not Implemented....");
         }
+                /// <summary>
+        /// This is the new version for both capplan and MLUfailure analysis.
+        /// </summary>
+        /// <returns></returns>
+        /// <exception cref="System.Exception"></exception>
+        public OptimizationEncoding<TVar, TSolution> Encoding(Topology topology,
+                                                              bool modelFailures = true,
+                                                              Dictionary<(string, string), Polynomial<TVar>> preDemandVariables = null,
+                                                              Dictionary<(string, string), Polynomial<TVar>> preCapVariables = null,
+                                                              Dictionary<string[], Polynomial<TVar>> prePathExtensionCapacities = null,
+                                                              Dictionary<(string, string), double> demandEqualityConstraints = null,
+                                                              Dictionary<(string, string), double> capacityEqualityConstraints = null,
+                                                              Dictionary<string[], double> pathExtensionCapacityConstraints = null,
+                                                              bool noAdditionalConstraints = false,
+                                                              InnerRewriteMethodChoice innerRewriteMethod = InnerRewriteMethodChoice.KKT,
+                                                              PathType pathType = PathType.KSP,
+                                                              Dictionary<(string, string), string[][]> selectedPaths = null,
+                                                              Dictionary<(int, string, string), double> historicDemandConstraints = null,
+                                                              HashSet<string> excludeEdges = null,
+                                                              int numProcesses = -1)
+        {
+            throw new System.Exception("MLU encoding missing");
+        }
+        /// <summary>
+        /// The encoding for Africa V2.
+        /// </summary>
+        public OptimizationEncoding<TVar, TSolution> Encoding(Topology topology,
+                                                              bool modelFailures = true,
+                                                              Dictionary<(string, string), string[][]> primaryPaths = null,
+                                                              Dictionary<(string, string), string[][]> backupPaths = null,
+                                                              Dictionary<(string, string), Polynomial<TVar>> preDemandVariables = null,
+                                                              Dictionary<(string, string), Polynomial<TVar>> preCapVariables = null,
+                                                              Dictionary<string[], Polynomial<TVar>> prePathExtensionCapacities = null,
+                                                              Dictionary<(string, string), double> demandEqualityConstraints = null,
+                                                              Dictionary<(string, string), double> capacityEqualityConstraints = null,
+                                                              Dictionary<string[], double> pathExtensionCapacityConstraints = null,
+                                                              bool noAdditionalConstraints = false,
+                                                              InnerRewriteMethodChoice innerRewriteMethodChoice = InnerRewriteMethodChoice.KKT,
+                                                              PathType pathType = PathType.KSP,
+                                                              Dictionary<(int, string, string), double> historicDemandConstraints = null,
+                                                              HashSet<string> excludeNodesEdges = null,
+                                                              int numProcesses = -1)
+        {
+            throw new System.Exception("Encoder for the split paths cut encoder.");
+        }
 
         /// <summary>
         /// Encode the problem.

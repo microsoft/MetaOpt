@@ -56,7 +56,13 @@ namespace MetaOptimize
             Variables = new HashSet<Zen<Real>>();
             _objective = null;
         }
-
+        /// <summary>
+        /// Getting the timeout value.
+        /// </summary>
+        public double GetTimeout()
+        {
+            throw new Exception("Havent yet added this functionality.");
+        }
         /// <summary>
         /// Reset the solver by removing all the variables and constraints.
         /// </summary>

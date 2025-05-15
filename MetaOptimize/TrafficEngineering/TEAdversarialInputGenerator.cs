@@ -10,10 +10,13 @@ namespace MetaOptimize
     using System.Linq;
     using System.Threading;
     using Gurobi;
+    using Microsoft.VisualBasic;
+    using Microsoft.Z3;
     using NLog;
 
     /// <summary>
-    /// Meta-optimization utility functions for maximizing optimality gaps.
+    /// The adversarial generator that maximizes the gap between the objectives of the
+    /// two input encoders.
     /// </summary>
     public class TEAdversarialInputGenerator<TVar, TSolution>
     {
@@ -21,27 +24,42 @@ namespace MetaOptimize
         /// <summary>
         /// The topology for the network.
         /// </summary>
-        protected Topology Topology { get; set; }
+        protected Topology Topology
+        {
+            get; set;
+        }
 
         /// <summary>
         /// The maximum number of paths to use between any two nodes.
         /// </summary>
-        protected int maxNumPath { get; set; }
+        protected int maxNumPath
+        {
+            get; set;
+        }
 
         /// <summary>
         /// number of processors to use for multiprocessing purposes.
         /// </summary>
-        protected int NumProcesses { get; set; }
+        protected int NumProcesses
+        {
+            get; set;
+        }
 
         /// <summary>
         /// The demand variables.
         /// </summary>
-        protected Dictionary<(string, string), Polynomial<TVar>> DemandEnforcers { get; set; }
+        protected Dictionary<(string, string), Polynomial<TVar>> DemandEnforcers
+        {
+            get; set;
+        }
 
         /// <summary>
         /// demnad constrains enforced by locality.
         /// </summary>
-        protected Dictionary<(string, string), double> LocalityConstrainedDemands { get; set; }
+        protected Dictionary<(string, string), double> LocalityConstrainedDemands
+        {
+            get; set;
+        }
 
         /// <summary>
         /// Constructor.
@@ -103,7 +121,7 @@ namespace MetaOptimize
             IEncoder<TVar, TSolution> heuristicEncoder,
             double demandUB = -1,
             InnerRewriteMethodChoice innerEncoding = InnerRewriteMethodChoice.KKT,
-            IDemandList demandList = null,
+            IList demandList = null,
             IDictionary<(string, string), double> constrainedDemands = null,
             bool simplify = false,
             bool verbose = false,
@@ -158,12 +176,12 @@ namespace MetaOptimize
 
             Logger.Info("generating optimal encoding.");
             var optimalEncoding = optimalEncoder.Encoding(this.Topology, preInputVariables: this.DemandEnforcers,
-                    innerEncoding: innerEncoding, numProcesses: this.NumProcesses, verbose: verbose,
+                    innerEncoding: innerEncoding, numProcesses: this.NumProcesses,
                     inputEqualityConstraints: LocalityConstrainedDemands, noAdditionalConstraints: true,
                     pathType: pathType, selectedPaths: selectedPaths, historicInputConstraints: historicDemandConstraints);
             Logger.Info("generating heuristic encoding.");
             var heuristicEncoding = heuristicEncoder.Encoding(this.Topology, preInputVariables: this.DemandEnforcers,
-                    innerEncoding: innerEncoding, numProcesses: this.NumProcesses, verbose: verbose,
+                    innerEncoding: innerEncoding, numProcesses: this.NumProcesses,
                     inputEqualityConstraints: LocalityConstrainedDemands,
                     pathType: pathType, selectedPaths: selectedPaths, historicInputConstraints: historicDemandConstraints);
 
@@ -184,9 +202,6 @@ namespace MetaOptimize
 
             Logger.Info("setting the objective.");
 
-            // var objective = new Polynomial<TVar>();
-            // objective.Add(optimalEncoding.MaximizationObjective.Copy());
-            // objective.Add(heuristicEncoding.MaximizationObjective.Negate());
             // TODO: @Pooria I had to change this to fix the test cases
             // fix it please by figuring out how to handle this._scale better.
             var objective = new Polynomial<TVar>(
@@ -212,7 +227,7 @@ namespace MetaOptimize
             double optimalObj,
             double demandUB = -1,
             InnerRewriteMethodChoice innerEncoding = InnerRewriteMethodChoice.KKT,
-            IDemandList demandList = null,
+            IList demandList = null,
             IDictionary<(string, string), double> constrainedDemands = null,
             bool simplify = false,
             bool verbose = false,
@@ -268,12 +283,12 @@ namespace MetaOptimize
                         CreateDemandVariables(solver, innerEncoding, demandList, demandInits, LargeDemandLB, LargeMaxDistance, SmallMaxDistance);
             Logger.Info("generating optimal encoding.");
             var optimalEncoding = optimalEncoder.Encoding(this.Topology, preInputVariables: this.DemandEnforcers,
-                    innerEncoding: innerEncoding, numProcesses: this.NumProcesses, verbose: verbose,
+                    innerEncoding: innerEncoding, numProcesses: this.NumProcesses,
                     inputEqualityConstraints: LocalityConstrainedDemands, noAdditionalConstraints: true,
                     pathType: pathType, selectedPaths: selectedPaths, historicInputConstraints: historicDemandConstraints);
             Logger.Info("generating heuristic encoding.");
             var heuristicEncoding = heuristicEncoder.Encoding(this.Topology, preInputVariables: this.DemandEnforcers,
-                    innerEncoding: innerEncoding, numProcesses: this.NumProcesses, verbose: verbose,
+                    innerEncoding: innerEncoding, numProcesses: this.NumProcesses,
                     inputEqualityConstraints: LocalityConstrainedDemands,
                     pathType: pathType, selectedPaths: selectedPaths, historicInputConstraints: historicDemandConstraints);
 
@@ -323,7 +338,7 @@ namespace MetaOptimize
         /// <param name="SmallMaxDistance"></param>
         /// <param name="randomInitialization"></param>
         /// <exception cref="Exception"></exception>
-        private static void CheckDensityAndLocalityInputs(
+        protected static void CheckDensityAndLocalityInputs(
             InnerRewriteMethodChoice innerEncoding,
             double density,
             double LargeDemandLB,
@@ -362,57 +377,52 @@ namespace MetaOptimize
             }
         }
 
-        private bool checkIfPairIsConstrained(
+        /// <summary>
+        /// We use this function to check if the user has specified constraints on the demand.
+        /// Use this function where you want to add other constraints on the demand and there is potential
+        /// for the two sets of constraints to interfere with each other.
+        /// </summary>
+        /// <param name="constrainedDemands"></param>
+        /// <param name="pair"></param>
+        /// <returns></returns>
+        protected bool checkIfPairIsConstrained(
             IDictionary<(string, string), double> constrainedDemands,
             (string, string) pair)
         {
             return constrainedDemands.ContainsKey(pair) || this.LocalityConstrainedDemands.ContainsKey(pair);
         }
 
-        private double DiscoverMatchingDemandLvl(Polynomial<TVar> DemandVar, double demandValue)
+        /// <summary>
+        /// We use this for primal dual when we need to find a demand level in the primal dual levels that matches
+        /// an constant that either the user provided or that we got from a different method.
+        /// </summary>
+        /// <param name="DemandVar"></param>
+        /// <param name="demandValue"></param>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
+        protected double DiscoverMatchingDemandLvl(Polynomial<TVar> DemandVar, double demandValue)
         {
-            if (demandValue <= 0.0001)
+            if (demandValue <= 0.01)
             {
                 return 0;
             }
             foreach (var demandlvl in DemandVar.GetTerms())
             {
-                if (Math.Abs(demandlvl.Coefficient - demandValue) <= 0.0001)
+                if (Math.Abs(demandlvl.Coefficient - demandValue) <= 0.01)
                 {
                     return demandlvl.Coefficient;
                 }
             }
             throw new Exception(String.Format("does not match {0}", demandValue));
         }
-
         /// <summary>
-        /// Maximize optimality gap with clustering method used for scale up.
+        ///  Makes sure the input clusters are valid: i.e. there are not
+        ///  nodes that are present in multiple clusters and that the clusters
+        ///  cover all nodes in the topology.
         /// </summary>
-        public (TEOptimizationSolution, TEOptimizationSolution) MaximizeOptimalityGapWithClusteringV2(
-            List<Topology> clusters,
-            IEncoder<TVar, TSolution> optimalEncoder,
-            IEncoder<TVar, TSolution> heuristicEncoder,
-            double demandUB = -1,
-            int numInterClusterSamples = 0,
-            int numNodePerCluster = 0,
-            InnerRewriteMethodChoice innerEncoding = InnerRewriteMethodChoice.KKT,
-            GenericDemandList demandList = null,
-            IDictionary<(string, string), double> constrainedDemands = null,
-            bool simplify = false,
-            bool verbose = false,
-            double density = 1.0,
-            double LargeDemandLB = -1,
-            int LargeMaxDistance = -1,
-            int SmallMaxDistance = -1,
-            bool randomInitialization = false,
-            IEncoder<TVar, TSolution> HeuisticDirectEncoder = null)
+        /// <param name="clusters">The clusters we want to validate.</param>
+        protected void CheckClusteringIsValid(List<Topology> clusters)
         {
-            CheckDensityAndLocalityInputs(innerEncoding, density, LargeDemandLB, LargeMaxDistance, SmallMaxDistance, randomInitialization);
-            if (density < 1.0)
-            {
-                throw new Exception("density constraint is not implemented completely for the clustering approach. " +
-                                    "Need to think about how to translate to cluster level density.");
-            }
             var seenNode = new HashSet<string>();
             foreach (var cluster in clusters)
             {
@@ -432,79 +442,49 @@ namespace MetaOptimize
                         this.Topology.GetAllNodes().Count(),
                         seenNode.Count()));
             }
-            if (constrainedDemands == null)
-            {
-                constrainedDemands = new Dictionary<(string, string), double>();
-            }
-            Dictionary<(string, string), double> rndDemand = null;
-            var timer = Stopwatch.StartNew();
+        }
+        private (Dictionary<(string, string), double>, double) RandomlyInitializeDemands(double demandUB, GenericList demandList, IEncoder<TVar, TSolution> optimalEncoder, IEncoder<TVar, TSolution> HeuisticDirectEncoder)
+        {
+            var rng = new Random(Seed: 0);
+            var rndDemand = new Dictionary<(string, string), double>();
             double currGap = 0;
-            if (randomInitialization)
+            int numTrials = 10;
+            for (int i = 0; i < numTrials; i++)
             {
-                Debug.Assert(innerEncoding == InnerRewriteMethodChoice.PrimalDual);
-                var rng = new Random(Seed: 0);
-                rndDemand = new Dictionary<(string, string), double>();
-                int numTrials = 10;
-                for (int i = 0; i < numTrials; i++)
+                bool feasible = true;
+                var currRndDemand = getRandomDemand(rng, demandUB, demandList);
+                double currRndGap = 0.0;
+                do
                 {
-                    bool feasible = true;
-                    var currRndDemand = getRandomDemand(rng, demandUB, demandList);
-                    double currRndGap = 0.0;
-                    do
+                    feasible = true;
+                    try
                     {
-                        feasible = true;
-                        try
+                        (currRndGap, _) = GetGap(optimalEncoder, HeuisticDirectEncoder, currRndDemand, disableStoreProgress: true);
+                        if (currRndGap > currGap)
                         {
-                            (currRndGap, _) = GetGap(optimalEncoder, HeuisticDirectEncoder, currRndDemand, disableStoreProgress: true);
-                            if (currRndGap > currGap)
-                            {
-                                currGap = currRndGap;
-                                rndDemand = currRndDemand;
-                            }
+                            currGap = currRndGap;
+                            rndDemand = currRndDemand;
                         }
-                        catch (DemandPinningLinkNegativeException e)
-                        {
-                            feasible = false;
-                            Console.WriteLine("Infeasible input!");
-                            ReduceDemandsOnLink(currRndDemand, e.Edge, e.Threshold, 0);
-                        }
-                    } while (!feasible);
-                }
+                    }
+                    catch (DemandPinningLinkNegativeException e)
+                    {
+                        feasible = false;
+                        Console.WriteLine("Infeasible input!");
+                        ReduceDemandsOnLink(currRndDemand, e.Edge, e.Threshold, 0);
+                    }
+                } while (!feasible);
             }
-            timer.Stop();
+            return (rndDemand, currGap);
+        }
 
-            var solver = optimalEncoder.Solver;
-            solver.CleanAll();
-            if (randomInitialization)
-            {
-                solver.AppendToStoreProgressFile(timer.ElapsedMilliseconds, currGap, reset: false);
-            }
-            Logger.Info("creating demand variables.");
-            (this.DemandEnforcers, this.LocalityConstrainedDemands) =
-                        CreateDemandVariables(solver, innerEncoding, demandList,
-                                LargeDemandLB: LargeDemandLB, LargeMaxDistance: LargeMaxDistance, SmallMaxDistance: SmallMaxDistance);
-            Logger.Info("generating optimal encoding.");
-            var optimalEncoding = optimalEncoder.Encoding(this.Topology, preInputVariables: this.DemandEnforcers,
-                    innerEncoding: innerEncoding, numProcesses: this.NumProcesses, verbose: verbose,
-                    inputEqualityConstraints: this.LocalityConstrainedDemands, noAdditionalConstraints: true);
-            Logger.Info("generating heuristic encoding.");
-            var heuristicEncoding = heuristicEncoder.Encoding(this.Topology, preInputVariables: this.DemandEnforcers,
-                    innerEncoding: innerEncoding, numProcesses: this.NumProcesses, verbose: verbose,
-                    inputEqualityConstraints: LocalityConstrainedDemands);
-
-            // ensures that demand in both problems is the same and lower than demand upper bound constraint.
-            Logger.Info("adding constraints for upper bound on demands.");
-            EnsureDemandUB(solver, demandUB);
-            Logger.Info("adding equality constraints for specified demands.");
-            EnsureDemandEquality(solver, constrainedDemands);
-            Logger.Info("Adding density constraint: max density = " + density);
-            EnsureDensityConstraint(solver, density);
-
-            if (demandUB < 0)
-            {
-                demandUB = this.maxNumPath * this.Topology.MaxCapacity();
-            }
-
+        /// <summary>
+        /// This function is used when we do clustering.
+        /// If we do not do randominitialization, it zeros out all demands which do not have a pre-specified value.
+        /// If we are doing random initialization, then it sets all demands to the value closest to their random initialization.
+        /// If a close value (for primal-dual levels) does not exist, it just sets the demand to zero.
+        /// </summary>
+        protected Dictionary<(string, string), string> AddViableDemandConstraints(bool randomInitialization, ISolver<TVar, TSolution> solver, IDictionary<(string, string), double> constrainedDemands, Dictionary<(string, string), double> rndDemand)
+        {
             var pairNameToConstraintMapping = new Dictionary<(string, string), string>();
             if (!randomInitialization)
             {
@@ -521,7 +501,6 @@ namespace MetaOptimize
             }
             else
             {
-                Debug.Assert(innerEncoding == InnerRewriteMethodChoice.PrimalDual);
                 Logger.Info("Randomly Initialize Demands!");
                 foreach (var (pair, demandVar) in this.DemandEnforcers)
                 {
@@ -554,6 +533,90 @@ namespace MetaOptimize
                 }
             }
             solver.ModelUpdate();
+            return pairNameToConstraintMapping;
+        }
+        /// <summary>
+        /// Maximize optimality gap with clustering method used for scale up.
+        /// </summary>
+        /// TODO: this needs more comments.
+        public (TEOptimizationSolution, TEOptimizationSolution) MaximizeOptimalityGapWithClusteringV2(
+            List<Topology> clusters,
+            IEncoder<TVar, TSolution> optimalEncoder,
+            IEncoder<TVar, TSolution> heuristicEncoder,
+            double demandUB = -1,
+            int numInterClusterSamples = 0,
+            int numNodePerCluster = 0,
+            InnerRewriteMethodChoice innerEncoding = InnerRewriteMethodChoice.KKT,
+            GenericList demandList = null,
+            IDictionary<(string, string), double> constrainedDemands = null,
+            bool simplify = false,
+            bool verbose = false,
+            double density = 1.0,
+            double LargeDemandLB = -1,
+            int LargeMaxDistance = -1,
+            int SmallMaxDistance = -1,
+            bool randomInitialization = false,
+            IEncoder<TVar, TSolution> HeuisticDirectEncoder = null)
+        {
+            CheckDensityAndLocalityInputs(innerEncoding, density, LargeDemandLB, LargeMaxDistance, SmallMaxDistance, randomInitialization);
+            if (density < 1.0)
+            {
+                // TODO-research: figure out how to do this.
+                throw new Exception("density constraint is not implemented completely for the clustering approach. " +
+                                    "Need to think about how to translate to cluster level density.");
+            }
+            CheckClusteringIsValid(clusters);
+            if (constrainedDemands == null)
+            {
+                constrainedDemands = new Dictionary<(string, string), double>();
+            }
+            Dictionary<(string, string), double> rndDemand = null;
+            var timer = Stopwatch.StartNew();
+            double currGap = 0;
+            // This code initializes the solver with a feasible solution. To do so it generates random demand matrices and computes
+            // the solution to the optimal and the heuristic (or reports that one or both problems are infeasible). It tries 10 times
+            // and gives up if it cannot find a solution in 10 tries.
+            if (randomInitialization)
+            {
+                Debug.Assert(innerEncoding == InnerRewriteMethodChoice.PrimalDual);
+                (rndDemand, currGap) = RandomlyInitializeDemands(demandUB, demandList, optimalEncoder, HeuisticDirectEncoder);
+            }
+            timer.Stop();
+
+            var solver = optimalEncoder.Solver;
+            solver.CleanAll();
+            if (randomInitialization)
+            {
+                solver.AppendToStoreProgressFile(timer.ElapsedMilliseconds, currGap, reset: false);
+            }
+            Logger.Info("creating demand variables.");
+            (this.DemandEnforcers, this.LocalityConstrainedDemands) =
+                        CreateDemandVariables(solver, innerEncoding, demandList,
+                                LargeDemandLB: LargeDemandLB, LargeMaxDistance: LargeMaxDistance, SmallMaxDistance: SmallMaxDistance);
+            Logger.Info("generating optimal encoding.");
+            var optimalEncoding = optimalEncoder.Encoding(this.Topology, preInputVariables: this.DemandEnforcers,
+                    innerEncoding: innerEncoding, numProcesses: this.NumProcesses,
+                    inputEqualityConstraints: this.LocalityConstrainedDemands, noAdditionalConstraints: true);
+            Logger.Info("generating heuristic encoding.");
+            var heuristicEncoding = heuristicEncoder.Encoding(this.Topology, preInputVariables: this.DemandEnforcers,
+                    innerEncoding: innerEncoding, numProcesses: this.NumProcesses,
+                    inputEqualityConstraints: LocalityConstrainedDemands);
+
+            // ensures that demand in both problems is the same and lower than demand upper bound constraint.
+            Logger.Info("adding constraints for upper bound on demands.");
+            EnsureDemandUB(solver, demandUB);
+            Logger.Info("adding equality constraints for specified demands.");
+            EnsureDemandEquality(solver, constrainedDemands);
+            Logger.Info("Adding density constraint: max density = " + density);
+            EnsureDensityConstraint(solver, density);
+
+            if (demandUB < 0)
+            {
+                demandUB = this.maxNumPath * this.Topology.MaxCapacity();
+            }
+
+            var pairNameToConstraintMapping = new Dictionary<(string, string), string>();
+            pairNameToConstraintMapping = AddViableDemandConstraints(randomInitialization, solver, constrainedDemands, rndDemand);
 
             var demandMatrix = new Dictionary<(string, string), double>();
             // find gap for all the clusters
@@ -590,7 +653,6 @@ namespace MetaOptimize
                     var demandlvl = DiscoverMatchingDemandLvl(this.DemandEnforcers[pair], optimalSolution.Demands[pair]);
                     demandMatrix[pair] = demandlvl;
                     AddSingleDemandEquality(solver, pair, demandlvl);
-                    // AddSingleDemandUB(solver, pair, demandMatrix[pair]);
                 }
 
                 if (verbose)
@@ -625,7 +687,7 @@ namespace MetaOptimize
                     {
                         foreach (var node2 in cluster2Nodes)
                         {
-                            if (this.Topology.ContaintsEdge(node1, node2))
+                            if (this.Topology.ContainsEdge(node1, node2))
                             {
                                 neighbor = true;
                                 break;
@@ -641,6 +703,8 @@ namespace MetaOptimize
                         Logger.Debug("skipping the cluster pairs since they are not neighbors");
                         continue;
                     }
+                    // @Pooria: this may be buggy because it assumes that if node1-node2 demands are constrained
+                    // then so are the reverse of them.
                     foreach (var node1 in cluster1Nodes)
                     {
                         foreach (var node2 in cluster2Nodes)
@@ -669,6 +733,7 @@ namespace MetaOptimize
                             }
                             else
                             {
+                                // Should this be node2, node1?
                                 solver.RemoveConstraint(pairNameToConstraintMapping[(node1, node2)]);
                             }
                             consideredPairs.Add((node2, node1));
@@ -686,7 +751,6 @@ namespace MetaOptimize
                         var demandlvl = DiscoverMatchingDemandLvl(this.DemandEnforcers[pair], optimalSolution.Demands[pair]);
                         demandMatrix[pair] = demandlvl;
                         AddSingleDemandEquality(solver, pair, demandlvl);
-                        // AddSingleDemandUB(solver, pair, demandMatrix[pair]);
                     }
                 }
             }
@@ -716,7 +780,7 @@ namespace MetaOptimize
             int numInterClusterSamples = 0,
             int numNodePerCluster = 0,
             InnerRewriteMethodChoice innerEncoding = InnerRewriteMethodChoice.KKT,
-            GenericDemandList demandList = null,
+            GenericList demandList = null,
             IDictionary<(string, string), double> constrainedDemands = null,
             bool simplify = false,
             bool verbose = false)
@@ -788,11 +852,11 @@ namespace MetaOptimize
                 Logger.Info("generating optimal encoding.");
                 var optimalEncoding = optimalEncoder.Encoding(this.Topology, preInputVariables: this.DemandEnforcers,
                                         inputEqualityConstraints: demandMatrix, innerEncoding: innerEncoding,
-                                        numProcesses: this.NumProcesses, verbose: verbose, noAdditionalConstraints: true);
+                                        numProcesses: this.NumProcesses, noAdditionalConstraints: true);
                 Logger.Info("generating heuristic encoding.");
                 var heuristicEncoding = heuristicEncoder.Encoding(this.Topology, preInputVariables: this.DemandEnforcers,
                                         inputEqualityConstraints: demandMatrix, innerEncoding: innerEncoding,
-                                        numProcesses: this.NumProcesses, verbose: verbose);
+                                        numProcesses: this.NumProcesses);
 
                 // ensures that demand in both problems is the same and lower than demand upper bound constraint.
                 Logger.Info("adding constraints for upper bound on demands.");
@@ -922,7 +986,7 @@ namespace MetaOptimize
             int numInterClusterSamples = 0,
             int numNodePerCluster = 0,
             InnerRewriteMethodChoice innerEncoding = InnerRewriteMethodChoice.KKT,
-            GenericDemandList demandList = null,
+            GenericList demandList = null,
             int numInterClusterQuantizations = -1,
             IDictionary<(string, string), double> constrainedDemands = null,
             bool simplify = false,
@@ -1064,7 +1128,7 @@ namespace MetaOptimize
             }
 
             Logger.Info("computing updated demand list");
-            var demandlvls = demandList.demandList;
+            var demandlvls = demandList.List;
             demandlvls.Add(0);
             var abstractDemandList = new Dictionary<(string, string), ISet<double>>();
             foreach (var ((cluster1, cluster2), numPairs) in clusterPairToNumNodePairs)
@@ -1134,7 +1198,7 @@ namespace MetaOptimize
                 {
                     var node1 = nodeCluster1[rng.Next(nodeCluster1.Count())];
                     var node2 = nodeCluster2[rng.Next(nodeCluster2.Count())];
-                    var demand = demandList.GetRandomNonZeroDemandForPair(rng, node1, node2);
+                    var demand = demandList.GetRandomNonZeroValueForPair(rng, node1, node2);
                     if (demandMatrix.ContainsKey((node1, node2)) || remDemand < demand)
                     {
                         continue;
@@ -1174,7 +1238,7 @@ namespace MetaOptimize
             double minDifference,
             double demandUB = -1,
             InnerRewriteMethodChoice innerEncoding = InnerRewriteMethodChoice.KKT,
-            GenericDemandList demandList = null,
+            GenericList demandList = null,
             bool simplify = false)
         {
             if (optimalEncoder.Solver != heuristicEncoder.Solver)
@@ -1225,8 +1289,13 @@ namespace MetaOptimize
             Console.WriteLine("Optimal (Pop):");
             heuristicEncoder.DisplaySolution(solution); */
         }
-
-        private void EnsureDemandUB(
+        /// <summary>
+        /// Ensures demands are bounded if a bound is specified.
+        /// </summary>
+        /// <param name="solver"></param>
+        /// <param name="demandUB"></param>
+        /// <exception cref="Exception"></exception>
+        protected void EnsureDemandUB(
             ISolver<TVar, TSolution> solver,
             double demandUB)
         {
@@ -1234,7 +1303,8 @@ namespace MetaOptimize
             {
                 demandUB = double.PositiveInfinity;
             }
-            demandUB = Math.Min(this.Topology.MaxCapacity() * this.maxNumPath, demandUB);
+            Debug.Assert(maxNumPath < 100, "the number of paths cannot be more than 100 or you should change this");
+            demandUB = Math.Min(this.Topology.MaxCapacity() * 100, demandUB);
             foreach (var (pair, variable) in this.DemandEnforcers)
             {
                 if (this.LocalityConstrainedDemands.ContainsKey(pair))
@@ -1259,7 +1329,7 @@ namespace MetaOptimize
         /// <param name="solver"></param>
         /// <param name="demandUB"></param>
         /// <exception cref="Exception"></exception>
-        private void EnsureDemandUB(
+        protected void EnsureDemandUB(
             ISolver<TVar, TSolution> solver,
             IDictionary<(string, string), double> demandUB)
         {
@@ -1277,6 +1347,10 @@ namespace MetaOptimize
                         throw new Exception("the locality based constrain and the demand upper bound are in conflict.");
                     }
                 }
+                if (!DemandEnforcers.ContainsKey(pair))
+                {
+                    continue;
+                }
                 ub = Math.Min(this.Topology.MaxCapacity() * this.maxNumPath, ub);
                 var poly = DemandEnforcers[pair].Copy();
                 poly.Add(new Term<TVar>(-1 * ub));
@@ -1286,11 +1360,18 @@ namespace MetaOptimize
 
         // TODO: a question here: so shouldn't this normalize the demand in some way so that the quantized levels are able to reach that value?
         // or in another way doesn't this just dictate the value for certain variables?
-        private void AddSingleDemandEquality(
+        /// <summary>
+        /// This function is used in clustering to set the values of demands for nodes in a cluster.
+        /// </summary>
+        protected void AddSingleDemandEquality(
             ISolver<TVar, TSolution> solver,
             (string, string) pair,
             double demand)
         {
+            if (!this.DemandEnforcers.ContainsKey(pair))
+            {
+                return;
+            }
             var poly = this.DemandEnforcers[pair].Copy();
             poly.Add(new Term<TVar>(-1 * demand));
             solver.AddEqZeroConstraint(poly);
@@ -1313,7 +1394,7 @@ namespace MetaOptimize
         /// <param name="solver"></param>
         /// <param name="constrainedDemands"></param>
         /// <exception cref="Exception"></exception>
-        private void EnsureDemandEquality(
+        protected void EnsureDemandEquality(
             ISolver<TVar, TSolution> solver,
             IDictionary<(string, string), double> constrainedDemands)
         {
@@ -1339,7 +1420,7 @@ namespace MetaOptimize
         /// </summary>
         /// <param name="solver"></param>
         /// <param name="density"></param>
-        private void EnsureDensityConstraint(
+        protected void EnsureDensityConstraint(
             ISolver<TVar, TSolution> solver,
             double density)
         {
@@ -1363,10 +1444,10 @@ namespace MetaOptimize
         /// <summary>
         /// Creates demand variables.
         /// </summary>
-        private (Dictionary<(string, string), Polynomial<TVar>>, Dictionary<(string, string), double>) CreateDemandVariables(
+        protected virtual (Dictionary<(string, string), Polynomial<TVar>>, Dictionary<(string, string), double>) CreateDemandVariables(
                 ISolver<TVar, TSolution> solver,
                 InnerRewriteMethodChoice innerEncoding,
-                IDemandList quantizationThresholdsForDemands,
+                IList quantizationThresholdsForDemands,
                 IDictionary<(string, string), double> demandInits = null,
                 double LargeDemandLB = -1,
                 int LargeMaxDistance = -1,
@@ -1402,6 +1483,11 @@ namespace MetaOptimize
 
             foreach (var pair in this.Topology.GetNodePairs())
             {
+                if (pair.Item1.Contains("-CombineWith-") || pair.Item2.Contains("-CombineWith-"))
+                {
+                    Logger.Info("Skipping pair " + pair.Item1 + " " + pair.Item2);
+                    continue;
+                }
                 switch (innerEncoding)
                 {
                     case InnerRewriteMethodChoice.KKT:
@@ -1409,12 +1495,13 @@ namespace MetaOptimize
                         break;
                     case InnerRewriteMethodChoice.PrimalDual:
                         // get demands lvls
-                        var demands = quantizationThresholdsForDemands.GetDemandsForPair(pair.Item1, pair.Item2);
+                        var demands = quantizationThresholdsForDemands.GetValueForPair(pair.Item1, pair.Item2);
 
                         // TODO-Behnaz's question: why do you remove the first item in the list?
                         demands.Remove(0);
                         // get distance
-                        var distance = this.Topology.ShortestKPaths(1, pair.Item1, pair.Item2)[0].Length - 1;
+                        var path = this.Topology.ShortestKPaths(1, pair.Item1, pair.Item2);
+                        var distance = path.Length > 0 ? path[0].Length - 1 : 1e10;
                         // create demand variables
                         var axVariableConstraint = new Polynomial<TVar>(new Term<TVar>(-1));
                         var demandLvlEnforcer = new Polynomial<TVar>();
@@ -1450,7 +1537,6 @@ namespace MetaOptimize
                                     solver.InitializeVariables(demandbinaryAuxVar, 0);
                                 }
                             }
-                            // sumAllAuxVars.Add(new Term<TVar>(1, demandAuxVar));
                         }
                         if (demandInits != null)
                         {
@@ -1491,7 +1577,7 @@ namespace MetaOptimize
             double startGap,
             double demandUB = double.PositiveInfinity,
             InnerRewriteMethodChoice innerEncoding = InnerRewriteMethodChoice.KKT,
-            GenericDemandList demandList = null)
+            GenericList demandList = null)
         {
             if (optimalEncoder.Solver != heuristicEncoder.Solver)
             {
@@ -1570,12 +1656,13 @@ namespace MetaOptimize
                     (TEOptimizationSolution)heuristicEncoder.GetSolution(solution));
         }
 
+        // TODO: needs a comment.
         private (double, (TEOptimizationSolution, TEOptimizationSolution)) GetGap(
             IEncoder<TVar, TSolution> optimalEncoder,
             IEncoder<TVar, TSolution> heuristicEncoder,
             Dictionary<(string, string), double> demands,
             InnerRewriteMethodChoice innerEncoding = InnerRewriteMethodChoice.KKT,
-            IDemandList demandList = null,
+            IList demandList = null,
             bool disableStoreProgress = false)
         {
             // solving the hueristic for the demand
@@ -1923,13 +2010,13 @@ namespace MetaOptimize
         /// <summary>
         /// Generate single random demand.
         /// </summary>
-        protected double getSingleRandomDemand(Random rng, (string, string) pair, double demandUB, GenericDemandList demandList)
+        protected double getSingleRandomDemand(Random rng, (string, string) pair, double demandUB, GenericList demandList)
         {
             if (this.Topology.ShortestKPaths(1, pair.Item1, pair.Item2).Count() <= 0)
             {
                 return 0;
             }
-            return demandList.GetRandomDemandForPair(rng, pair.Item1, pair.Item2);
+            return demandList.GetRandomValueForPair(rng, pair.Item1, pair.Item2);
         }
 
         /// <summary>
@@ -1952,7 +2039,7 @@ namespace MetaOptimize
         /// <summary>
         /// Generates random demands.
         /// </summary>
-        protected Dictionary<(string, string), double> getRandomDemand(Random rng, double demandUB, GenericDemandList demandList)
+        protected Dictionary<(string, string), double> getRandomDemand(Random rng, double demandUB, GenericList demandList)
         {
             Dictionary<(string, string), double> currDemands = new Dictionary<(string, string), double>();
             // initializing some random demands
