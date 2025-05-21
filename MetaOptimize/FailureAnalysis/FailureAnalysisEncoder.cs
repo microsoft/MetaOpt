@@ -254,7 +254,7 @@ namespace MetaOptimize.FailureAnalysis
             this.BoundFlowVariables();
             this.EnsureNoFlowOnDisconnected();
             this.ComputeTotalFlowPerDemand();
-            this.AddCapacityConstraints();
+            this.AddCapCapacityConstraints();
             Logger.Info("Generate full constraints.");
             var objective = new Polynomial<TVar>(new Term<TVar>(1, this.TotalDemandMetVariable));
             Logger.Info("Calling inner rewrite function.");
@@ -305,7 +305,7 @@ namespace MetaOptimize.FailureAnalysis
                         }
                         else
                         {
-                            lagFlows[edge] += this.Solver.GetVariable(solution, this.FlowPathVariables[path]);
+                            lagFlows[edge] = this.Solver.GetVariable(solution, this.FlowPathVariables[path]);
                         }
                     }
                 }

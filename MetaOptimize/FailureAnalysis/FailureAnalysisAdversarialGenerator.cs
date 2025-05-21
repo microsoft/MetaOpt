@@ -326,13 +326,13 @@ namespace MetaOptimize
                     Logger.Info("Creating optimal encoding");
                     optimalEncoding = optimalEncoder.Encoding(this.Topology,
                         preInputVariables: this.DemandEnforcers,
-                        innerEncoding: innerEncoding,
-                        numProcesses: this.NumProcesses,
                         inputEqualityConstraints: this.LocalityConstrainedDemands,
                         noAdditionalConstraints: true,
+                        innerEncoding: innerEncoding,
                         pathType: pathType,
                         selectedPaths: pathSubset,
-                        historicInputConstraints: historicDemandConstraints);
+                        historicInputConstraints: historicDemandConstraints,
+                        numProcesses: this.NumProcesses);
                 }
 
                 Logger.Info("Adding equality constraints");
@@ -1780,6 +1780,7 @@ namespace MetaOptimize
                 solver.AddEqZeroConstraint(trueCap);
             }
             Logger.Info("new adding the path extension capacity constraints based on the pathUpVariables");
+            this.SetPathConstraintsForFailures(solver, ensureAtLeastOnePathUp);
         }
         /// <summary>
         /// Returns the lag down events after solving the problem.
@@ -1965,7 +1966,7 @@ namespace MetaOptimize
                 var lagUpTerm = new Term<TVar>(Math.Log(Math.Max(1 - probability, 1e-10)), lagUp);
                 constraint.Add(lagUpTerm);
             }
-            solver.AddEqZeroConstraint(constraint);
+            solver.AddLeqZeroConstraint(constraint);
         }
         /// <summary>
         /// Ensures that there are no more SRLG failures than what we allow.

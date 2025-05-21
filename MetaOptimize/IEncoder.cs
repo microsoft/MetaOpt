@@ -86,20 +86,17 @@ namespace MetaOptimize
             throw new System.Exception("Capacity Augmentation encoder not implemented");
         }
         /// <summary>
-        /// Encode the problem.
+        /// TE max flow encoder.
         /// </summary>
-        /// <returns>The constraints and maximization objective.</returns>
-        /// TODO: need to change the variable names to be more general and not be specific to the TE problem.
+        /// <returns></returns>
         public OptimizationEncoding<TVar, TSolution> Encoding(Topology topology, Dictionary<(string, string), Polynomial<TVar>> preInputVariables = null,
             Dictionary<(string, string), double> inputEqualityConstraints = null, bool noAdditionalConstraints = false,
             InnerRewriteMethodChoice innerEncoding = InnerRewriteMethodChoice.KKT,
-            PathType pathType = PathType.KSP, Dictionary<(string, string), string[][]> selectedPaths = null,
-            Dictionary<(int, string, string), double> historicInputConstraints = null,
-            int numProcesses = -1, bool verbose = false)
+            PathType pathType = PathType.KSP, Dictionary<(string, string), string[][]> selectedPaths = null, Dictionary<(int, string, string), double> historicInputConstraints = null,
+            int numProcesses = -1)
         {
-            throw new System.Exception("TE Not Implemented....");
+            throw new System.Exception("making sure that TE is defined...");
         }
-
         /// <summary>
         /// Encode the problem.
         /// </summary>
