@@ -112,7 +112,7 @@ namespace MetaOptimize
             {
                 var encoding = heruisticEncoder.Encoding(this.Topology, this.DemandVariables, demandEqualityConstraints,
                                                                 noAdditionalConstraints: noAdditionalConstraints, innerEncoding: innerEncoding,
-                                                                numProcesses: numProcesses, verbose: verbose);
+                                                                numProcesses: numProcesses);
                 this.HeuristicEncodingDict[heruisticEncoder] = encoding;
             }
 
