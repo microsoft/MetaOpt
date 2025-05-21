@@ -69,7 +69,22 @@ namespace MetaOptimize
         {
             throw new System.Exception("Encoder for the split paths cut encoder.");
         }
-
+        /// <summary>
+        /// Encodes the capacity augmentation problem.
+        /// </summary>
+        public OptimizationEncoding<TVar, TSolution> Encoding(
+            Topology topology,
+            Dictionary<(string, string), double> demands = null,
+            Dictionary<(string, string), double> flows = null,
+            double targetDemandMet = -1,
+            int minAugmentation = 0,
+            Dictionary<(string, string), int> exclude = null,
+            Dictionary<(string, string), string[][]> path = null,
+            bool specialWeight = true,
+            bool addOnExisting = false)
+        {
+            throw new System.Exception("Capacity Augmentation encoder not implemented");
+        }
         /// <summary>
         /// Encode the problem.
         /// </summary>

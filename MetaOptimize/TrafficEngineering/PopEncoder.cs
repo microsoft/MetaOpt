@@ -187,7 +187,7 @@ namespace MetaOptimize
                     }
                 }
                 encodings[i] = this.PartitionEncoders[i].Encoding(this.ReducedTopology, partitionPreDemandVariables, this.perPartitionDemandConstraints[i], noAdditionalConstraints: noAdditionalConstraints,
-                                                                innerEncoding: innerEncoding, numProcesses: numProcesses, verbose: verbose);
+                                                                innerEncoding: innerEncoding, numProcesses: numProcesses);
             }
 
             // create new demand variables as the sum of the individual partitions.

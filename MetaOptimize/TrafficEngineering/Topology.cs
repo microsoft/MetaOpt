@@ -250,6 +250,14 @@ namespace MetaOptimize
                 }
             }
         }
+        /// <summary>
+        /// Removes an edge from the graph.
+        /// </summary>
+        /// <param name="edge"></param>
+        public void RemoveEdge(EquatableTaggedEdge<string, double> edge)
+        {
+            this.Graph.RemoveEdge(edge);
+        }
 
         /// <summary>
         /// compute the paths.
@@ -257,17 +265,26 @@ namespace MetaOptimize
         public Dictionary<(string, string), string[][]> ComputePaths(PathType pathType,
             Dictionary<(string, string), string[][]> selectedPaths,
             int K,
-            int numProcesses, bool verbose)
+            int numProcesses,
+            bool verbose,
+            List<string> relayFilter = null,
+            HashSet<string> metaNodes = null,
+            bool metrics = false)
         {
+            if (metaNodes != null && metrics == false)
+            {
+                throw new Exception("MetaNode cannot be not null if we are not using metrics");
+            }
             var paths = new Dictionary<(string, string), string[][]>();
             switch (pathType)
             {
                 case PathType.KSP:
                     Debug.Assert(selectedPaths == null);
                     Logger.Info("Using K shortest paths with K = " + K);
-                    paths = this.MultiProcessAllPairsKShortestPath(K, numProcesses: numProcesses, verbose: verbose);
+                    paths = this.MultiProcessAllPairsKShortestPath(K, numProcesses: numProcesses, verbose: verbose, relayFilter, metaNodes, metrics);
                     break;
                 case PathType.Predetermined:
+                    Debug.Assert(relayFilter == null, "the relay filter has to be null in this case");
                     Debug.Assert(selectedPaths != null && selectedPaths.Count == this.GetNumNodePairs());
                     Logger.Info("Using predetermined paths");
                     paths = selectedPaths;
@@ -350,10 +367,7 @@ namespace MetaOptimize
         /// <summary>
         /// Compute the shortest k paths from a source to a destination.
         /// </summary>
-        /// <param name="maxNumPaths">The maximum number of paths.</param>
-        /// <param name="source">The source node.</param>
-        /// <param name="dest">The destination node.</param>
-        public string[][] ShortestKPaths(int maxNumPaths, string source, string dest)
+        public string[][] ShortestKPaths(int maxNumPaths, string source, string dest, List<string> relayFilter = null, HashSet<string> metaNodes = null, bool metrics = false)
         {
             if (this.paths.ContainsKey(maxNumPaths) && this.paths[maxNumPaths].ContainsKey((source, dest)))
             {
@@ -369,10 +383,38 @@ namespace MetaOptimize
             }
 
             // Returns the weith of the edge which the shortest path algorithm then uses to compute the shortest path.
-            Func<EquatableTaggedEdge<string, double>, double> myfunc = delegate
+            Func<EquatableTaggedEdge<string, double>, double> myfunc;
+            if (relayFilter != null)
             {
-                return 1;
-            };
+                myfunc = delegate(EquatableTaggedEdge<string, double> edge)
+                {
+                    return relayFilter.Any(filter => (edge.Source.Contains(filter) || edge.Target.Contains(filter))) ? this.GetAllEdges().Count() * 1000 : 1;
+                };
+            }
+            else
+            {
+                if (metrics)
+                {
+                    myfunc = delegate(EquatableTaggedEdge<string, double> edge)
+                    {
+                        if (!this.Metrics.ContainsKey((edge.Source, edge.Target)))
+                        {
+                            if (metaNodes.Contains(edge.Source) || metaNodes.Contains(edge.Target))
+                            {
+                                this.Metrics[(edge.Source, edge.Target)] = this.Metrics.Select(x => x.Value).Max();
+                            }
+                        }
+                        return this.Metrics[(edge.Source, edge.Target)];
+                    };
+                }
+                else
+                {
+                    myfunc = delegate
+                    {
+                        return 1;
+                    };
+                }
+            }
             var algorithm = new YenShortestPathsAlgorithm<string>(this.Graph, source, dest, maxNumPaths, edgeWeights: myfunc);
 
             try
@@ -400,19 +442,14 @@ namespace MetaOptimize
         /// <summary>
         /// Compute the shortest k paths for a list of src-dst pairs.
         /// </summary>
-        /// <param name="maxNumPaths">The maximum number of paths.</param>
-        /// <param name="nodePairList">list of src-dst pairs.</param>
-        /// <param name="output">to store output.</param>
-        /// <param name="pid">processor id for logging.</param>
-        /// <param name="verbose">enables detailed logging.</param>
         public void ShortestKPathsForPairList(int maxNumPaths, IEnumerable<(string, string)> nodePairList,
-                IDictionary<(string, string), string[][]> output, int pid = -1, bool verbose = false)
+                IDictionary<(string, string), string[][]> output, int pid = -1, bool verbose = false, List<string> relayFilter = null, HashSet<string> metaNodes = null, bool metrics = false)
         {
             var path_dict = new Dictionary<(string, string), string[][]>();
             Logger.Info("processor with pid " + pid + " starting to compute paths...");
             foreach (var pair in nodePairList)
             {
-                var paths = this.ShortestKPaths(maxNumPaths, pair.Item1, pair.Item2);
+                var paths = this.ShortestKPaths(maxNumPaths, pair.Item1, pair.Item2, relayFilter, metaNodes, metrics);
                 path_dict[pair] = paths;
             }
             path_dict.ToList().ForEach(pair => output[pair.Key] = pair.Value);
@@ -422,11 +459,8 @@ namespace MetaOptimize
         /// <summary>
         /// Compute the shortest k paths for all the pairs. You can specify the number of processors to use.
         /// </summary>
-        /// <param name="maxNumPaths">The maximum number of paths.</param>
-        /// <param name="numProcesses">The number of processors to use.</param>
-        /// <param name="verbose">To show detailed logs.</param>
         public Dictionary<(string, string), string[][]> MultiProcessAllPairsKShortestPath(int maxNumPaths,
-                int numProcesses = -1, bool verbose = false)
+                int numProcesses = -1, bool verbose = false, List<string> relayFilter = null, HashSet<string> metaNodes = null, bool metrics = false)
         {
             if (this.paths.ContainsKey(maxNumPaths))
             {
@@ -441,7 +475,7 @@ namespace MetaOptimize
             var output = new ConcurrentDictionary<(string, string), string[][]>();
             if (numProcesses < 1)
             {
-                this.ShortestKPathsForPairList(maxNumPaths, this.GetNodePairs(), output, verbose: verbose);
+                this.ShortestKPathsForPairList(maxNumPaths, this.GetNodePairs(), output, verbose: verbose, relayFilter: relayFilter, metaNodes: metaNodes, metrics: metrics);
                 this.paths[maxNumPaths] = output.ToDictionary(entry => entry.Key,
                                                 entry => entry.Value);
                 return output.ToDictionary(entry => entry.Key,
@@ -467,7 +501,7 @@ namespace MetaOptimize
             {
                 Logger.Info(
                     string.Format("creating process {0} with {1} pairs", pid1, processToPairList[pid1].Count()));
-                threadlist.Add(new Thread(() => ShortestKPathsForPairList(maxNumPaths, processToPairList[pid1], output, pid: pid1, verbose: verbose)));
+                threadlist.Add(new Thread(() => ShortestKPathsForPairList(maxNumPaths, processToPairList[pid1], output, pid: pid1, verbose: verbose, relayFilter)));
                 Logger.Info(
                     string.Format("starting process {0} with {1} pairs", pid1, processToPairList[pid1].Count()));
                 threadlist[pid1].Start();
