@@ -116,8 +116,24 @@ Refer to the following two papers for more information:
 }
 ```
 
-## Comments
+## Raha instructions
 The Raha code is re-implemented from the original version to avoid releasing production code.
+However, we have implemented extensive test cases to show how to use the different features in Raha. 
+To try those, you can go to MetaOptimize.Test and run FailureAnalysisGurobiTests.cs. The actual test cases
+are implemented in FailureAnalysisBasicTests.cs [you can use visual studio test suite to run these tests].
+
+In addition to these test examples, Raha provides additional features that you can use if needed:
+
+MetaOptimize/FailureAnalysis/FailureAnalysisWithMetaNodeAdversarialGenerator.cs is an extension class that allows you to analyze a subset of the topology
+where the rest of the topology is collapsed into a metanode.
+
+MetaOptimize/FailureAnalysis/FailureAnalysisAdversarialGeneratorForUnequalPaths.cs is an extension class that allows you to input the paths and backup paths
+instead of kShortestPaths. While the base class also allows paths to be input, it assume there is an equal number of paths for all commodities.
+
+We do not provide test examples for link augmentation. But if of interest these are captured in the following class:
+
+MetaOptimize/FailureAnalysis/CapacityAugmenterV2.cs
+
 Please contact bearzani@microsoft.com in case you have issues.
 
 ## Contributing
