@@ -116,6 +116,10 @@ Refer to the following two papers for more information:
 }
 ```
 
+## Comments
+The Raha code is re-implemented from the original version to avoid releasing production code.
+Please contact bearzani@microsoft.com in case you have issues.
+
 ## Contributing
 
 This project welcomes contributions and suggestions.  Most contributions require you to agree to a
