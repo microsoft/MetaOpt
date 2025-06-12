@@ -13,13 +13,13 @@ namespace MetaOptimize.FailureAnalysis
     /// </summary>
     public class CapacityAugmentsOnExisting<TVar, TSolution>
     {
-        private double minCapacity { get; set; }
+        private double MinCapacity { get; set; }
         /// <summary>
         /// Number of paths to use for path computation.
         /// </summary>
         protected int MaxNumPaths { get; set; }
 
-        private Topology Topology;
+        private Topology topology;
         /// <summary>
         /// The solver we will be using.
         /// </summary>
@@ -78,14 +78,14 @@ namespace MetaOptimize.FailureAnalysis
         private Topology FilteredTopology()
         {
             var t = new Topology();
-            foreach (var node in this.Topology.GetAllNodes())
+            foreach (var node in this.topology.GetAllNodes())
             {
                 if (!this.MetaNodeToActualNode.ContainsKey(node))
                 {
                     t.AddNode(node);
                 }
             }
-            foreach (var edge in this.Topology.GetAllEdges())
+            foreach (var edge in this.topology.GetAllEdges())
             {
                 if (!this.MetaNodeToActualNode.ContainsKey(edge.Source) && !this.MetaNodeToActualNode.ContainsKey(edge.Target))
                 {
@@ -105,7 +105,7 @@ namespace MetaOptimize.FailureAnalysis
         public void SetPath(PathType pathType = PathType.KSP)
         {
             Topology t = this.FilteredTopology();
-            this.Paths = this.Topology.ComputePaths(pathType, null, this.MaxNumPaths, -1, false);
+            this.Paths = this.topology.ComputePaths(pathType, null, this.MaxNumPaths, -1, false);
             var filteredPaths = t.ComputePaths(pathType, null, this.MaxNumPaths, -1, false);
             foreach (var pair in this.Paths.Keys)
             {
@@ -151,7 +151,7 @@ namespace MetaOptimize.FailureAnalysis
         /// <param name="flows"></param>
         protected void InitializeVariables(Dictionary<(string, string), double> demands, Dictionary<(string, string), double> flows)
         {
-            this.minCapacity = this.Topology.GetAllEdges().Where(x => x.Capacity > 0).Select(x => x.Capacity).Min();
+            this.MinCapacity = this.topology.GetAllEdges().Where(x => x.Capacity > 0).Select(x => x.Capacity).Min();
             this.AugmentVariables = new Dictionary<(string, string), TVar>();
             this.TotalDemandMetVariable = this.Solver.CreateVariable("total_demand_met", lb: 0);
             this.variables = new HashSet<TVar>();
@@ -161,7 +161,7 @@ namespace MetaOptimize.FailureAnalysis
 
             this.FlowVariables = new Dictionary<(string, string), TVar>();
             this.FlowPathVariables = new Dictionary<string[], TVar>(new PathComparer());
-            var avgCapacity = this.Topology.GetAllEdges().Where(x => x.Capacity > 0).Select(x => x.Capacity).Average();
+            var avgCapacity = this.topology.GetAllEdges().Where(x => x.Capacity > 0).Select(x => x.Capacity).Average();
             foreach (var pair in demands.Keys)
             {
                 this.FlowVariables[pair] = this.Solver.CreateVariable("Flow_" + pair.Item1 + "_" + pair.Item2, lb: this.Paths[pair].Where(x => x.Length > 0).Count() > 0 ? flows[pair] : 0, ub: demands[pair]);
@@ -205,7 +205,7 @@ namespace MetaOptimize.FailureAnalysis
                     {
                         var source = path[i];
                         var target = path[i + 1];
-                        var edge = this.Topology.GetEdge(source, target);
+                        var edge = this.topology.GetEdge(source, target);
                         var term = new Term<TVar>(1, this.FlowPathVariables[path]);
                         if (!sumPerEdge.ContainsKey(edge))
                         {
@@ -250,7 +250,7 @@ namespace MetaOptimize.FailureAnalysis
             {
                 throw new Exception("This function is not meant to be used this way");
             }
-            this.Topology = topology.Copy();
+            this.topology = topology.Copy();
             this.SetPath();
             InitializeVariables(demands, flows);
             ComputeTotalFlowPerDemand(demands);
@@ -274,7 +274,7 @@ namespace MetaOptimize.FailureAnalysis
         public OptimizationSolution GetSolution(TSolution solution)
         {
             var AddedLags = new Dictionary<(string, string), double>();
-            foreach (var edge in this.Topology.GetAllEdges())
+            foreach (var edge in this.topology.GetAllEdges())
             {
                 var source = edge.Source;
                 var target = edge.Target;

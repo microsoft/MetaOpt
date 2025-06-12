@@ -83,7 +83,7 @@ namespace MetaOptimize
         /// <summary>
         /// Ensures we do not fail metro links.
         /// </summary>
-        protected bool doNotFailMetro = false;
+        protected bool DoNotFailMetro = false;
         /// <summary>
         /// Initializer for the failure analysis adversarial input generator.
         /// </summary>
@@ -214,7 +214,7 @@ namespace MetaOptimize
             bool useSRLGFailures = false,
             bool doNotFailMetro = false)
             {
-                this.doNotFailMetro = doNotFailMetro;
+                this.DoNotFailMetro = doNotFailMetro;
                 Logger.Info("Starting MaximizeOptimalityGap with parameters: useLinkFailures={0}, useSRLGFailures={1}, ensureConnectedGraph={2}",
                     useLinkFailures, useSRLGFailures, ensureConnectedGraph);
 
@@ -1008,7 +1008,7 @@ namespace MetaOptimize
                 {
                     throw new Exception("For clustering I don't have pre-specified paths enabled yet.");
                 }
-                this.doNotFailMetro = doNotFailMetro;
+                this.DoNotFailMetro = doNotFailMetro;
                 var pathSubset = VerifyPaths(this.Paths, numExtraPaths);
                 Dictionary<(string, string), double> rndDemand = null;
                 var timer = Stopwatch.StartNew();
@@ -1824,7 +1824,7 @@ namespace MetaOptimize
                     {
                         continue;
                     }
-                    if (this.doNotFailMetro && IsLagMetro((link.Item1, link.Item2)))
+                    if (this.DoNotFailMetro && IsLagMetro((link.Item1, link.Item2)))
                     {
                         continue;
                     }
@@ -1864,7 +1864,7 @@ namespace MetaOptimize
                 {
                     continue;
                 }
-                if (this.doNotFailMetro && IsLagMetro((link.Item1, link.Item2)))
+                if (this.DoNotFailMetro && IsLagMetro((link.Item1, link.Item2)))
                 {
                     continue;
                 }
@@ -1886,7 +1886,7 @@ namespace MetaOptimize
                 {
                     continue;
                 }
-                if (this.doNotFailMetro && IsLagMetro(lag))
+                if (this.DoNotFailMetro && IsLagMetro(lag))
                 {
                     continue;
                 }
@@ -1930,7 +1930,7 @@ namespace MetaOptimize
                 {
                     continue;
                 }
-                if (this.doNotFailMetro && IsLagMetro((link.Item1, link.Item2)))
+                if (this.DoNotFailMetro && IsLagMetro((link.Item1, link.Item2)))
                 {
                     continue;
                 }
@@ -1955,7 +1955,7 @@ namespace MetaOptimize
                 {
                     continue;
                 }
-                if (this.doNotFailMetro && IsLagMetro(lag))
+                if (this.DoNotFailMetro && IsLagMetro(lag))
                 {
                     continue;
                 }

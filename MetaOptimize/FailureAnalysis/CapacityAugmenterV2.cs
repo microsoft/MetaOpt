@@ -22,7 +22,7 @@ namespace MetaOptimize.FailureAnalysis
         /// The initial topology that we are starting with.
         /// </summary>
         /// <value></value>
-        public Topology Topology { get; set; }
+        public Topology topology { get; set; }
         /// <summary>
         /// The solver we use.
         /// </summary>
@@ -43,7 +43,7 @@ namespace MetaOptimize.FailureAnalysis
         /// <returns></returns>
         public CapacityAugmenterV2(Topology topo, int maxNumPaths, Dictionary<(string, string, string), double> failureProbs = null, Dictionary<string, HashSet<string>> MetaNodeToActualNode = null)
         {
-            this.Topology = topo;
+            this.topology = topo;
             this.LinkFailureProbabilities = failureProbs;
             this.MetaNodeToActualNode = MetaNodeToActualNode;
             this.MaxNumPaths = maxNumPaths;
@@ -55,17 +55,17 @@ namespace MetaOptimize.FailureAnalysis
             var downedEdges = downedLinks.GroupBy(kvp => (kvp.Key.Item1, kvp.Key.Item1))
                                          .ToDictionary(g => g.Key,
                                                        g => g.Sum(kvp => kvp.Value));
-            foreach (var node in this.Topology.GetAllNodes())
+            foreach (var node in this.topology.GetAllNodes())
             {
                 t.AddNode(node);
             }
-            var linksBefore = this.Topology.edgeLinks.SelectMany(x => x.Value.Keys).Sum();
-            var lagsBefore = this.Topology.GetAllEdges().Count();
-            foreach (var edge in this.Topology.GetAllEdges())
+            var linksBefore = this.topology.edgeLinks.SelectMany(x => x.Value.Keys).Sum();
+            var lagsBefore = this.topology.GetAllEdges().Count();
+            foreach (var edge in this.topology.GetAllEdges())
             {
                 if (downedEdges.ContainsKey((edge.Source, edge.Target)))
                 {
-                    var numberOfLinksInOriginal = this.Topology.edgeLinks[(edge.Source, edge.Target)].Count;
+                    var numberOfLinksInOriginal = this.topology.edgeLinks[(edge.Source, edge.Target)].Count;
                     Debug.Assert(downedEdges[(edge.Source, edge.Target)] <= numberOfLinksInOriginal);
                     if (downedEdges[(edge.Source, edge.Target)] == numberOfLinksInOriginal)
                     {
@@ -73,13 +73,13 @@ namespace MetaOptimize.FailureAnalysis
                     }
                     var capacity = edge.Capacity * (numberOfLinksInOriginal - downedEdges[(edge.Source, edge.Target)]) / numberOfLinksInOriginal;
                     t.AddEdge(edge.Source, edge.Target, capacity);
-                    foreach (var link in this.Topology.edgeLinks[(edge.Source, edge.Target)].Keys)
+                    foreach (var link in this.topology.edgeLinks[(edge.Source, edge.Target)].Keys)
                     {
-                        if (downedLinks.ContainsKey((edge.Source, edge.Target, this.Topology.edgeLinks[(edge.Source, edge.Target)][link].Item1)))
+                        if (downedLinks.ContainsKey((edge.Source, edge.Target, this.topology.edgeLinks[(edge.Source, edge.Target)][link].Item1)))
                         {
                             continue;
                         }
-                        t.AddLinkToEdge(edge.Source, edge.Target, this.Topology.edgeLinks[(edge.Source, edge.Target)][link].Item1, this.Topology.edgeLinks[(edge.Source, edge.Target)][link].Item2);
+                        t.AddLinkToEdge(edge.Source, edge.Target, this.topology.edgeLinks[(edge.Source, edge.Target)][link].Item1, this.topology.edgeLinks[(edge.Source, edge.Target)][link].Item2);
                     }
                 }
                 else
@@ -89,16 +89,16 @@ namespace MetaOptimize.FailureAnalysis
                     {
                         var pathSet = paths.Where(demands => demands.Key.Item1 == edge.Source)
                                            .SelectMany(path => path.Value).Where(path => path[1] == edge.Target).ToList();
-                        capacity = pathSet.Select(path => path.Zip(path.Skip(1), (from, to) => this.Topology.GetEdge(from, to).Capacity).ToList().Min()).Sum();
+                        capacity = pathSet.Select(path => path.Zip(path.Skip(1), (from, to) => this.topology.GetEdge(from, to).Capacity).ToList().Min()).Sum();
                     }
                     if (this.MetaNodeToActualNode.ContainsKey(edge.Target))
                     {
                         var pathSet = paths.Where(demands => demands.Key.Item2 == edge.Target)
                                            .SelectMany(path => path.Value).Where(path => path[path.Count() - 2] == edge.Source).ToList();
-                        capacity = pathSet.Select(path => path.Zip(path.Skip(1), (from, to) => this.Topology.GetEdge(from, to).Capacity).ToList().Min()).Sum();
+                        capacity = pathSet.Select(path => path.Zip(path.Skip(1), (from, to) => this.topology.GetEdge(from, to).Capacity).ToList().Min()).Sum();
                     }
                     t.AddEdge(edge.Source, edge.Target, capacity);
-                    t.edgeLinks[(edge.Source, edge.Target)] = this.Topology.edgeLinks[(edge.Source, edge.Target)];
+                    t.edgeLinks[(edge.Source, edge.Target)] = this.topology.edgeLinks[(edge.Source, edge.Target)];
                 }
             }
             var linksAfter = t.edgeLinks.SelectMany(x => x.Value.Keys).Sum();
@@ -113,17 +113,17 @@ namespace MetaOptimize.FailureAnalysis
             var downedEdges = downedLinks.GroupBy(kvp => (kvp.Key.Item1, kvp.Key.Item2))
                                          .ToDictionary(g => g.Key,
                                                        g => g.Sum(kvp => kvp.Value));
-            foreach (var node in this.Topology.GetAllNodes())
+            foreach (var node in this.topology.GetAllNodes())
             {
                 t.AddNode(node);
             }
-            var linksBefore = this.Topology.edgeLinks.SelectMany(x => x.Value.Keys).Sum();
-            var lagsBefore = this.Topology.GetAllEdges().Count();
-            foreach (var edge in this.Topology.GetAllEdges())
+            var linksBefore = this.topology.edgeLinks.SelectMany(x => x.Value.Keys).Sum();
+            var lagsBefore = this.topology.GetAllEdges().Count();
+            foreach (var edge in this.topology.GetAllEdges())
             {
                 if (downedEdges.ContainsKey((edge.Source, edge.Target)))
                 {
-                    var numberOfLinksInOriginal = this.Topology.edgeLinks[(edge.Source, edge.Target)].Count;
+                    var numberOfLinksInOriginal = this.topology.edgeLinks[(edge.Source, edge.Target)].Count;
                     Debug.Assert(downedEdges[(edge.Source, edge.Target)] <= numberOfLinksInOriginal);
                     if (downedEdges[(edge.Source, edge.Target)] == numberOfLinksInOriginal)
                     {
@@ -135,19 +135,19 @@ namespace MetaOptimize.FailureAnalysis
                     }
                     var capacity = edge.Capacity * (numberOfLinksInOriginal - downedEdges[(edge.Source, edge.Target)]) / numberOfLinksInOriginal;
                     t.AddEdge(edge.Source, edge.Target, capacity);
-                    foreach (var link in this.Topology.edgeLinks[(edge.Source, edge.Target)].Keys)
+                    foreach (var link in this.topology.edgeLinks[(edge.Source, edge.Target)].Keys)
                     {
-                        if (downedLinks.ContainsKey((edge.Source, edge.Target, this.Topology.edgeLinks[(edge.Source, edge.Target)][link].Item1)))
+                        if (downedLinks.ContainsKey((edge.Source, edge.Target, this.topology.edgeLinks[(edge.Source, edge.Target)][link].Item1)))
                         {
                             continue;
                         }
-                        t.AddLinkToEdge(edge.Source, edge.Target, this.Topology.edgeLinks[(edge.Source, edge.Target)][link].Item1, this.Topology.edgeLinks[(edge.Source, edge.Target)][link].Item2);
+                        t.AddLinkToEdge(edge.Source, edge.Target, this.topology.edgeLinks[(edge.Source, edge.Target)][link].Item1, this.topology.edgeLinks[(edge.Source, edge.Target)][link].Item2);
                     }
                 }
                 else
                 {
                     t.AddEdge(edge.Source, edge.Target, edge.Capacity);
-                    t.edgeLinks[(edge.Source, edge.Target)] = this.Topology.edgeLinks[(edge.Source, edge.Target)];
+                    t.edgeLinks[(edge.Source, edge.Target)] = this.topology.edgeLinks[(edge.Source, edge.Target)];
                 }
             }
             var linksAfter = t.edgeLinks.SelectMany(x => x.Value.Keys).Sum();
@@ -161,17 +161,17 @@ namespace MetaOptimize.FailureAnalysis
         // Todo : currently assumes links that are augmented don't fail. Can modify later to make this more general with other probability estimates.
         private void augmentTopo(Dictionary<(string, string), double> augmentedLags, bool useLagCapacity = false, int iteration = 0)
         {
-            var avgCapacity = this.Topology.GetAllEdges().Where(x => x.Capacity > 0).Select(x => x.Capacity).Average();
-            var initialLags = this.Topology.GetAllEdges().Count();
+            var avgCapacity = this.topology.GetAllEdges().Where(x => x.Capacity > 0).Select(x => x.Capacity).Average();
+            var initialLags = this.topology.GetAllEdges().Count();
             foreach (var (source, dest) in augmentedLags.Keys)
             {
-                if (this.Topology.Graph.TryGetEdge(source, dest, out var taggedEdgeVar))
+                if (this.topology.Graph.TryGetEdge(source, dest, out var taggedEdgeVar))
                 {
                     double capacity = taggedEdgeVar.Tag;
-                    this.Topology.RemoveEdge(taggedEdgeVar);
-                    this.Topology.AddEdge(source, dest, capacity + avgCapacity);
+                    this.topology.RemoveEdge(taggedEdgeVar);
+                    this.topology.AddEdge(source, dest, capacity + avgCapacity);
                     var linkFailureProb = this.LinkFailureProbabilities.Where(x => x.Key.Item1 == source && x.Key.Item2 == dest).Select(x => x.Value).Average();
-                    this.Topology.AddLinkToEdge(source, dest, $"augmented-{iteration}", linkFailureProb);
+                    this.topology.AddLinkToEdge(source, dest, $"augmented-{iteration}", linkFailureProb);
                     this.LinkFailureProbabilities[(source, dest, $"augmented-{iteration}")] = linkFailureProb;
                     continue;
                 }
@@ -179,11 +179,11 @@ namespace MetaOptimize.FailureAnalysis
                 {
                     avgCapacity = augmentedLags[(source, dest)];
                 }
-                this.Topology.AddEdge(source, dest, avgCapacity);
-                this.Topology.AddLinkToEdge(source, dest, "augmented", 0);
+                this.topology.AddEdge(source, dest, avgCapacity);
+                this.topology.AddLinkToEdge(source, dest, "augmented", 0);
                 this.LinkFailureProbabilities[(source, dest, "agumented")] = 0;
             }
-            var finalLags = this.Topology.GetAllEdges().Count();
+            var finalLags = this.topology.GetAllEdges().Count();
             Debug.Assert(finalLags > initialLags, $"Number of final lags {finalLags} and initial lags {initialLags}");
         }
         /// <summary>
@@ -195,20 +195,20 @@ namespace MetaOptimize.FailureAnalysis
         {
             foreach (var (source, dest) in augmentedLags.Keys)
             {
-                if (this.Topology.Graph.TryGetEdge(source, dest, out var taggedEdgeVar))
+                if (this.topology.Graph.TryGetEdge(source, dest, out var taggedEdgeVar))
                 {
                     double capacity = taggedEdgeVar.Tag;
-                    this.Topology.RemoveEdge(taggedEdgeVar);
-                    this.Topology.AddEdge(source, dest, capacity + augmentedLags[(source, dest)]);
+                    this.topology.RemoveEdge(taggedEdgeVar);
+                    this.topology.AddEdge(source, dest, capacity + augmentedLags[(source, dest)]);
                     var linkFailureProb = this.LinkFailureProbabilities.Where(x => x.Key.Item1 == source && x.Key.Item2 == dest).Select(x => x.Value).Average();
-                    this.Topology.AddLinkToEdge(source, dest, $"augmented-{iteration}", linkFailureProb);
+                    this.topology.AddLinkToEdge(source, dest, $"augmented-{iteration}", linkFailureProb);
                     this.LinkFailureProbabilities[(source, dest, $"augmented-{iteration}")] = linkFailureProb;
                 }
             }
         }
         private void updateClusters(List<Topology> clusters, Dictionary<(string, string), double> augmentedLags)
         {
-            var minCapacity = this.Topology.GetAllEdges().Where(x => x.Capacity > 0).Select(x => x.Capacity).Min();
+            var minCapacity = this.topology.GetAllEdges().Where(x => x.Capacity > 0).Select(x => x.Capacity).Min();
             foreach (var (source, dest) in augmentedLags.Keys)
             {
                 foreach (var cluster in clusters)
@@ -228,7 +228,7 @@ namespace MetaOptimize.FailureAnalysis
         }
         private void updateExistingClusters(List<Topology> clusters, Dictionary<(string, string), double> augmentedLags)
         {
-            var minCapacity = this.Topology.GetAllEdges().Where(x => x.Capacity > 0).Select(x => x.Capacity).Min();
+            var minCapacity = this.topology.GetAllEdges().Where(x => x.Capacity > 0).Select(x => x.Capacity).Min();
             foreach (var (source, dest) in augmentedLags.Keys)
             {
                 foreach (var cluster in clusters)
@@ -299,7 +299,7 @@ namespace MetaOptimize.FailureAnalysis
                 }
                 TEOptimizationSolution optimalSol = null;
                 FailureAnalysisOptimizationSolution failureSol = null;
-                var adversarialGenerator = new FailureAnalysisWithMetaNodeAdversarialGenerator<TVar, TSolution>(this.Topology, this.MaxNumPaths, metaNodeToActualNodes: this.MetaNodeToActualNode);
+                var adversarialGenerator = new FailureAnalysisWithMetaNodeAdversarialGenerator<TVar, TSolution>(this.topology, this.MaxNumPaths, metaNodeToActualNodes: this.MetaNodeToActualNode);
                 if (constrainedDemands != null || clusters == null)
                 {
                     this.Solver.CleanAll();
@@ -406,7 +406,7 @@ namespace MetaOptimize.FailureAnalysis
                     }
                 }
             }
-            return this.Topology;
+            return this.topology;
         }
         /// <summary>
         /// Main difference with the function above is that it only uses existing lags instead of new ones.
@@ -450,7 +450,7 @@ namespace MetaOptimize.FailureAnalysis
                 }
                 TEOptimizationSolution optimalSol = null;
                 FailureAnalysisOptimizationSolution failureSol = null;
-                var adversarialGenerator = new FailureAnalysisWithMetaNodeAdversarialGenerator<TVar, TSolution>(this.Topology, this.MaxNumPaths, metaNodeToActualNodes: this.MetaNodeToActualNode);
+                var adversarialGenerator = new FailureAnalysisWithMetaNodeAdversarialGenerator<TVar, TSolution>(this.topology, this.MaxNumPaths, metaNodeToActualNodes: this.MetaNodeToActualNode);
                 if (constrainedDemands != null || clusters == null)
                 {
                     this.Solver.CleanAll();
@@ -535,7 +535,7 @@ namespace MetaOptimize.FailureAnalysis
                     augmentedLags[lag] = ((CapacityAugmentSolution)augmentationSolution).LagStatus[lag];
                     if (augmentedLags[lag] > 0)
                     {
-                        var edge = this.Topology.Graph.TryGetEdge(lag.Item1, lag.Item2, out var taggedEdge);
+                        var edge = this.topology.Graph.TryGetEdge(lag.Item1, lag.Item2, out var taggedEdge);
                         Console.WriteLine($"This is the lag that we augmented to {lag} and by {augmentedLags[lag]} much old capacity was: {taggedEdge.Tag}");
                         count += 1;
                         cap += augmentedLags[lag];
@@ -550,7 +550,7 @@ namespace MetaOptimize.FailureAnalysis
                     }
                 }
             }
-            return this.Topology;
+            return this.topology;
         }
     }
 }

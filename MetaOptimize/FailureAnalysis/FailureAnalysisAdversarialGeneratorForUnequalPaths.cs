@@ -266,7 +266,7 @@ namespace MetaOptimize.FailureAnalysis
                 }
                 this.primaryPaths = primaryPaths;
                 this.backupPaths = backupPaths;
-                this.doNotFailMetro = doNotFailMetro;
+                this.DoNotFailMetro = doNotFailMetro;
                 var solver = optimalEncoder.Solver;
                 if (cleanUpSolver)
                 {
@@ -475,7 +475,7 @@ namespace MetaOptimize.FailureAnalysis
                 var solver = optimalEncoder.Solver;
                 this.primaryPaths = primaryPaths;
                 this.backupPaths = backupPaths;
-                this.doNotFailMetro = doNotFailMetro;
+                this.DoNotFailMetro = doNotFailMetro;
                 if (lagFailureProbabilities != null && linkFailureProbabilities != null)
                 {
                     throw new Exception("you cannot have both lag and link failure probabilities");

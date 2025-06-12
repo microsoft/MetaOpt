@@ -18,7 +18,7 @@ namespace MetaOptimize.FailureAnalysis
     public class CapacityAugmentEncoder<TVar, TSolution>
     {
         private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
-        private double avgCapacity { get; set; }
+        private double AvgCapacity { get; set; }
         private Topology Topology;
         /// <summary>
         /// The solver being used.
@@ -51,7 +51,7 @@ namespace MetaOptimize.FailureAnalysis
         /// <value></value>
         public TVar TotalDemandMetVariable { get; set; }
         /// <summary>
-        /// Number of links added as the objective.
+        /// Number of lags added as the objective.
         /// </summary>
         /// <value></value>
         public TVar NumberOfLagsAdded { get; set; }
@@ -87,7 +87,7 @@ namespace MetaOptimize.FailureAnalysis
                                            Dictionary<(string, string), string[][]> paths = null,
                                            bool addOnExisting = false)
         {
-            this.avgCapacity = this.Topology.GetAllEdges().Where(x => x.Capacity > 0).Select(x => x.Capacity).Average();
+            this.AvgCapacity = this.Topology.GetAllEdges().Where(x => x.Capacity > 0).Select(x => x.Capacity).Average();
             this.CapacityVariables = new Dictionary<(string, string), TVar>();
             this.variables = new HashSet<TVar>();
             this.ExistingVariables = new HashSet<(string, string)>();
@@ -100,7 +100,7 @@ namespace MetaOptimize.FailureAnalysis
                         this.ExistingVariables.Add((source, dest));
                         this.CapacityVariables[(source, dest)] = this.Solver.CreateVariable("capacity_" + source + "_" + dest, type: GRB.BINARY);
                         this.variables.Add(this.CapacityVariables[(source, dest)]);
-                        this.Topology.AddEdge(source, dest, this.avgCapacity);
+                        this.Topology.AddEdge(source, dest, this.AvgCapacity);
                     }
                     continue;
                 }
@@ -116,7 +116,7 @@ namespace MetaOptimize.FailureAnalysis
                 {
                     this.CapacityVariables[(source, dest)] = this.Solver.CreateVariable("capacity_" + source + "_" + dest, type: GRB.BINARY);
                     this.variables.Add(this.CapacityVariables[(source, dest)]);
-                    this.Topology.AddEdge(source, dest, this.avgCapacity);
+                    this.Topology.AddEdge(source, dest, this.AvgCapacity);
                 }
                 else
                 {
@@ -125,7 +125,7 @@ namespace MetaOptimize.FailureAnalysis
                         this.ExistingVariables.Add((source, dest));
                         this.CapacityVariables[(source, dest)] = this.Solver.CreateVariable("capacity_" + source + "_" + dest, type: GRB.BINARY);
                         this.variables.Add(this.CapacityVariables[(source, dest)]);
-                        this.Topology.AddEdge(source, dest, this.avgCapacity);
+                        this.Topology.AddEdge(source, dest, this.AvgCapacity);
                     }
                 }
             }
@@ -253,13 +253,17 @@ namespace MetaOptimize.FailureAnalysis
         /// <param name="demands"></param>
         public void AddFlowConservationConstraints(Dictionary<(string, string), double> demands)
         {
+            if (demands == null)
+            {
+                throw new ArgumentException("Demands cannot be null.");
+            }
             foreach (var node in this.Topology.GetAllNodes())
             {
                 var outGoingEdges = this.Topology.GetAllEdges().Where(x => x.Source == node);
                 var incomingEdges = this.Topology.GetAllEdges().Where(x => x.Target == node);
                 foreach (var pair in demands.Keys)
                 {
-                    if (node == pair.Item2 || node == pair.Item2)
+                    if (node == pair.Item1 || node == pair.Item2)
                     {
                         continue;
                     }
@@ -288,13 +292,13 @@ namespace MetaOptimize.FailureAnalysis
                 var sumForEdge = new Polynomial<TVar>(new Term<TVar>(0));
                 if (this.CapacityVariables.ContainsKey((edge.Source, edge.Target)) && (!this.ExistingVariables.Contains((edge.Source, edge.Target)) || !addOnExisting))
                 {
-                    sumForEdge.Add(new Term<TVar>(-1 * this.avgCapacity, this.CapacityVariables[(edge.Source, edge.Target)]));
+                    sumForEdge.Add(new Term<TVar>(-1 * this.AvgCapacity, this.CapacityVariables[(edge.Source, edge.Target)]));
                 }
                 else
                 {
                     if (this.CapacityVariables.ContainsKey((edge.Source, edge.Target)))
                     {
-                        sumForEdge.Add(new Term<TVar>(-1 * this.avgCapacity, this.CapacityVariables[(edge.Source, edge.Target)]));
+                        sumForEdge.Add(new Term<TVar>(-1 * this.AvgCapacity, this.CapacityVariables[(edge.Source, edge.Target)]));
                     }
                     sumForEdge.Add(new Term<TVar>(-1 * edge.Capacity));
                 }

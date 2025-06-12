@@ -14,7 +14,10 @@
 |      ├── VectorBinPacking    # implementation of VBP encoders (OPT and variants of FF)
 |      |                       # and VBP adversarial generator.
 |      |
-|      └── PIFO                # implementation of PIFO, SP-PIFO, and AIFO encoders. 
+|      ├── PIFO                # implementation of PIFO, SP-PIFO, and AIFO encoders.
+|      |
+|      |
+|      └── FailureAnalysis     # Implementation for failure analysis (RAHA SIGCOMM 2025).
 |
 |
 ├── MetaOptimize.Cli           # examples and scripts to reproduce the results in
@@ -93,6 +96,14 @@ Refer to the following two papers for more information:
   booktitle = {21st USENIX Symposium on Networked Systems Design and
                     Implementation (NSDI 24)},
   year = {2024},
+}
+```
+```bibtex
+@inproceedings{Raha,
+  author = {Arzani, Behnaz and Taheri, Sina and Namyar, Pooria, and Beckett, Ryan, and Kakarla, Siva and Jallilipour, Elnaz},
+  title = {{R}aha: {A} {G}eneral {T}ool to {A}nalyze {W}AN {D}egradation},
+  booktitle = {Proceedings of the ACM SIGCOMM 2025 Conference},
+  year = {2025},
 }
 ```
 
