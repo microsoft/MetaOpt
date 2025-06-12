@@ -134,7 +134,7 @@ We do not provide test examples for link augmentation. But if of interest these 
 
 MetaOptimize/FailureAnalysis/CapacityAugmenterV2.cs
 
-Please contact bearzani@microsoft.com in case you have issues.
+Please contact bearzani@microsoft.com with questions.
 
 ## Contributing
 
