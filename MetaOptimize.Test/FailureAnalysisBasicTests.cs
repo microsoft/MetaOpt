@@ -559,7 +559,7 @@ namespace MetaOptimize.Test
             if (capacities != null)
             {
                 Assert.AreEqual(capacities.Count, 5);
-                Assert.IsTrue(capacities.Select(x => x.Value > 0 ? 0 : 1).Sum() <= maxNumFailures);
+                Assert.IsTrue(capacities.Select(x => x.Value > 0 ? 0 : 1).Sum() == exactNumFailures);
                 Assert.AreEqual(capacities[("a", "c")], 10);
                 Assert.AreEqual(capacities[("a", "b")], 10);
                 Assert.AreEqual(capacities[("c", "d")], 10);
