@@ -63,8 +63,8 @@ namespace MetaOptimize
                 }
                 if (demand <= this.Threshold && Math.Abs(flows[pair] - demand) > 0.001)
                 {
-                    Logger.Debug($"{pair.Item1},{pair.Item2},{demand},{flows[pair]}");
-                    throw new Exception("does not match");
+                    Console.WriteLine($"error: src {pair.Item1}, dst {pair.Item2}, demand {demand}, flow {flows[pair]}");
+                    throw new Exception("Demand below the threshold is not routed fully through the shortest path.");
                 }
                 bool found = false;
                 if (demand <= 0.001)
@@ -83,8 +83,8 @@ namespace MetaOptimize
                 }
                 if (!found)
                 {
-                    Logger.Debug($"{pair.Item1},{pair.Item2},{demand},{flows[pair]}");
-                    throw new Exception("does not match");
+                    Console.WriteLine($"error: src {pair.Item1}, dst {pair.Item2}, demand {demand}, flow {flows[pair]}");
+                    throw new Exception("Demand does not match prespecified levels. Please check solver's precision.");
                 }
             }
         }
