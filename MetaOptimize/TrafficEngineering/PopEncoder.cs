@@ -154,11 +154,13 @@ namespace MetaOptimize
         /// the multi-commodity flow problem.
         /// </summary>
         /// <returns>The constraints and maximization objective.</returns>
-        public OptimizationEncoding<TVar, TSolution> Encoding(Topology topology, Dictionary<(string, string), Polynomial<TVar>> preDemandVariables = null,
+        public OptimizationEncoding<TVar, TSolution> Encoding(
+            Topology topology, Dictionary<(string, string), Polynomial<TVar>> preDemandVariables = null,
             Dictionary<(string, string), double> demandEqualityConstraints = null, bool noAdditionalConstraints = false,
             InnerRewriteMethodChoice innerEncoding = InnerRewriteMethodChoice.KKT,
-            PathType pathType = PathType.KSP, Dictionary<(string, string), string[][]> selectedPaths = null, Dictionary<(int, string, string), double> historicInputConstraints = null,
-            int numProcesses = -1, bool verbose = false)
+            PathType pathType = PathType.KSP, Dictionary<(string, string), string[][]> selectedPaths = null,
+            Dictionary<(int, string, string), double> historicInputConstraints = null,
+            int numProcesses = -1)
         {
             if (pathType != PathType.KSP)
             {
@@ -175,7 +177,7 @@ namespace MetaOptimize
             // get all the separate encodings.
             for (int i = 0; i < this.NumPartitions; i++)
             {
-                Logger.Info(string.Format("generating pop encoding for partition {0}.", i), verbose);
+                Logger.Info(string.Format("generating pop encoding for partition {0}.", i));
                 Dictionary<(string, string), Polynomial<TVar>> partitionPreDemandVariables = null;
                 partitionPreDemandVariables = new Dictionary<(string, string), Polynomial<TVar>>();
                 foreach (var (pair, partitionID) in this.DemandPartitions)

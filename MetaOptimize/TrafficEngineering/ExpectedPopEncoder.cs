@@ -115,12 +115,13 @@ namespace MetaOptimize
         /// Encode the problem.
         /// </summary>
         /// <returns>The constraints and maximization objective.</returns>
-        public OptimizationEncoding<TVar, TSolution> Encoding(Topology topology, Dictionary<(string, string), Polynomial<TVar>> preDemandVariables = null,
+        public OptimizationEncoding<TVar, TSolution> Encoding(
+            Topology topology, Dictionary<(string, string), Polynomial<TVar>> preDemandVariables = null,
             Dictionary<(string, string), double> demandEqualityConstraints = null, bool noAdditionalConstraints = false,
             InnerRewriteMethodChoice innerEncoding = InnerRewriteMethodChoice.KKT,
             PathType pathType = PathType.KSP, Dictionary<(string, string), string[][]> selectedPaths = null,
             Dictionary<(int, string, string), double> historicDemandConstraints = null,
-            int numProcesses = -1, bool verbose = false)
+            int numProcesses = -1)
         {
             if (pathType != PathType.KSP) {
                 throw new Exception("Only KSP works for now.");
@@ -144,7 +145,7 @@ namespace MetaOptimize
                 Logger.Info(string.Format("generating pop encoding for sample {0}.", i));
                 encodings[i] = this.PoPEncoders[i].Encoding(this.Topology, this.DemandVariables,
                                                             demandEqualityConstraints, noAdditionalConstraints, innerEncoding,
-                                                            numProcesses: numProcesses, verbose: verbose);
+                                                            numProcesses: numProcesses);
             }
             // computing the objective value
             var objectiveVariable = this.Solver.CreateVariable("average_objective_pop");

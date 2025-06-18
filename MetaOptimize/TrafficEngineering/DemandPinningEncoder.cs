@@ -162,10 +162,9 @@ namespace MetaOptimize
         /// <param name="demandConstraints"></param>
         /// <param name="innerEncoding"></param>
         /// <param name="numProcesses"></param>
-        /// <param name="verbose"></param>
         /// <exception cref="Exception"></exception>
         private void InitializeVariables(Dictionary<(string, string), Polynomial<TVar>> preDemandVariables, Dictionary<(string, string), double> demandConstraints,
-                InnerRewriteMethodChoice innerEncoding = InnerRewriteMethodChoice.KKT, int numProcesses = -1, bool verbose = false)
+                InnerRewriteMethodChoice innerEncoding = InnerRewriteMethodChoice.KKT, int numProcesses = -1)
         {
             this.variables = new HashSet<TVar>();
             this.Paths = new Dictionary<(string, string), string[][]>();
@@ -207,7 +206,7 @@ namespace MetaOptimize
             this.sumNonShortestDict = new Dictionary<(string, string), Polynomial<TVar>>();
             this.shortestFlowVariables = new Dictionary<(string, string), TVar>();
 
-            this.Paths = this.Topology.MultiProcessAllPairsKShortestPath(this.maxNumPaths, numProcesses, verbose);
+            this.Paths = this.Topology.MultiProcessAllPairsKShortestPath(this.maxNumPaths, numProcesses);
             foreach (var pair in this.Topology.GetNodePairs())
             {
                 if (!IsDemandValid(pair))
@@ -275,13 +274,14 @@ namespace MetaOptimize
         /// Encode the problem.
         /// </summary>
         /// <returns>The constraints and maximization objective.</returns>
-        public OptimizationEncoding<TVar, TSolution> Encoding(Topology topology, Dictionary<(string, string),
+        public OptimizationEncoding<TVar, TSolution> Encoding(
+            Topology topology, Dictionary<(string, string),
             Polynomial<TVar>> preDemandVariables = null,
             Dictionary<(string, string), double> demandConstraints = null, bool noAdditionalConstraints = false,
             InnerRewriteMethodChoice innerEncoding = InnerRewriteMethodChoice.KKT,
             PathType pathType = PathType.KSP, Dictionary<(string, string), string[][]> selectedPaths = null,
             Dictionary<(int, string, string), double> historicInputConstraints = null,
-            int numProcesses = -1, bool verbose = false)
+            int numProcesses = -1)
         {
             if (pathType != PathType.KSP || selectedPaths != null) {
                 throw new Exception("Not implemented yet.");
@@ -289,7 +289,7 @@ namespace MetaOptimize
 
             Logger.Info("Demand Pinning with threshold = " + this.Threshold);
             this.Topology = topology;
-            InitializeVariables(preDemandVariables, demandConstraints, innerEncoding, numProcesses, verbose);
+            InitializeVariables(preDemandVariables, demandConstraints, innerEncoding, numProcesses);
 
             // Compute the maximum demand M.
             // Since we don't know the demands we have to be very conservative.
@@ -397,7 +397,7 @@ namespace MetaOptimize
             }
 
             var objectiveFunction = new Polynomial<TVar>(new Term<TVar>(this._scale, this.TotalDemandMetVariable));
-            GenerateDPConstraints(objectiveFunction, verbose);
+            GenerateDPConstraints(objectiveFunction);
 
             // Generate the full constraints.
             this.innerProblemEncoder.AddMaximizationConstraints(objectiveFunction, noAdditionalConstraints);
@@ -415,7 +415,7 @@ namespace MetaOptimize
         /// <summary>
         /// The demand pinning constraints, this is equivalent to the Appendix section A.3 in the MetaOpt paper.
         /// </summary>.
-        protected virtual void GenerateDPConstraints(Polynomial<TVar> objectiveFunction, bool verbose)
+        protected virtual void GenerateDPConstraints(Polynomial<TVar> objectiveFunction)
         {
             // generating the max constraints that achieve pinning.
             Logger.Info("Generating DP constraints.");

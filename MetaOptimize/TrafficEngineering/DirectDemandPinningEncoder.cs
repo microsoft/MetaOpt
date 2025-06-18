@@ -111,7 +111,7 @@ namespace MetaOptimize
             this.Threshold = threshold;
         }
 
-        private void InitializeVariables(Dictionary<(string, string), double> demandConstraints, int numProcesses, bool verbose)
+        private void InitializeVariables(Dictionary<(string, string), double> demandConstraints, int numProcesses)
         {
             this.variables = new HashSet<TVar>();
             this.Paths = new Dictionary<(string, string), string[][]>();
@@ -164,7 +164,7 @@ namespace MetaOptimize
                 }
             }
             Logger.Debug("Total Demand pinned = " + this.totalDemandPinned);
-            this.Paths = this.Topology.MultiProcessAllPairsKShortestPath(this.K, numProcesses: numProcesses, verbose: verbose);
+            this.Paths = this.Topology.MultiProcessAllPairsKShortestPath(this.K, numProcesses: numProcesses);
             foreach (var pair in this.Topology.GetNodePairs())
             {
                 if (!IsDemandValid(pair))
@@ -210,14 +210,14 @@ namespace MetaOptimize
             Dictionary<(string, string), double> demandEqualityConstraints = null, bool noAdditionalConstraints = false,
             InnerRewriteMethodChoice innerEncoding = InnerRewriteMethodChoice.KKT,
             PathType pathType = PathType.KSP, Dictionary<(string, string), string[][]> selectedPaths = null,
-            int numProcesses = -1, bool verbose = false)
+            int numProcesses = -1)
         {
             if (pathType != PathType.KSP) {
                 throw new Exception("Only KSP works for now.");
             }
 
             this.Topology = topology;
-            InitializeVariables(demandEqualityConstraints, numProcesses, verbose);
+            InitializeVariables(demandEqualityConstraints, numProcesses);
             // Compute the maximum demand M.
             // Since we don't know the demands we have to be very conservative.
             // var maxDemand = this.Topology.TotalCapacity() * 10;

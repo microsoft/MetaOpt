@@ -89,10 +89,12 @@ namespace MetaOptimize
         /// TE max flow encoder.
         /// </summary>
         /// <returns></returns>
-        public OptimizationEncoding<TVar, TSolution> Encoding(Topology topology, Dictionary<(string, string), Polynomial<TVar>> preInputVariables = null,
+        public OptimizationEncoding<TVar, TSolution> Encoding(
+            Topology topology, Dictionary<(string, string), Polynomial<TVar>> preInputVariables = null,
             Dictionary<(string, string), double> inputEqualityConstraints = null, bool noAdditionalConstraints = false,
             InnerRewriteMethodChoice innerEncoding = InnerRewriteMethodChoice.KKT,
-            PathType pathType = PathType.KSP, Dictionary<(string, string), string[][]> selectedPaths = null, Dictionary<(int, string, string), double> historicInputConstraints = null,
+            PathType pathType = PathType.KSP, Dictionary<(string, string), string[][]> selectedPaths = null,
+            Dictionary<(int, string, string), double> historicInputConstraints = null,
             int numProcesses = -1)
         {
             throw new System.Exception("making sure that TE is defined...");

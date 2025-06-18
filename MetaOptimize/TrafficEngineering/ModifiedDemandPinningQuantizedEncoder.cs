@@ -110,7 +110,7 @@ namespace MetaOptimize
         /// <summary>
         /// add Demand Pinning Constraints.
         /// </summary>
-        protected override void GenerateDPConstraints(Polynomial<TVar> objectiveFunction, bool verbose)
+        protected override void GenerateDPConstraints(Polynomial<TVar> objectiveFunction)
         {
             Logger.Info("Generating Modified Quantized DP constraints.");
             // generating the max constraints that achieve pinning.
