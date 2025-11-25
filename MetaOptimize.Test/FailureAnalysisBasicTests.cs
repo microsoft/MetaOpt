@@ -2,14 +2,11 @@ namespace MetaOptimize.Test
 {
     using System;
     using System.Collections.Generic;
-    using System.Configuration.Assemblies;
-    using System.Diagnostics.CodeAnalysis;
     using System.Linq;
-    using System.Runtime.InteropServices;
     using MetaOptimize;
     using MetaOptimize.FailureAnalysis;
     using Microsoft.VisualStudio.TestTools.UnitTesting;
-    using Microsoft.Z3;
+
     /// <summary>
     /// The tests for the basic failure analysis class.
     /// </summary>
@@ -410,6 +407,7 @@ namespace MetaOptimize.Test
             (optimalSol, failureSol) = adversarialGenerator.MaximizeOptimalityGap(optimalEncoder, optimalCutEncoder, innerEncoding: InnerRewriteMethodChoice.PrimalDual, constrainedDemands: demands, maxNumFailures: 2, demandList: demandList, numExtraPaths: 1, lagFailureProbabilities: probs, failureProbThreshold: 0.1);
             Assert.IsTrue(Utils.IsApproximately(2, optimalSol.MaxObjective - failureSol.MaxObjective));
         }
+
         /// <summary>
         /// Tests that the instance based gap generator is correct.
         /// </summary>

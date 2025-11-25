@@ -1,0 +1,17 @@
+{
+    "directed": true,
+    "multigraph": false,
+    "graph": {},
+    "nodes": [
+        { "id": "a" },
+        { "id": "b" },
+        { "id": "c" },
+        { "id": "d" }
+    ],
+    "links": [
+        { "source": "a", "target": "b", "capacity": 10 },
+        { "source": "a", "target": "c", "capacity": 10 },
+        { "source": "b", "target": "d", "capacity": 10 },
+        { "source": "c", "target": "d", "capacity": 10 }
+    ]
+}
