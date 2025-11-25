@@ -28,7 +28,7 @@ namespace MetaOptimize.Cli
         /// <summary>
         /// Gets the problem type being solved.
         /// </summary>
-        public string ProblemType => this.Get("--problemType", "FailureAnalysis");
+        public string ProblemType => this.Get("--problemType", "BinPacking");
 
         /// <summary>
         /// Gets a value indicating whether to show help.
