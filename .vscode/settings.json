@@ -1,0 +1,4 @@
+{
+    "dotnet.defaultSolution": "MetaOptimize.sln",
+    "python.formatting.provider": "none"
+}

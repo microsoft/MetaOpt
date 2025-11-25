@@ -38,7 +38,7 @@ namespace MetaOptimize.Cli
                 switch (problemType)
                 {
                     case "TrafficEngineering":
-                        var mode = cliArgs.Get("--teMode", "advanced");
+                        var mode = cliArgs.Get("--teMode", "simple");
                         if (mode.ToLower() == "advanced")
                         {
                             TERunner.RunAdvanced(args);
