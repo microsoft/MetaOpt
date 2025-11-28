@@ -1,4 +1,10 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
   <ItemGroup>    
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
     <PackageReference Include="MSTest.TestAdapter" />
@@ -12,8 +18,11 @@
     <PackageReference Include="ZenLib" />
     <PackageReference Include="Gurobi.Optimizer" />
   </ItemGroup>
+
   <Import Project="..\.stylecop\StyleCop.props" />
+
   <ItemGroup>
     <ProjectReference Include="..\MetaOptimize\MetaOptimize.csproj" />
+    <ProjectReference Include="..\MetaOptimize.Cli\MetaOptimize.Cli.csproj" />
   </ItemGroup>
 </Project>

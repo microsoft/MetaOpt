@@ -1,81 +1,129 @@
-using System.Diagnostics;
-using Gurobi;
-using ZenLib;
+// <copyright file="BPRunner.cs" company="Microsoft">
+// Copyright (c) Microsoft. All rights reserved.
+// </copyright>
 
 namespace MetaOptimize.Cli
 {
+    using System.Diagnostics;
+    using Gurobi;
+    using ZenLib;
+    using ZenLib.ModelChecking;
+
     /// <summary>
-    /// Main entry point for traffic engineering experiments.
-    /// Executes adversarial optimization to find worst-case demand patterns for routing heuristics.
+    /// Runner for Vector Bin Packing adversarial optimization.
+    /// Finds item sizes that maximize the gap between optimal packing and First-Fit heuristics.
     /// </summary>
     /// <remarks>
-    /// Flow: Load topology → Generate demand levels → Run adversarial optimization → Validate results.
-    /// Finds demand patterns where heuristic routes significantly less than optimal.
+    /// Flow: Configure bins → Create encoders → Run adversarial optimization → Display gap.
+    ///
+    /// Compares optimal bin packing solution against First-Fit variants (FF, FFDSum, FFDProd, FFDDiv).
+    /// The adversarial generator finds item sizes where the heuristic uses significantly more bins
+    /// than the optimal solution.
+    ///
+    /// Supports both Gurobi (MIP) and Zen (SMT) solvers via generic implementation.
     /// </remarks>
-    public sealed class BPRunner
+    public static class BPRunner
     {
         /// <summary>
-        /// Runs Bin Packing optimization.
-        /// Uses MainVBP logic (more complete than vbMain).
+        /// Runs Bin Packing adversarial optimization.
+        /// Dispatches to the appropriate solver-specific implementation.
         /// </summary>
-        public static void Run(CliArgs args)
+        /// <param name="opts">Command-line options containing bin packing parameters.</param>
+        /// <exception cref="Exception">Thrown when an unsupported solver is specified.</exception>
+        public static void Run(CliOptions opts)
         {
-            var numBins = args.GetInt("--numBins", 6);
-            var numDemands = args.GetInt("--numDemands", 9);
-            var numDimensions = args.GetInt("--numDimensions", 2);
-            var binCapacityStr = args.Get("--binCapacity", "1.00001,1.00001");
-            var optimalBins = args.GetInt("--optimalBins", 3);
-            var ffdMethod = args.Get("--ffdMethod", "FFDSum");
-            var breakSymmetry = args.GetBool("--breakSymmetry", false);
-            var timeout = args.GetDouble("--timeout", 1000);
-            var verbose = args.GetBool("--verbose", false);
-
-            Console.WriteLine($"Bins: {numBins}, Items: {numDemands}, Dimensions: {numDimensions}");
-            Console.WriteLine($"Target optimal bins: {optimalBins}");
-
-            // Parse bin capacity
-            var binSize = binCapacityStr.Split(',').Select(double.Parse).ToList();
-            if (binSize.Count != numDimensions)
+            switch (opts.SolverChoice)
             {
-                throw new Exception($"Bin capacity dimensions ({binSize.Count}) must match numDimensions ({numDimensions})");
+                case SolverChoice.Zen:
+                    RunBinPacking(new SolverZen(), opts);
+                    break;
+                case SolverChoice.Gurobi:
+                    RunBinPacking(
+                        new GurobiSOS(timeout: opts.Timeout, verbose: Convert.ToInt32(opts.Verbose)),
+                        opts);
+                    break;
+                default:
+                    throw new Exception($"Unsupported solver: {opts.SolverChoice}. Valid options: Gurobi, Zen");
+            }
+        }
+
+        /// <summary>
+        /// Generic implementation of bin packing adversarial optimization.
+        /// </summary>
+        /// <typeparam name="TVar">Solver variable type (GRBVar or Zen).</typeparam>
+        /// <typeparam name="TSolution">Solver solution type (GRBModel or ZenSolution).</typeparam>
+        /// <param name="solver">The solver instance to use.</param>
+        /// <param name="opts">Command-line options containing bin packing parameters.</param>
+        /// <remarks>
+        /// Creates three components:
+        /// 1. VBPOptimalEncoder: Encodes the optimal bin packing problem
+        /// 2. FFDItemCentricEncoder: Encodes the First-Fit heuristic behavior
+        /// 3. VBPAdversarialInputGenerator: Finds item sizes maximizing the gap
+        ///
+        /// The optimization finds item sizes such that:
+        /// - Optimal solution uses exactly opts.OptimalBins bins
+        /// - FFD heuristic uses as many bins as possible
+        /// - Gap = FFD bins - Optimal bins is maximized.
+        /// </remarks>
+        private static void RunBinPacking<TVar, TSolution>(ISolver<TVar, TSolution> solver, CliOptions opts)
+        {
+            Console.WriteLine($"Bins: {opts.NumBins}, Items: {opts.NumDemands}, Dimensions: {opts.NumDimensions}");
+            Console.WriteLine($"Target optimal bins: {opts.OptimalBins}");
+            Console.WriteLine($"FF Method: {opts.FFMethod}");
+
+            // Parse bin capacities from comma-separated string
+            var binCapacities = opts.BinCapacity.Split(',').Select(double.Parse).ToList();
+
+            // Pad capacities to match number of dimensions
+            while (binCapacities.Count < opts.NumDimensions)
+            {
+                binCapacities.Add(1.00001);
             }
 
-            var bins = new Bins(numBins, binSize);
-            var ffdMethodChoice = ffdMethod switch
-            {
-                "FF" => FFDMethodChoice.FF,
-                "FFDProd" => FFDMethodChoice.FFDProd,
-                "FFDDiv" => FFDMethodChoice.FFDDiv,
-                _ => FFDMethodChoice.FFDSum,
-            };
-            var solver = new GurobiSOS(timeout: timeout, verbose: Convert.ToInt32(verbose));
-            var optimalEncoder = new VBPOptimalEncoder<GRBVar, GRBModel>(
-                solver, numDemands, numDimensions, BreakSymmetry: breakSymmetry);
-            var ffdEncoder = new FFDItemCentricEncoder<GRBVar, GRBModel>(
-                solver, numDemands, numDimensions);
-            var adversarialGenerator = new VBPAdversarialInputGenerator<GRBVar, GRBModel>(
-                bins, numDemands, numDimensions);
+            // Create bin configuration
+            var bins = new Bins(opts.NumBins, binCapacities);
+
+            // Create optimal encoder - finds minimum bins needed
+            var optimalEncoder = new VBPOptimalEncoder<TVar, TSolution>(
+                solver, opts.NumDemands, opts.NumDimensions, BreakSymmetry: opts.BreakSymmetry);
+
+            // Create FFD encoder - simulates First-Fit heuristic behavior
+            var ffdEncoder = new FFDItemCentricEncoder<TVar, TSolution>(
+                solver, opts.NumDemands, opts.NumDimensions);
+
+            // Create adversarial generator - finds worst-case item sizes
+            var adversarialGenerator = new VBPAdversarialInputGenerator<TVar, TSolution>(
+                bins, opts.NumDemands, opts.NumDimensions);
 
             var timer = Stopwatch.StartNew();
+
+            // Run bilevel optimization to find adversarial inputs
+            List<IList<double>> demandList = null;
             var (optimalSolution, ffdSolution) = adversarialGenerator.MaximizeOptimalityGapFFD(
-                optimalEncoder, ffdEncoder, optimalBins,
-                ffdMethod: ffdMethodChoice, itemList: null, verbose: verbose);
+                optimalEncoder, ffdEncoder,
+                opts.OptimalBins,
+                ffdMethod: opts.FFMethod,
+                itemList: demandList,
+                verbose: opts.Verbose);
+
             timer.Stop();
 
+            // Display results
             Console.WriteLine("\n" + new string('=', 60));
             Console.WriteLine("RESULTS:");
             Console.WriteLine($"Optimal bins used: {optimalSolution.TotalNumBinsUsed}");
-            Console.WriteLine($"FFD bins used: {ffdSolution.TotalNumBinsUsed}");
+            Console.WriteLine($"{opts.FFMethod} bins used: {ffdSolution.TotalNumBinsUsed}");
             Console.WriteLine($"Gap: {ffdSolution.TotalNumBinsUsed - optimalSolution.TotalNumBinsUsed}");
             Console.WriteLine($"Time: {timer.ElapsedMilliseconds}ms");
             Console.WriteLine(new string('=', 60));
 
-            if (verbose)
+            // Verbose output: full solution details as JSON
+            if (opts.Verbose)
             {
                 Console.WriteLine("\nOptimal Solution:");
                 Console.WriteLine(Newtonsoft.Json.JsonConvert.SerializeObject(
                     optimalSolution, Newtonsoft.Json.Formatting.Indented));
-                Console.WriteLine("\nFFD Solution:");
+                Console.WriteLine("\nHeuristic Solution:");
                 Console.WriteLine(Newtonsoft.Json.JsonConvert.SerializeObject(
                     ffdSolution, Newtonsoft.Json.Formatting.Indented));
             }

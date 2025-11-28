@@ -1,21 +1,42 @@
-using System.Diagnostics;
-using Gurobi;
+// <copyright file="PIFORunner.cs" company="Microsoft">
+// Copyright (c) Microsoft. All rights reserved.
+// </copyright>
 
 namespace MetaOptimize.Cli
 {
+    using System.Diagnostics;
+    using Gurobi;
+
     /// <summary>
-    /// Main entry point for traffic engineering experiments.
-    /// Executes adversarial optimization to find worst-case demand patterns for routing heuristics.
+    /// Runner for PIFO (Push-In First-Out) packet scheduling adversarial optimization.
+    /// Finds packet arrival patterns that maximize scheduling inversions between SP-PIFO and AIFO.
     /// </summary>
     /// <remarks>
-    /// Flow: Load topology → Generate demand levels → Run adversarial optimization → Validate results.
-    /// Finds demand patterns where heuristic routes significantly less than optimal.
+    /// Compares two packet scheduling algorithms:
+    /// - SP-PIFO with Drop: Strict Priority PIFO with packet dropping under congestion
+    /// - AIFO: Approximate Ideal Fair Ordering with window-based admission
+    ///
+    /// The adversarial generator finds packet rank sequences where AIFO produces
+    /// significantly more inversions (out-of-order deliveries) than SP-PIFO.
+    ///
+    /// An inversion occurs when a lower-priority packet is scheduled before a
+    /// higher-priority packet that arrived earlier.
     /// </remarks>
     public sealed class PIFORunner
     {
         /// <summary>
-        /// Computes inversion count for a single packet.
+        /// Computes the number of inversions for a single packet.
+        /// An inversion occurs when a lower-priority packet precedes this packet in the schedule.
         /// </summary>
+        /// <param name="solution">The scheduling solution to analyze.</param>
+        /// <param name="orderToRank">Mapping from schedule order to packet rank.</param>
+        /// <param name="pid">The packet ID to compute inversions for.</param>
+        /// <returns>Number of inversions for the specified packet.</returns>
+        /// <remarks>
+        /// For admitted packets: counts how many packets scheduled earlier have higher rank values
+        /// (lower priority, since lower rank = higher priority).
+        /// For dropped packets: counts inversions against all admitted packets.
+        /// </remarks>
         private static int ComputeInversionNum(
             PIFOOptimizationSolution solution,
             Dictionary<int, double> orderToRank,
@@ -23,9 +44,11 @@ namespace MetaOptimize.Cli
         {
             int numInv = 0;
 
+            // Check if packet was admitted (0.98 threshold handles floating-point)
             if (solution.Admit[pid] >= 0.98)
             {
                 int currOrder = solution.Order[pid];
+                // Count packets scheduled earlier with worse priority (higher rank)
                 for (int prev = 0; prev < currOrder; prev++)
                 {
                     if (orderToRank[prev] > solution.Ranks[pid])
@@ -36,6 +59,7 @@ namespace MetaOptimize.Cli
             }
             else
             {
+                // Dropped packet: count against all admitted packets with worse priority
                 foreach (var (order, rank) in orderToRank)
                 {
                     if (rank > solution.Ranks[pid])
@@ -49,13 +73,18 @@ namespace MetaOptimize.Cli
         }
 
         /// <summary>
-        /// Computes inversion count for PIFO solutions.
+        /// Computes total inversion counts for both optimal and heuristic solutions.
         /// </summary>
+        /// <param name="optimalSol">The optimal (SP-PIFO) scheduling solution.</param>
+        /// <param name="heuristicSol">The heuristic (AIFO) scheduling solution.</param>
+        /// <param name="numPackets">Total number of packets in the sequence.</param>
+        /// <returns>Tuple of (optimal inversions, heuristic inversions).</returns>
         private static (int optimal, int heuristic) ComputeInversions(
             PIFOOptimizationSolution optimalSol,
             PIFOOptimizationSolution heuristicSol,
             int numPackets)
         {
+            // Build order-to-rank mappings for admitted packets
             var orderToRankOpt = new Dictionary<int, double>();
             var orderToRankHeu = new Dictionary<int, double>();
 
@@ -72,6 +101,7 @@ namespace MetaOptimize.Cli
                 }
             }
 
+            // Sum inversions across all packets
             int numInvOpt = 0;
             int numInvHeu = 0;
 
@@ -85,58 +115,70 @@ namespace MetaOptimize.Cli
         }
 
         /// <summary>
-        /// Runs Bin Packing optimization.
-        /// Uses MainVBP logic (more complete than vbMain).
+        /// Runs PIFO packet scheduling adversarial optimization.
         /// </summary>
-        public static void Run(CliArgs args)
+        /// <param name="opts">Command-line options containing PIFO parameters.</param>
+        /// <remarks>
+        /// Creates encoders for SP-PIFO and AIFO algorithms, then uses adversarial
+        /// optimization to find packet rank sequences that maximize the cost gap.
+        ///
+        /// Key parameters from opts:
+        /// - NumPackets: Total packets in sequence
+        /// - MaxRank: Maximum priority rank value
+        /// - NumQueues: Number of queues for SP-PIFO
+        /// - MaxQueueSize: Maximum packets per queue
+        /// - WindowSize: AIFO admission window size
+        /// - BurstParam: AIFO burst tolerance parameter.
+        /// </remarks>
+        public static void Run(CliOptions opts)
         {
-            var maxRank = args.GetInt("--maxRank", 8);
-            var numPackets = args.GetInt("--numPackets", 18);
-            var numQueues = args.GetInt("--numQueues", 4);
-            var maxQueueSize = args.GetInt("--maxQueueSize", 12);
-            var windowSize = args.GetInt("--windowSize", 12);
-            var burstParam = args.GetDouble("--burstParam", 0.1);
-            var timeout = args.GetDouble("--timeout", 1000);
-            var verbose = args.GetBool("--verbose", false);
+            Console.WriteLine($"Packets: {opts.NumPackets}, Max Rank: {opts.MaxRank}, Queues: {opts.NumQueues}");
+            Console.WriteLine($"Max Queue Size: {opts.MaxQueueSize}, Window Size: {opts.WindowSize}");
 
-            Console.WriteLine($"Packets: {numPackets}, Max Rank: {maxRank}, Queues: {numQueues}");
-            Console.WriteLine($"Max Queue Size: {maxQueueSize}, Window Size: {windowSize}");
+            var solver = new GurobiSOS(verbose: Convert.ToInt32(opts.Verbose), timeout: opts.Timeout);
 
-            var solver = new GurobiSOS(verbose: Convert.ToInt32(verbose), timeout: timeout);
+            // Create SP-PIFO encoder (optimal baseline)
+            var spPifoEncoder = new SPPIFOWithDropAvgDelayEncoder<GRBVar, GRBModel>(
+                solver, opts.NumPackets, opts.NumQueues, opts.MaxRank, opts.MaxQueueSize);
 
-            // Create encoders - comparing SP-PIFO with drop vs AIFO
-            var h1 = new SPPIFOWithDropAvgDelayEncoder<GRBVar, GRBModel>(
-                solver, numPackets, numQueues, maxRank, maxQueueSize);
-            var h2 = new AIFOAvgDelayEncoder<GRBVar, GRBModel>(
-                solver, numPackets, maxRank, maxQueueSize, windowSize, burstParam);
+            // Create AIFO encoder (heuristic to evaluate)
+            var aifoEncoder = new AIFOAvgDelayEncoder<GRBVar, GRBModel>(
+                solver, opts.NumPackets, opts.MaxRank, opts.MaxQueueSize, opts.WindowSize, opts.BurstParam);
 
+            // Create adversarial generator
             var adversarialGenerator = new PIFOAdversarialInputGenerator<GRBVar, GRBModel>(
-                numPackets, maxRank);
+                opts.NumPackets, opts.MaxRank);
 
             var timer = Stopwatch.StartNew();
+
+            // Find worst-case packet sequence
             var (optimalSolution, heuristicSolution) = adversarialGenerator.MaximizeOptimalityGap(
-                h1, h2, verbose: verbose);
+                spPifoEncoder, aifoEncoder, verbose: opts.Verbose);
+
             timer.Stop();
 
-            // Compute inversions
-            var (numInvOpt, numInvHeu) = ComputeInversions(optimalSolution, heuristicSolution, numPackets);
+            // Compute inversion metrics
+            var (numInvOpt, numInvHeu) = ComputeInversions(
+                optimalSolution, heuristicSolution, opts.NumPackets);
 
+            // Display results
             Console.WriteLine("\n" + new string('=', 60));
             Console.WriteLine("RESULTS:");
-            Console.WriteLine($"Optimal cost: {optimalSolution.Cost}");
-            Console.WriteLine($"Heuristic cost: {heuristicSolution.Cost}");
+            Console.WriteLine($"SP-PIFO cost: {optimalSolution.Cost}");
+            Console.WriteLine($"AIFO cost: {heuristicSolution.Cost}");
             Console.WriteLine($"Gap: {heuristicSolution.Cost - optimalSolution.Cost}");
-            Console.WriteLine($"Inversions (Optimal): {numInvOpt}");
-            Console.WriteLine($"Inversions (Heuristic): {numInvHeu}");
+            Console.WriteLine($"Inversions (SP-PIFO): {numInvOpt}");
+            Console.WriteLine($"Inversions (AIFO): {numInvHeu}");
             Console.WriteLine($"Time: {timer.ElapsedMilliseconds}ms");
             Console.WriteLine(new string('=', 60));
 
-            if (verbose)
+            // Verbose output: full solution details
+            if (opts.Verbose)
             {
-                Console.WriteLine("\nOptimal Solution:");
+                Console.WriteLine("\nSP-PIFO Solution:");
                 Console.WriteLine(Newtonsoft.Json.JsonConvert.SerializeObject(
                     optimalSolution, Newtonsoft.Json.Formatting.Indented));
-                Console.WriteLine("\nHeuristic Solution:");
+                Console.WriteLine("\nAIFO Solution:");
                 Console.WriteLine(Newtonsoft.Json.JsonConvert.SerializeObject(
                     heuristicSolution, Newtonsoft.Json.Formatting.Indented));
             }

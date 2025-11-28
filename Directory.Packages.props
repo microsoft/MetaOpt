@@ -11,9 +11,8 @@
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>  
 
     <!-- We must use an explicit platform due to the way Gurobi is packaged, so auto-detect it -->
-    <Platforms>$([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture)</Platforms>
-    <PlatformTarget>$(Platforms)</PlatformTarget>
-
+    <PlatformTarget>x64</PlatformTarget>
+    
     <Company>Microsoft</Company>
     <Copyright>© Microsoft Corporation. All rights reserved.</Copyright>
   </PropertyGroup>
@@ -39,11 +38,5 @@
     <PackageVersion Include="Meta.Numerics" Version="4.1.4" />
     <PackageVersion Include="CsvHelper" Version="30.0.1" />
     <PackageVersion Include="System.Numerics.Tensors" Version="0.1.0" />
-  </ItemGroup>
-
-  <!-- REMOVED StyleCop.Analyzers PackageReference - it's in StyleCop.props -->
-  <ItemGroup>
-    <PackageReference Include="CsvHelper" />
-    <PackageReference Include="System.Numerics.Tensors" />
   </ItemGroup>
 </Project>

@@ -1,53 +1,90 @@
-using System.Diagnostics;
-using Gurobi;
-using MetaOptimize.FailureAnalysis;
-using ZenLib;
-using ZenLib.ModelChecking;
+// <copyright file="FailureAnalysisRunner.cs" company="Microsoft">
+// Copyright (c) Microsoft. All rights reserved.
+// </copyright>
 
 namespace MetaOptimize.Cli
 {
+    using System.Diagnostics;
+    using Gurobi;
+    using MetaOptimize.FailureAnalysis;
+    using ZenLib;
+    using ZenLib.ModelChecking;
+
     /// <summary>
-    /// Non-generic entry point that dispatches to the correct generic implementation.
+    /// Runner for network failure analysis adversarial optimization.
+    /// Finds failure scenarios that maximize the gap between normal and degraded network performance.
     /// </summary>
+    /// <remarks>
+    /// Analyzes network resilience by finding worst-case link failure combinations.
+    /// Compares optimal routing under normal conditions against routing under failure scenarios,
+    /// identifying vulnerabilities where failures cause significant throughput degradation.
+    ///
+    /// Supports configurable failure probability thresholds and multiple simultaneous failures.
+    /// </remarks>
     public static class FailureAnalysisRunner
     {
         /// <summary>
-        /// Generic implementation of Failure Analysis optimization.
+        /// Runs failure analysis adversarial optimization.
+        /// Dispatches to the appropriate solver-specific implementation.
         /// </summary>
-        public static void Run(CliArgs args)
+        /// <param name="opts">Command-line options containing failure analysis parameters.</param>
+        /// <exception cref="Exception">Thrown when an unsupported solver is specified.</exception>
+        public static void Run(CliOptions opts)
         {
-            var solverChoice = args.Get("--solver", "Gurobi");
-            var verbose = args.GetBool("--verbose", false);
-            var timeout = args.GetDouble("--timeout", 1000);
-
-            switch (solverChoice.ToLower())
+            switch (opts.SolverChoice)
             {
-                case "gurobi":
+                case SolverChoice.Gurobi:
                     FailureAnalysisRunnerImpl<GRBVar, GRBModel>.CreateSolver =
-                        () => new GurobiSOS(verbose: Convert.ToInt32(verbose), timeout: timeout);
-                    FailureAnalysisRunnerImpl<GRBVar, GRBModel>.Run(args);
+                        () => new GurobiSOS(verbose: Convert.ToInt32(opts.Verbose), timeout: opts.Timeout);
+                    FailureAnalysisRunnerImpl<GRBVar, GRBModel>.Run(opts);
                     break;
-                case "zen":
+                case SolverChoice.Zen:
                     FailureAnalysisRunnerImpl<Zen<Real>, ZenSolution>.CreateSolver =
                         () => new SolverZen();
-                    FailureAnalysisRunnerImpl<Zen<Real>, ZenSolution>.Run(args);
+                    FailureAnalysisRunnerImpl<Zen<Real>, ZenSolution>.Run(opts);
                     break;
                 default:
-                    throw new Exception($"Unsupported solver: {solverChoice}");
+                    throw new Exception($"Unsupported solver: {opts.SolverChoice}. Valid options: Gurobi, Zen");
             }
         }
     }
 
     /// <summary>
-    /// Generic implementation of Failure Analysis optimization.
+    /// Generic implementation of failure analysis adversarial optimization.
     /// </summary>
+    /// <typeparam name="TVar">Solver variable type (GRBVar or Zen).</typeparam>
+    /// <typeparam name="TSolution">Solver solution type (GRBModel or ZenSolution).</typeparam>
+    /// <remarks>
+    /// Uses bilevel optimization to find:
+    /// 1. Outer level: Failure scenario (which links fail)
+    /// 2. Inner level: Optimal routing under that failure scenario
+    ///
+    /// The gap represents how much throughput is lost due to the failure.
+    /// </remarks>
     internal sealed class FailureAnalysisRunnerImpl<TVar, TSolution>
     {
+        /// <summary>
+        /// Factory function to create solver instances.
+        /// Set by the dispatcher before calling Run().
+        /// </summary>
         internal static Func<ISolver<TVar, TSolution>> CreateSolver = null;
 
         /// <summary>
-        /// Creates default topology for failure analysis testing.
+        /// Creates a default 4-node diamond topology for testing.
         /// </summary>
+        /// <returns>A simple test topology with nodes a, b, c, d.</returns>
+        /// <remarks>
+        /// Topology structure:
+        ///      a
+        ///     /|\
+        ///    / | \
+        ///   b--+--c
+        ///    \ | /
+        ///     \|/
+        ///      d
+        ///
+        /// Link capacities vary to create interesting failure scenarios.
+        /// </remarks>
         private static Topology CreateDefaultFailureTopology()
         {
             var topology = new Topology();
@@ -59,52 +96,56 @@ namespace MetaOptimize.Cli
             topology.AddEdge("a", "c", capacity: 10);
             topology.AddEdge("b", "d", capacity: 10);
             topology.AddEdge("c", "d", capacity: 10);
-            topology.AddEdge("a", "d", capacity: 5);
-            topology.AddEdge("b", "c", capacity: 3);
+            topology.AddEdge("a", "d", capacity: 5);  // Direct path with lower capacity
+            topology.AddEdge("b", "c", capacity: 3);  // Cross-link with lowest capacity
             return topology;
         }
 
         /// <summary>
-        /// Reads topology from JSON file.
+        /// Reads topology from a JSON file.
         /// </summary>
+        /// <param name="filePath">Path to the topology JSON file.</param>
+        /// <returns>Loaded topology (currently returns empty topology - TODO).</returns>
         private static Topology ReadTopologyFromFile(string filePath)
         {
             Console.WriteLine($"Loading topology from: {filePath}");
-            // TODO: Implement proper JSON topology loading
+            // TODO: Implement proper JSON topology loading matching TERunner format
             var topology = new Topology();
             return topology;
         }
 
         /// <summary>
-        /// Runs Failure Analysis optimization.
+        /// Runs failure analysis adversarial optimization.
         /// </summary>
-        internal static void Run(CliArgs args)
+        /// <param name="opts">Command-line options containing failure analysis parameters.</param>
+        /// <remarks>
+        /// Key parameters from opts:
+        /// - UseDefaultTopology: Use built-in test topology or load from file
+        /// - MaxNumFailures: Maximum simultaneous link failures to consider
+        /// - NumExtraPaths: Additional paths for rerouting under failures
+        /// - FailureProbThreshold: Minimum probability for considering a failure
+        /// - InnerEncoding: KKT or PrimalDual for inner optimization
+        /// - DemandList: Quantized demand levels for optimization.
+        /// </remarks>
+        internal static void Run(CliOptions opts)
         {
-            var useDefaultTopology = args.GetBool("--useDefaultTopology", true);
-            var maxNumFailures = args.GetInt("--maxNumFailures", 1);
-            var numExtraPaths = args.GetInt("--numExtraPaths", 1);
-            var demandListStr = args.Get("--demandList", "0,5,10");
-            var failureProbThreshold = args.GetDouble("--failureProbThreshold", 0.25);
-            var scenarioProbThreshold = args.GetDouble("--scenarioProbThreshold", 0.0);
-            var innerEncoding = args.Get("--innerEncoding", "PrimalDual");
-            var verbose = args.GetBool("--verbose", false);
+            Console.WriteLine($"Max Failures: {opts.MaxNumFailures}, Extra Paths: {opts.NumExtraPaths}");
+            Console.WriteLine($"Failure Prob Threshold: {opts.FailureProbThreshold}");
 
-            Console.WriteLine($"Max Failures: {maxNumFailures}, Extra Paths: {numExtraPaths}");
-            Console.WriteLine($"Failure Prob Threshold: {failureProbThreshold}");
-
+            // Load or create topology
             Topology topology;
-            if (useDefaultTopology)
+            if (opts.UseDefaultTopology)
             {
                 topology = CreateDefaultFailureTopology();
                 Console.WriteLine("Using default test topology");
             }
             else
             {
-                var topologyFile = args.Get("--topologyFile");
-                topology = ReadTopologyFromFile(topologyFile);
-                Console.WriteLine($"Loaded topology from: {topologyFile}");
+                topology = ReadTopologyFromFile(opts.TopologyFile);
+                Console.WriteLine($"Loaded topology from: {opts.TopologyFile}");
             }
 
+            // Default demand matrix for test topology
             var demands = new Dictionary<(string, string), double>
             {
                 { ("a", "d"), 10 },
@@ -115,13 +156,14 @@ namespace MetaOptimize.Cli
                 { ("b", "c"), 0 },
             };
 
-            var demandSet = new HashSet<double>(
-                demandListStr.Split(',').Select(double.Parse));
+            // Parse demand quantization levels
+            var demandSet = new HashSet<double>(opts.DemandList.Split(',').Select(double.Parse));
             var demandList = new GenericList(demandSet);
 
+            // Link failure probabilities for test topology
             var probs = new Dictionary<(string, string), double>
             {
-                { ("a", "d"), 0.3 },
+                { ("a", "d"), 0.3 },  // Direct link has highest failure probability
                 { ("b", "d"), 0.2 },
                 { ("a", "c"), 0 },
                 { ("a", "b"), 0 },
@@ -131,39 +173,40 @@ namespace MetaOptimize.Cli
 
             var solver = CreateSolver();
 
-            var innerEncodingType = innerEncoding == "KKT"
-                ? InnerRewriteMethodChoice.KKT
-                : InnerRewriteMethodChoice.PrimalDual;
-
             var timer = Stopwatch.StartNew();
 
-            var optimalEncoder = new TEMaxFlowOptimalEncoder<TVar, TSolution>(solver, 2);
-            var optimalCutEncoder = new FailureAnalysisEncoder<TVar, TSolution>(solver, 2);
-            var adversarialGenerator = new FailureAnalysisAdversarialGenerator<TVar, TSolution>(topology, 2);
+            // Create encoders for normal and failure scenarios
+            var optimalEncoder = new TEMaxFlowOptimalEncoder<TVar, TSolution>(solver, maxNumPaths: 2);
+            var failureEncoder = new FailureAnalysisEncoder<TVar, TSolution>(solver, maxNumPathTotal: 2);
+            var adversarialGenerator = new FailureAnalysisAdversarialGenerator<TVar, TSolution>(
+                topology, maxNumPaths: 2);
 
+            // Find worst-case failure scenario
             var (optimalSol, failureSol) = adversarialGenerator.MaximizeOptimalityGap(
-                optimalEncoder, optimalCutEncoder,
-                innerEncoding: innerEncodingType,
+                optimalEncoder, failureEncoder,
+                innerEncoding: opts.InnerEncoding,
                 constrainedDemands: demands,
-                maxNumFailures: maxNumFailures,
+                maxNumFailures: opts.MaxNumFailures,
                 demandList: demandList,
-                numExtraPaths: numExtraPaths,
+                numExtraPaths: opts.NumExtraPaths,
                 lagFailureProbabilities: probs,
-                failureProbThreshold: failureProbThreshold);
+                failureProbThreshold: opts.FailureProbThreshold);
 
             timer.Stop();
 
+            // Display results
             Console.WriteLine("\n" + new string('=', 60));
             Console.WriteLine("RESULTS:");
-            Console.WriteLine($"Optimal objective: {optimalSol.MaxObjective}");
+            Console.WriteLine($"Optimal objective (no failures): {optimalSol.MaxObjective}");
             Console.WriteLine($"Failure scenario objective: {failureSol.MaxObjective}");
-            Console.WriteLine($"Gap: {optimalSol.MaxObjective - failureSol.MaxObjective}");
+            Console.WriteLine($"Gap (throughput loss): {optimalSol.MaxObjective - failureSol.MaxObjective}");
             Console.WriteLine($"Time: {timer.ElapsedMilliseconds}ms");
             Console.WriteLine(new string('=', 60));
 
-            if (verbose)
+            // Verbose output: full solution details
+            if (opts.Verbose)
             {
-                Console.WriteLine("\nOptimal Solution:");
+                Console.WriteLine("\nOptimal Solution (no failures):");
                 Console.WriteLine(Newtonsoft.Json.JsonConvert.SerializeObject(
                     optimalSol, Newtonsoft.Json.Formatting.Indented));
                 Console.WriteLine("\nFailure Scenario Solution:");
