@@ -51,8 +51,15 @@ namespace MetaOptimize.Cli
         {
             try
             {
-                Console.WriteLine($"Starting MetaOptimize - Problem Type: {opts.ProblemType}");
-                Console.WriteLine(new string('=', 60));
+                // Debug output
+                if (opts.Verbose)
+                {
+                    Console.WriteLine($"[DEBUG] UseDefaultTopology: {opts.UseDefaultTopology}");
+                    Console.WriteLine($"[DEBUG] BreakSymmetry: {opts.BreakSymmetry}");
+                    Console.WriteLine($"[DEBUG] EnableClustering: {opts.EnableClustering}");
+                    Console.WriteLine($"[DEBUG] Verbose: {opts.Verbose}");
+                    Console.WriteLine($"[DEBUG] Debug: {opts.Debug}");
+                }
 
                 switch (opts.ProblemType)
                 {

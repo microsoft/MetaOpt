@@ -83,7 +83,7 @@ namespace MetaOptimize.Cli
         ///   "links": [{"source": "a", "target": "b", "capacity": 10}, ...]
         /// }.
         /// </remarks>
-        [Option('f', "topologyFile", Default = "..\\Topologies\\simple.json", HelpText = "The location of the topology file (JSON format)")]
+        [Option('f', "topologyFile", Default = "..\\MetaOpt\\Topologies\\simple.json", HelpText = "The location of the topology file (JSON format)")]
         public string TopologyFile { get; set; }
 
         /// <summary>
@@ -491,8 +491,16 @@ namespace MetaOptimize.Cli
         /// Reduces search space by eliminating equivalent solutions.
         /// May speed up optimization but could miss some adversarial inputs.
         /// </summary>
-        [Option("breakSymmetry", Default = false, HelpText = "Enable symmetry breaking (BinPacking)")]
-        public bool BreakSymmetry { get; set; }
+        [Option("breakSymmetry", Default = "false", HelpText = "Enable symmetry breaking in BinPacking encoder (true/false)")]
+        public string BreakSymmetryStr { get; set; }
+
+        /// <summary>
+        /// Enable symmetry breaking constraints.
+        /// Reduces search space by eliminating equivalent solutions.
+        /// May speed up optimization but could miss some adversarial inputs.
+        /// </summary>
+        public bool BreakSymmetry =>
+            string.Equals(BreakSymmetryStr, "true", StringComparison.OrdinalIgnoreCase);
 
         /// <summary>
         /// Bin capacities per dimension (comma-separated).
@@ -556,8 +564,15 @@ namespace MetaOptimize.Cli
         /// Use built-in default topology instead of loading from file.
         /// Default topology is a simple 4-node diamond for testing.
         /// </summary>
-        [Option("useDefaultTopology", Default = true, HelpText = "Use built-in test topology (FailureAnalysis)")]
-        public bool UseDefaultTopology { get; set; }
+        [Option("useDefaultTopology", Default = "true", HelpText = "Use built-in default topology for Failure Analysis. Requires value: true or false")]
+        public string UseDefaultTopologyStr { get; set; }
+
+        /// <summary>
+        /// Use built-in default topology instead of loading from file.
+        /// Default topology is a simple 4-node diamond for testing.
+        /// </summary>
+        public bool UseDefaultTopology =>
+            string.Equals(UseDefaultTopologyStr, "true", StringComparison.OrdinalIgnoreCase);
 
         /// <summary>
         /// Maximum number of simultaneous link failures to consider.

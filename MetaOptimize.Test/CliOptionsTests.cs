@@ -4,7 +4,6 @@
 
 namespace MetaOptimize.Test
 {
-    using System;
     using System.Collections.Generic;
     using CommandLine;
     using MetaOptimize.Cli;
