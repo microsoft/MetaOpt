@@ -219,7 +219,8 @@ namespace MetaOptimize.Cli
         public static (Topology, List<Topology>) getTopology(string topologyFile, string pathFile, double downScaleFactor, bool enableClustering,
                 int numClusters, string clusterDir, bool verbose)
         {
-            Topology topology = Parser.ReadTopologyJson(topologyFile, pathFile, scaleFactor: downScaleFactor);
+            string topoPath = ResolveTopologyPath(topologyFile);
+            Topology topology = Parser.ReadTopologyJson(topoPath, pathFile, scaleFactor: downScaleFactor);
             List<Topology> clusters = new List<Topology>();
             if (enableClustering)
             {
@@ -231,6 +232,41 @@ namespace MetaOptimize.Cli
                 }
             }
             return (topology, clusters);
+        }
+
+        /// <summary>
+        /// It makes sure the topology file path works for both VSCode and CLI run modes.
+        /// </summary>
+        /// <param name="topologyFile"></param>
+        /// <returns>Valid topology path.</returns>
+        private static string ResolveTopologyPath(string topologyFile)
+        {
+            // If absolute path or file exists, use as-is
+            if (Path.IsPathRooted(topologyFile) || File.Exists(topologyFile))
+            {
+                return topologyFile;
+            }
+
+            // Try common locations
+            var candidates = new[]
+            {
+                topologyFile,
+                Path.Combine("Topologies", Path.GetFileName(topologyFile)),
+                Path.Combine("..", "Topologies", Path.GetFileName(topologyFile)),
+                Path.Combine("..", "MetaOpt", "Topologies", Path.GetFileName(topologyFile)),
+            };
+
+            foreach (var candidate in candidates)
+            {
+                if (File.Exists(candidate))
+                {
+                    Console.WriteLine($"Found topology at: {Path.GetFullPath(candidate)}");
+                    return candidate;
+                }
+            }
+
+            // Fall back to original (will fail with clear error)
+            return topologyFile;
         }
 
         /// <summary>

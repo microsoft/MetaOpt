@@ -37,7 +37,7 @@ namespace MetaOptimize.Cli
         /// The problem type to solve.
         /// Determines which runner is invoked and which parameters are relevant.
         /// </summary>
-        [Option("problemType", Default = ProblemType.TrafficEngineering, HelpText = "Problem type: TrafficEngineering, BinPacking, PIFO, FailureAnalysis")]
+        [Option("problemType", Default = ProblemType.BinPacking, HelpText = "Problem type: TrafficEngineering, BinPacking, PIFO, FailureAnalysis")]
         public ProblemType ProblemType { get; set; }
 
         /// <summary>
@@ -83,7 +83,7 @@ namespace MetaOptimize.Cli
         ///   "links": [{"source": "a", "target": "b", "capacity": 10}, ...]
         /// }.
         /// </remarks>
-        [Option('f', "topologyFile", Default = "..\\MetaOpt\\Topologies\\simple.json", HelpText = "The location of the topology file (JSON format)")]
+        [Option('f', "topologyFile", Default = "..\\Topologies\\simple.json", HelpText = "The location of the topology file (JSON format)")]
         public string TopologyFile { get; set; }
 
         /// <summary>

@@ -1,4 +1,6 @@
 {
     "dotnet.defaultSolution": "MetaOptimize.sln",
-    "python.formatting.provider": "none"
+    "debugpy.debugJustMyCode": false,
+    "jupyter.debugJustMyCode": false,
+    "csharp.debug.justMyCode": false
 }
