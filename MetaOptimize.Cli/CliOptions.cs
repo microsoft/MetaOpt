@@ -37,7 +37,7 @@ namespace MetaOptimize.Cli
         /// The problem type to solve.
         /// Determines which runner is invoked and which parameters are relevant.
         /// </summary>
-        [Option("problemType", Default = ProblemType.BinPacking, HelpText = "Problem type: TrafficEngineering, BinPacking, PIFO, FailureAnalysis")]
+        [Option("problemType", Default = ProblemType.PIFO, HelpText = "Problem type: TrafficEngineering, BinPacking, PIFO, FailureAnalysis")]
         public ProblemType ProblemType { get; set; }
 
         /// <summary>
@@ -515,6 +515,36 @@ namespace MetaOptimize.Cli
         #region PIFO Options
 
         /// <summary>
+        /// First PIFO method (h1 encoder).
+        /// </summary>
+        [Option("pifoMethod1", Default = PIFOMethodChoice.SPPIFO, HelpText = "First PIFO method: PIFO, SPPIFO, AIFO, ModifiedSPPIFO")]
+        public PIFOMethodChoice PIFOMethod1 { get; set; }
+
+        /// <summary>
+        /// Second PIFO method (h2 encoder).
+        /// </summary>
+        [Option("pifoMethod2", Default = PIFOMethodChoice.AIFO, HelpText = "Second PIFO method: PIFO, SPPIFO, AIFO, ModifiedSPPIFO")]
+        public PIFOMethodChoice PIFOMethod2 { get; set; }
+
+        /// <summary>
+        /// Whether to consider packet drop in PIFO scheduling.
+        /// </summary>
+        [Option("considerPktDrop", Default = true, HelpText = "Consider packet drop (true/false)")]
+        public bool ConsiderPktDrop { get; set; }
+
+        /// <summary>
+        /// Split queue parameter for ModifiedSPPIFO.
+        /// </summary>
+        [Option("splitQueue", Default = 4, HelpText = "Split queue count for ModifiedSPPIFO")]
+        public int SplitQueue { get; set; }
+
+        /// <summary>
+        /// Split rank parameter for ModifiedSPPIFO.
+        /// </summary>
+        [Option("splitRank", Default = 100, HelpText = "Split rank threshold for ModifiedSPPIFO")]
+        public int SplitRank { get; set; }
+
+        /// <summary>
         /// Number of packets in the sequence.
         /// More packets = larger adversarial search space.
         /// </summary>
@@ -603,6 +633,7 @@ namespace MetaOptimize.Cli
         public double ScenarioProbThreshold { get; set; }
 
         #endregion
+
     }
 
     #region Enums
@@ -695,6 +726,12 @@ namespace MetaOptimize.Cli
         /// Based on Z3, open source, good for constraint satisfaction.
         /// </summary>
         Zen,
+
+        /// <summary>
+        /// OrTools solver (SMT - Satisfiability Modulo Theories).
+        /// Based on Z3, open source, good for constraint satisfaction.
+        /// </summary>
+        OrTools,
     }
 
     /// <summary>
@@ -737,6 +774,34 @@ namespace MetaOptimize.Cli
         /// Can escape local optima better than HillClimber.
         /// </summary>
         SimulatedAnnealing,
+    }
+
+    /// <summary>
+    /// PIFO method choices for scheduling algorithms.
+    /// </summary>
+    public enum PIFOMethodChoice
+    {
+        /// <summary>
+        /// Push-In First-Out: Packets are inserted based on rank and dequeued from the head.
+        /// </summary>
+        PIFO,
+
+        /// <summary>
+        /// Strict Priority PIFO: Uses multiple priority queues to approximate PIFO behavior.
+        /// </summary>
+        SPPIFO,
+
+        /// <summary>
+        /// Approximate In-Order First-Out: Uses shallow buffers with admission control.
+        /// Only valid when ConsiderPktDrop is true.
+        /// </summary>
+        AIFO,
+
+        /// <summary>
+        /// Modified SP-PIFO: Variant with configurable queue splitting via splitQueue and splitRank parameters.
+        /// Only valid when ConsiderPktDrop is false.
+        /// </summary>
+        ModifiedSPPIFO,
     }
 
     #endregion

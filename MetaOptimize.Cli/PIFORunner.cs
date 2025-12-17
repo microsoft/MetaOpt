@@ -115,6 +115,43 @@ namespace MetaOptimize.Cli
         }
 
         /// <summary>
+        /// Creates the appropriate PIFO encoder based on method and packet drop settings.
+        /// </summary>
+        /// <param name="method">The PIFO scheduling method to use.</param>
+        /// <param name="solver">The Gurobi solver instance.</param>
+        /// <param name="opts">CLI options containing encoder parameters.</param>
+        /// <returns>Configured encoder implementing IEncoder interface.</returns>
+        /// <exception cref="ArgumentException">
+        /// Thrown when AIFO is used without packet drop, or ModifiedSPPIFO is used with packet drop.
+        /// </exception>
+        private static IEncoder<GRBVar, GRBModel> CreateEncoder(PIFOMethodChoice method, GurobiSOS solver, CliOptions opts)
+        {
+            return method switch
+            {
+                PIFOMethodChoice.PIFO => opts.ConsiderPktDrop
+                    ? new PIFOWithDropAvgDelayEncoder<GRBVar, GRBModel>(solver, opts.NumPackets, opts.MaxRank, opts.MaxQueueSize)
+                    : new PIFOAvgDelayOptimalEncoder<GRBVar, GRBModel>(solver, opts.NumPackets, opts.MaxRank),
+
+                PIFOMethodChoice.SPPIFO => opts.ConsiderPktDrop
+                    ? new SPPIFOWithDropAvgDelayEncoder<GRBVar, GRBModel>(solver, opts.NumPackets, opts.NumQueues, opts.MaxRank, opts.MaxQueueSize)
+                    : new SPPIFOAvgDelayEncoder<GRBVar, GRBModel>(solver, opts.NumPackets, opts.NumQueues, opts.MaxRank),
+
+                PIFOMethodChoice.AIFO => opts.ConsiderPktDrop
+                    ? new AIFOAvgDelayEncoder<GRBVar, GRBModel>(solver, opts.NumPackets, opts.MaxRank, opts.MaxQueueSize, opts.WindowSize, opts.BurstParam)
+                    : throw new ArgumentException(
+                        "AIFO only works on shallow buffers and decides whether to admit or drop the packet. " +
+                        "As a result, it does not apply to cases where we do not want packet drop."),
+
+                PIFOMethodChoice.ModifiedSPPIFO => !opts.ConsiderPktDrop
+                    ? new ModifiedSPPIFOAvgDelayEncoder<GRBVar, GRBModel>(solver, opts.NumPackets, opts.SplitQueue, opts.NumQueues, opts.SplitRank, opts.MaxRank)
+                    : throw new ArgumentException(
+                        "ModifiedSPPIFO does not support packet drop yet."),
+
+                _ => throw new ArgumentException($"Unknown PIFO method: {method}")
+            };
+        }
+
+        /// <summary>
         /// Runs PIFO packet scheduling adversarial optimization.
         /// </summary>
         /// <param name="opts">Command-line options containing PIFO parameters.</param>
@@ -137,13 +174,12 @@ namespace MetaOptimize.Cli
 
             var solver = new GurobiSOS(verbose: Convert.ToInt32(opts.Verbose), timeout: opts.Timeout);
 
-            // Create SP-PIFO encoder (optimal baseline)
-            var spPifoEncoder = new SPPIFOWithDropAvgDelayEncoder<GRBVar, GRBModel>(
-                solver, opts.NumPackets, opts.NumQueues, opts.MaxRank, opts.MaxQueueSize);
+            Console.WriteLine($"PIFO Method 1: {opts.PIFOMethod1} (ConsiderPktDrop={opts.ConsiderPktDrop})");
+            Console.WriteLine($"PIFO Method 2: {opts.PIFOMethod2} (ConsiderPktDrop={opts.ConsiderPktDrop})");
 
-            // Create AIFO encoder (heuristic to evaluate)
-            var aifoEncoder = new AIFOAvgDelayEncoder<GRBVar, GRBModel>(
-                solver, opts.NumPackets, opts.MaxRank, opts.MaxQueueSize, opts.WindowSize, opts.BurstParam);
+            // Create encoders based on CLI options
+            var h1 = CreateEncoder(opts.PIFOMethod1, solver, opts);
+            var h2 = CreateEncoder(opts.PIFOMethod2, solver, opts);
 
             // Create adversarial generator
             var adversarialGenerator = new PIFOAdversarialInputGenerator<GRBVar, GRBModel>(
@@ -153,7 +189,7 @@ namespace MetaOptimize.Cli
 
             // Find worst-case packet sequence
             var (optimalSolution, heuristicSolution) = adversarialGenerator.MaximizeOptimalityGap(
-                spPifoEncoder, aifoEncoder, verbose: opts.Verbose);
+                h1, h2, verbose: opts.Verbose);
 
             timer.Stop();
 

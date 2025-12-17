@@ -74,6 +74,10 @@ namespace MetaOptimize.Cli
 
             switch (opts.SolverChoice)
             {
+                case SolverChoice.OrTools:
+                    RunNetwork(new ORToolsSolver(), topology, clusters);
+                    break;
+
                 case SolverChoice.Zen:
                     RunNetwork(new SolverZen(), topology, clusters);
                     break;
