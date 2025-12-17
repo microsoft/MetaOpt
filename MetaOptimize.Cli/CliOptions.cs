@@ -728,8 +728,8 @@ namespace MetaOptimize.Cli
         Zen,
 
         /// <summary>
-        /// OrTools solver (SMT - Satisfiability Modulo Theories).
-        /// Based on Z3, open source, good for constraint satisfaction.
+        /// OR-Tools solver (CP-SAT - Constraint Programming with SAT).
+        /// Google's open-source optimization suite, good for combinatorial optimization.
         /// </summary>
         OrTools,
     }
