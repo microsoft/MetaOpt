@@ -5,7 +5,6 @@
 namespace MetaOptimize.Cli
 {
     using System.Diagnostics;
-    using Gurobi;
 
     /// <summary>
     /// Runner for PIFO (Push-In First-Out) packet scheduling adversarial optimization.
@@ -118,32 +117,35 @@ namespace MetaOptimize.Cli
         /// Creates the appropriate PIFO encoder based on method and packet drop settings.
         /// </summary>
         /// <param name="method">The PIFO scheduling method to use.</param>
-        /// <param name="solver">The Gurobi solver instance.</param>
+        /// <param name="solver">The solver instance.</param>
         /// <param name="opts">CLI options containing encoder parameters.</param>
         /// <returns>Configured encoder implementing IEncoder interface.</returns>
         /// <exception cref="ArgumentException">
         /// Thrown when AIFO is used without packet drop, or ModifiedSPPIFO is used with packet drop.
         /// </exception>
-        private static IEncoder<GRBVar, GRBModel> CreateEncoder(PIFOMethodChoice method, GurobiSOS solver, CliOptions opts)
+        private static IEncoder<TVar, TSolution> CreateEncoder<TVar, TSolution>(
+            PIFOMethodChoice method,
+            ISolver<TVar, TSolution> solver,
+            CliOptions opts)
         {
             return method switch
             {
                 PIFOMethodChoice.PIFO => opts.ConsiderPktDrop
-                    ? new PIFOWithDropAvgDelayEncoder<GRBVar, GRBModel>(solver, opts.NumPackets, opts.MaxRank, opts.MaxQueueSize)
-                    : new PIFOAvgDelayOptimalEncoder<GRBVar, GRBModel>(solver, opts.NumPackets, opts.MaxRank),
+                    ? new PIFOWithDropAvgDelayEncoder<TVar, TSolution>(solver, opts.NumPackets, opts.MaxRank, opts.MaxQueueSize)
+                    : new PIFOAvgDelayOptimalEncoder<TVar, TSolution>(solver, opts.NumPackets, opts.MaxRank),
 
                 PIFOMethodChoice.SPPIFO => opts.ConsiderPktDrop
-                    ? new SPPIFOWithDropAvgDelayEncoder<GRBVar, GRBModel>(solver, opts.NumPackets, opts.NumQueues, opts.MaxRank, opts.MaxQueueSize)
-                    : new SPPIFOAvgDelayEncoder<GRBVar, GRBModel>(solver, opts.NumPackets, opts.NumQueues, opts.MaxRank),
+                    ? new SPPIFOWithDropAvgDelayEncoder<TVar, TSolution>(solver, opts.NumPackets, opts.NumQueues, opts.MaxRank, opts.MaxQueueSize)
+                    : new SPPIFOAvgDelayEncoder<TVar, TSolution>(solver, opts.NumPackets, opts.NumQueues, opts.MaxRank),
 
                 PIFOMethodChoice.AIFO => opts.ConsiderPktDrop
-                    ? new AIFOAvgDelayEncoder<GRBVar, GRBModel>(solver, opts.NumPackets, opts.MaxRank, opts.MaxQueueSize, opts.WindowSize, opts.BurstParam)
+                    ? new AIFOAvgDelayEncoder<TVar, TSolution>(solver, opts.NumPackets, opts.MaxRank, opts.MaxQueueSize, opts.WindowSize, opts.BurstParam)
                     : throw new ArgumentException(
                         "AIFO only works on shallow buffers and decides whether to admit or drop the packet. " +
                         "As a result, it does not apply to cases where we do not want packet drop."),
 
                 PIFOMethodChoice.ModifiedSPPIFO => !opts.ConsiderPktDrop
-                    ? new ModifiedSPPIFOAvgDelayEncoder<GRBVar, GRBModel>(solver, opts.NumPackets, opts.SplitQueue, opts.NumQueues, opts.SplitRank, opts.MaxRank)
+                    ? new ModifiedSPPIFOAvgDelayEncoder<TVar, TSolution>(solver, opts.NumPackets, opts.SplitQueue, opts.NumQueues, opts.SplitRank, opts.MaxRank)
                     : throw new ArgumentException(
                         "ModifiedSPPIFO does not support packet drop yet."),
 
@@ -154,9 +156,31 @@ namespace MetaOptimize.Cli
         /// <summary>
         /// Runs PIFO packet scheduling adversarial optimization.
         /// </summary>
-        /// <param name="opts">Command-line options containing PIFO parameters.</param>
+        /// <param name="opts">CLI options.</param>
+        /// <exception cref="ArgumentException">Thrown for unsupported solver.</exception>
+        public static void Run(CliOptions opts)
+        {
+            switch (opts.SolverChoice)
+            {
+                case SolverChoice.OrTools:
+                    RunWithSolver(new ORToolsSolver(), opts);
+                    break;
+                case SolverChoice.Zen:
+                    RunWithSolver(new SolverZen(), opts);
+                    break;
+                case SolverChoice.Gurobi:
+                    RunWithSolver(new GurobiSOS(timeout: opts.Timeout, verbose: Convert.ToInt32(opts.Verbose)), opts);
+                    break;
+                default:
+                    throw new ArgumentException($"Unsupported solver: {opts.SolverChoice}");
+            }
+        }
+
+        /// <summary>
+        /// Runs PIFO packet scheduling adversarial optimization with the specified solver.
+        /// </summary>
         /// <remarks>
-        /// Creates encoders for SP-PIFO and AIFO algorithms, then uses adversarial
+        /// Creates encoders for the selected PIFO methods, then uses adversarial
         /// optimization to find packet rank sequences that maximize the cost gap.
         ///
         /// Key parameters from opts:
@@ -167,13 +191,10 @@ namespace MetaOptimize.Cli
         /// - WindowSize: AIFO admission window size
         /// - BurstParam: AIFO burst tolerance parameter.
         /// </remarks>
-        public static void Run(CliOptions opts)
+        private static void RunWithSolver<TVar, TSolution>(ISolver<TVar, TSolution> solver, CliOptions opts)
         {
             Console.WriteLine($"Packets: {opts.NumPackets}, Max Rank: {opts.MaxRank}, Queues: {opts.NumQueues}");
             Console.WriteLine($"Max Queue Size: {opts.MaxQueueSize}, Window Size: {opts.WindowSize}");
-
-            var solver = new GurobiSOS(verbose: Convert.ToInt32(opts.Verbose), timeout: opts.Timeout);
-
             Console.WriteLine($"PIFO Method 1: {opts.PIFOMethod1} (ConsiderPktDrop={opts.ConsiderPktDrop})");
             Console.WriteLine($"PIFO Method 2: {opts.PIFOMethod2} (ConsiderPktDrop={opts.ConsiderPktDrop})");
 
@@ -182,7 +203,7 @@ namespace MetaOptimize.Cli
             var h2 = CreateEncoder(opts.PIFOMethod2, solver, opts);
 
             // Create adversarial generator
-            var adversarialGenerator = new PIFOAdversarialInputGenerator<GRBVar, GRBModel>(
+            var adversarialGenerator = new PIFOAdversarialInputGenerator<TVar, TSolution>(
                 opts.NumPackets, opts.MaxRank);
 
             var timer = Stopwatch.StartNew();
@@ -200,21 +221,21 @@ namespace MetaOptimize.Cli
             // Display results
             Console.WriteLine("\n" + new string('=', 60));
             Console.WriteLine("RESULTS:");
-            Console.WriteLine($"SP-PIFO cost: {optimalSolution.Cost}");
-            Console.WriteLine($"AIFO cost: {heuristicSolution.Cost}");
+            Console.WriteLine($"{opts.PIFOMethod1} cost: {optimalSolution.Cost}");
+            Console.WriteLine($"{opts.PIFOMethod2} cost: {heuristicSolution.Cost}");
             Console.WriteLine($"Gap: {heuristicSolution.Cost - optimalSolution.Cost}");
-            Console.WriteLine($"Inversions (SP-PIFO): {numInvOpt}");
-            Console.WriteLine($"Inversions (AIFO): {numInvHeu}");
+            Console.WriteLine($"Inversions ({opts.PIFOMethod1}): {numInvOpt}");
+            Console.WriteLine($"Inversions ({opts.PIFOMethod2}): {numInvHeu}");
             Console.WriteLine($"Time: {timer.ElapsedMilliseconds}ms");
             Console.WriteLine(new string('=', 60));
 
             // Verbose output: full solution details
             if (opts.Verbose)
             {
-                Console.WriteLine("\nSP-PIFO Solution:");
+                Console.WriteLine($"\n{opts.PIFOMethod1} Solution:");
                 Console.WriteLine(Newtonsoft.Json.JsonConvert.SerializeObject(
                     optimalSolution, Newtonsoft.Json.Formatting.Indented));
-                Console.WriteLine("\nAIFO Solution:");
+                Console.WriteLine($"\n{opts.PIFOMethod2} Solution:");
                 Console.WriteLine(Newtonsoft.Json.JsonConvert.SerializeObject(
                     heuristicSolution, Newtonsoft.Json.Formatting.Indented));
             }

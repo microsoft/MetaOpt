@@ -34,6 +34,9 @@ namespace MetaOptimize.Cli
         {
             switch (opts.SolverChoice)
             {
+                case SolverChoice.OrTools:
+                    RunBinPacking(new ORToolsSolver(), opts);
+                    break;
                 case SolverChoice.Zen:
                     RunBinPacking(new SolverZen(), opts);
                     break;

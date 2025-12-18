@@ -37,14 +37,14 @@ namespace MetaOptimize.Cli
         /// The problem type to solve.
         /// Determines which runner is invoked and which parameters are relevant.
         /// </summary>
-        [Option("problemType", Default = ProblemType.PIFO, HelpText = "Problem type: TrafficEngineering, BinPacking, PIFO, FailureAnalysis")]
+        [Option("problemType", Default = ProblemType.FailureAnalysis, HelpText = "Problem type: TrafficEngineering, BinPacking, PIFO, FailureAnalysis")]
         public ProblemType ProblemType { get; set; }
 
         /// <summary>
         /// The solver to use for optimization.
         /// Gurobi uses MIP (Mixed Integer Programming), Zen uses SMT (Satisfiability Modulo Theories).
         /// </summary>
-        [Option('c', "solver", Default = SolverChoice.Gurobi, HelpText = "The solver to use (Gurobi | Zen)")]
+        [Option('c', "solver", Default = SolverChoice.OrTools, HelpText = "The solver to use (Gurobi | Zen)")]
         public SolverChoice SolverChoice { get; set; }
 
         /// <summary>
@@ -499,6 +499,9 @@ namespace MetaOptimize.Cli
         /// Reduces search space by eliminating equivalent solutions.
         /// May speed up optimization but could miss some adversarial inputs.
         /// </summary>
+        /// <remarks>
+        /// If enabled, we leverage symmetry to reduce the optimization size and enhance the scalability of optimal bin packing.
+        /// </remarks>
         public bool BreakSymmetry =>
             string.Equals(BreakSymmetryStr, "true", StringComparison.OrdinalIgnoreCase);
 

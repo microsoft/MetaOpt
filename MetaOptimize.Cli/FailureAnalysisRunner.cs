@@ -5,6 +5,7 @@
 namespace MetaOptimize.Cli
 {
     using System.Diagnostics;
+    using Google.OrTools.LinearSolver;
     using Gurobi;
     using MetaOptimize.FailureAnalysis;
     using ZenLib;
@@ -33,6 +34,10 @@ namespace MetaOptimize.Cli
         {
             switch (opts.SolverChoice)
             {
+                case SolverChoice.OrTools:
+                    FailureAnalysisRunnerImpl<Variable, Solver>.CreateSolver = () => new ORToolsSolver();
+                    FailureAnalysisRunnerImpl<Variable, Solver>.Run(opts);
+                    break;
                 case SolverChoice.Gurobi:
                     FailureAnalysisRunnerImpl<GRBVar, GRBModel>.CreateSolver =
                         () => new GurobiSOS(verbose: Convert.ToInt32(opts.Verbose), timeout: opts.Timeout);
@@ -102,19 +107,6 @@ namespace MetaOptimize.Cli
         }
 
         /// <summary>
-        /// Reads topology from a JSON file.
-        /// </summary>
-        /// <param name="filePath">Path to the topology JSON file.</param>
-        /// <returns>Loaded topology (currently returns empty topology - TODO).</returns>
-        private static Topology ReadTopologyFromFile(string filePath)
-        {
-            Console.WriteLine($"Loading topology from: {filePath}");
-            // TODO: Implement proper JSON topology loading matching TERunner format
-            var topology = new Topology();
-            return topology;
-        }
-
-        /// <summary>
         /// Runs failure analysis adversarial optimization.
         /// </summary>
         /// <param name="opts">Command-line options containing failure analysis parameters.</param>
@@ -134,6 +126,7 @@ namespace MetaOptimize.Cli
 
             // Load or create topology
             Topology topology;
+            List<Topology> clusters = null;
             if (opts.UseDefaultTopology)
             {
                 topology = CreateDefaultFailureTopology();
@@ -141,7 +134,14 @@ namespace MetaOptimize.Cli
             }
             else
             {
-                topology = ReadTopologyFromFile(opts.TopologyFile);
+                (topology, clusters) = CliUtils.getTopology(
+                opts.TopologyFile,
+                opts.PathFile,
+                opts.DownScaleFactor,
+                opts.EnableClustering,
+                opts.NumClusters,
+                opts.ClusterDir,
+                opts.Verbose);
                 Console.WriteLine($"Loaded topology from: {opts.TopologyFile}");
             }
 
