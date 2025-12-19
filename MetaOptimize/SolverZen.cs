@@ -10,6 +10,8 @@ namespace MetaOptimize
     using System.Linq;
     using Gurobi;
     using ZenLib;
+    using ZenLib.ModelChecking;
+
     /// <summary>
     /// An interface for an optimization solver.
     /// </summary>
@@ -36,7 +38,7 @@ namespace MetaOptimize
         /// </summary>
         static SolverZen()
         {
-            ZenLib.Settings.UseLargeStack = true;
+            ZenSettings.UseLargeStack = true;
         }
 
         /// <summary>

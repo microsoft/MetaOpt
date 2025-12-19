@@ -10,17 +10,18 @@ namespace MetaOptimize.Cli
     using Gurobi;
     using MetaOptimize;
     using ZenLib;
+    using ZenLib.ModelChecking;
 
     /// <summary>
     /// Main entry point for the program.
     /// </summary>
-    public class MainEntry
+    public class MainEntry_old
     {
         /// <summary>
         /// checks whether we get the solution we expect after running the solvers.
         /// </summary>
         /// <param name="args"></param>
-        public static void TEExampleMain(string[] args)
+        public static void MainOld(string[] args)
         {
             var topology = new Topology();
             topology.AddNode("a");
@@ -63,7 +64,7 @@ namespace MetaOptimize.Cli
         /// Use this function to test our theorem for VBP.
         /// (see theorem 1 in our NSDI24 Paper).
         /// </summary>
-        public static void vbpMain(string[] args)
+        public static void vbMain(string[] args)
         {
             // OPT = 2m + 3n
             // HUE = 4m + 6n
@@ -188,7 +189,7 @@ namespace MetaOptimize.Cli
         /// test MetaOpt on VBP.
         /// </summary>
         /// TODO: specify how this function is different from the previous.
-        public static void Main(string[] args)
+        public static void MainVBP(string[] args)
         {
             var binSize = new List<double>();
             binSize.Add(1.00001);
@@ -350,53 +351,6 @@ namespace MetaOptimize.Cli
             }
 
             return numInvOpt;
-        }
-
-        /// <summary>
-        /// Experiments for NSDI.
-        /// </summary>
-        public static void NSDIMain(string[] args)
-        {
-            // NSDIExp.compareGapDelayDiffMethodsDP();
-            // NSDIExp.compareLargeScaleGapDelayDiffMethodsDP();
-            // NSDIExp.compareGapDelayDiffMethodsPop();
-            // NSDIExp.AblationStudyClusteringOnDP();
-            // NSDIExp.BlackBoxParameterTunning();
-            NSDIExp.AddRealisticConstraintsDP();
-            // NSDIExp.gapThresholdDemandPinningForDifferentTopologies();
-            // NSDIExp.ImpactNumPathsPartitionsExpectedPop();
-            // NSDIExp.AblationStudyClusteringOnDP();
-            // NSDIExp.BlackBoxParameterTunning();
-            // NSDIExp.AnalyzeModifiedDP();
-            // NSDIExp.ImpactNumNodesRadixSmallWordTopoDemandPinning();
-            // NSDIExp.ImpactNumSamplesExpectedPop();
-            // NSDIExp.AnalyzeParallelHeuristics();
-        }
-
-        /// <summary>
-        /// Experiments for hotnets.
-        /// </summary>
-        public static void hotnetsMain(string[] args)
-        {
-            // var topology = Topology.RandomRegularGraph(8, 7, 1, seed: 0);
-            // var topology = Topology.SmallWordGraph(5, 4, 1);
-            // foreach (var edge in topology.GetAllEdges()) {
-            //     Console.WriteLine(edge.Source + "_" + edge.Target);
-            // }
-            // foreach (var pair in topology.GetNodePairs()) {
-            //     if (!topology.ContaintsEdge(pair.Item1, pair.Item2, 1)) {
-            //         Console.WriteLine("missing link " + pair.Item1 + " " + pair.Item2);
-            //     }
-            // }
-            // Experiment.printPaths();
-            // HotNetsExperiment.impactOfDPThresholdOnGap();
-            // Experiment.ImpactNumPathsDemandPinning();
-            // Experiment.ImpactNumNodesRadixRandomRegularGraphDemandPinning();
-            HotNetsExperiment.impactSmallWordGraphParamsDP();
-            // Experiment.ImpactNumPathsPartitionsPop();
-            // Experiment.compareGapDelayDiffMethodsPop();
-            // Experiment.compareGapDelayDiffMethodsDP();
-            // Experiment.compareTopoSizeLatency();
         }
 
         /// <summary>

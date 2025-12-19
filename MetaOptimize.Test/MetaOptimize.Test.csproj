@@ -1,29 +1,28 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
-    <TargetFramework>net6.0</TargetFramework>
-    <Nullable>disable</Nullable>
-
+    <TargetFramework>net8.0</TargetFramework>
     <IsPackable>false</IsPackable>
-
-	  <Platforms>x64</Platforms>
-	  <PlatformTarget>x64</PlatformTarget>
+    <IsTestProject>true</IsTestProject>
   </PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="Google.OrTools" Version="9.12.4544" />
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.11.0" />
-    <PackageReference Include="MSTest.TestAdapter" Version="2.2.7" />
-    <PackageReference Include="MSTest.TestFramework" Version="2.2.7" />
-    <PackageReference Include="coverlet.collector" Version="3.1.0" />
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
-    <PackageReference Include="ZenLib" Version="2.2.4" />
-	<PackageReference Include="Gurobi.Optimizer" Version="10.0.2" />
+  <ItemGroup>    
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="MSTest.TestAdapter" />
+    <PackageReference Include="MSTest.TestFramework" />
+    <PackageReference Include="coverlet.collector">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Google.OrTools" />
+    <PackageReference Include="Newtonsoft.Json" />
+    <PackageReference Include="ZenLib" />
+    <PackageReference Include="Gurobi.Optimizer" />
   </ItemGroup>
 
   <Import Project="..\.stylecop\StyleCop.props" />
 
   <ItemGroup>
     <ProjectReference Include="..\MetaOptimize\MetaOptimize.csproj" />
+    <ProjectReference Include="..\MetaOptimize.Cli\MetaOptimize.Cli.csproj" />
   </ItemGroup>
 </Project>

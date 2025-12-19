@@ -58,6 +58,76 @@ dotnet run
 
 We also provide many unittests that can serve as a starting point in `MetaOptimize.Test`.
 
+### Command Line Interface
+
+MetaOpt provides a unified CLI for all problem types. To see all available options:
+```bash
+cd MetaOptimize.Cli
+dotnet run -- --help
+```
+
+Or from the parent directory:
+```bash
+dotnet run --project MetaOptimize.Cli -- --help
+```
+
+#### Problem Types
+
+Use `--problemType` to select the optimization problem:
+
+| Problem Type | Description |
+|--------------|-------------|
+| `TrafficEngineering` | Network routing optimization |
+| `BinPacking` | Vector bin packing |
+| `PIFO` | Packet scheduling |
+| `FailureAnalysis` | Network failure resilience (Raha) |
+
+#### Examples
+
+**Traffic Engineering:**
+```bash
+dotnet run -- --problemType TrafficEngineering --topologyFile ../Topologies/simple.json --heuristic Pop --innerencoding PrimalDual --demandlist "0,0.25,0.5,0.75,1.0"
+```
+
+**Bin Packing:**
+```bash
+dotnet run -- --problemType BinPacking --numBins 6 --numDemands 9 --numDimensions 2 --ffMethod FFDSum --optimalBins 3
+```
+
+**PIFO Scheduling:**
+```bash
+dotnet run -- --problemType PIFO --pifoMethod1 SPPIFO --pifoMethod2 AIFO --considerPktDrop true --numPackets 18 --maxRank 8
+```
+
+**Failure Analysis:**
+```bash
+dotnet run -- --problemType FailureAnalysis --useDefaultTopology true --maxNumFailures 1 --innerencoding KKT
+```
+
+#### Solver Selection
+
+Use `--solver` to select the optimization solver:
+
+| Solver | Description |
+|--------|-------------|
+| `Gurobi` | Commercial MIP solver (default, requires license) |
+| `Zen` | SMT solver based on Z3 (open source) |
+| `OrTools` | Google's CP-SAT solver (open source, limited features) |
+
+Example:
+```bash
+dotnet run -- --problemType BinPacking --solver OrTools --numBins 6 --numDemands 9
+```
+
+#### Common Options
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `--timeout` | ∞ | Solver timeout in seconds |
+| `--verbose` | false | Enable detailed output |
+| `--innerencoding` | KKT | Bilevel encoding method (KKT or PrimalDual) |
+| `--seed` | 1 | Random seed for reproducibility |
+
 ## Analyzing heuristics using MetaOpt
 
 <p align="center">
