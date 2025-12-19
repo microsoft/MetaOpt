@@ -172,7 +172,7 @@ namespace MetaOptimize.Cli
                     RunWithSolver(new GurobiSOS(timeout: opts.Timeout, verbose: Convert.ToInt32(opts.Verbose)), opts);
                     break;
                 default:
-                    throw new ArgumentException($"Unsupported solver: {opts.SolverChoice}");
+                    throw new ArgumentException($"Unsupported solver: {opts.SolverChoice}. Valid options: OrTools, Gurobi, Zen");
             }
         }
 

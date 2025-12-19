@@ -37,7 +37,7 @@ namespace MetaOptimize.Cli
         /// The problem type to solve.
         /// Determines which runner is invoked and which parameters are relevant.
         /// </summary>
-        [Option("problemType", Default = ProblemType.FailureAnalysis, HelpText = "Problem type: TrafficEngineering, BinPacking, PIFO, FailureAnalysis")]
+        [Option("problemType", Default = ProblemType.BinPacking, HelpText = "Problem type: TrafficEngineering, BinPacking, PIFO, FailureAnalysis")]
         public ProblemType ProblemType { get; set; }
 
         /// <summary>

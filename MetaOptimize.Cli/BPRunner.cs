@@ -46,7 +46,7 @@ namespace MetaOptimize.Cli
                         opts);
                     break;
                 default:
-                    throw new Exception($"Unsupported solver: {opts.SolverChoice}. Valid options: Gurobi, Zen");
+                    throw new Exception($"Unsupported solver: {opts.SolverChoice}. Valid options: OrTools, Gurobi, Zen");
             }
         }
 
