@@ -5,8 +5,6 @@
 # Global ARGs
 ARG BASE_IMAGE=mcr.microsoft.com/dotnet/sdk:8.0-azurelinux3.0
 ARG RUNTIME_IMAGE=mcr.microsoft.com/dotnet/runtime:8.0-azurelinux3.0
-# mcr.microsoft.com/dotnet/runtime:8.0-azurelinux3.0
-# msrhubroot.azurecr.io/cliwrapper:dotnet8.0 
 
 # Build stage
 FROM ${BASE_IMAGE} AS build
