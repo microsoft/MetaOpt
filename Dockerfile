@@ -66,7 +66,9 @@ RUN curl -L "https://packages.gurobi.com/11.0/gurobi${GUROBI_VERSION}_linux64.ta
 ENV GUROBI_HOME=/opt/gurobi
 ENV PATH="${GUROBI_HOME}/bin:${PATH}"
 ENV LD_LIBRARY_PATH="${GUROBI_HOME}/lib"
-
+ENV CLI_COMMAND="powershell"
+ENV APP_TITLE="Meta Optimize CLI" 
+ 
 # Create application directories
 WORKDIR /app
 RUN mkdir -p /app/Topologies /app/output /app/licenses
