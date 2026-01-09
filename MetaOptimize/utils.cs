@@ -339,20 +339,69 @@ namespace MetaOptimize
             Dictionary<(int, string, string), double> historicDemands = null,
             double sensitivity = 0.001)
         {
-            heuristicEncoder.Solver.CleanAll();
-            var encodingHeuristic = heuristicEncoder.Encoding(topology, inputEqualityConstraints: demands,
-                noAdditionalConstraints: true, pathType: pathType, selectedPaths: selectedPaths, historicInputConstraints: historicDemands);
-            var solverSolutionHeuristic = heuristicEncoder.Solver.Maximize(encodingHeuristic.MaximizationObjective);
-            var optimizationSolutionHeuristic = (TEOptimizationSolution)heuristicEncoder.GetSolution(solverSolutionHeuristic);
+            // heuristicEncoder.Solver.CleanAll();
+            // var encodingHeuristic = heuristicEncoder.Encoding(topology, inputEqualityConstraints: demands,
+            //     noAdditionalConstraints: true, pathType: pathType, selectedPaths: selectedPaths, historicInputConstraints: historicDemands);
+            Console.WriteLine();
+            Console.WriteLine("------------------------------------------------------------");
+            Console.WriteLine("INSIDE Utils.checkSolution");
+            Console.WriteLine("------------------------------------------------------------");
+            Console.WriteLine($"Heuristic encoder type: {heuristicEncoder.GetType().Name}");
+            Console.WriteLine($"Optimal encoder type: {optimalEncoder.GetType().Name}");
+            Console.WriteLine($"Expected heuristic result: {hResult}");
+            Console.WriteLine($"Expected optimal result: {oResult}");
+            Console.WriteLine($"Demands count: {demands.Count}");
+            Console.WriteLine($"Solver name: {solverN}");
+            Console.WriteLine($"PathType: {pathType}");
+            Console.WriteLine($"SelectedPaths: {(selectedPaths == null ? "null" : $"{selectedPaths.Count} entries")}");
+            Console.WriteLine($"HistoricDemands: {(historicDemands == null ? "null" : $"{historicDemands.Count} entries")}");
+            Console.WriteLine($"Sensitivity: {sensitivity}");
+            Console.WriteLine();
 
-            optimalEncoder.Solver.CleanAll();
-            var encodingOptimal = optimalEncoder.Encoding(topology, inputEqualityConstraints: demands,
-                noAdditionalConstraints: true, pathType: pathType, selectedPaths: selectedPaths, historicInputConstraints: historicDemands);
-            var solverSolutionOptimal = optimalEncoder.Solver.Maximize(encodingOptimal.MaximizationObjective);
-            var optimizationSolutionOptimal = (TEOptimizationSolution)optimalEncoder.GetSolution(solverSolutionOptimal);
-            Console.WriteLine($"optimal-{solverN} = {optimizationSolutionOptimal.MaxObjective}, heuristic-{solverN}={optimizationSolutionHeuristic.MaxObjective}");
-            Debug.Assert(IsApproximately(hResult, optimizationSolutionHeuristic.MaxObjective, sensitivity));
-            Debug.Assert(IsApproximately(oResult, optimizationSolutionOptimal.MaxObjective, sensitivity));
+            Console.WriteLine("Cleaning heuristic encoder solver...");
+            heuristicEncoder.Solver.CleanAll();
+            Console.WriteLine("✓ Heuristic solver cleaned");
+
+            Console.WriteLine();
+            Console.WriteLine("Calling heuristicEncoder.Encoding...");
+            Console.WriteLine($"  Topology: {topology.GetAllNodes().Count()} nodes");
+            Console.WriteLine($"  inputEqualityConstraints (demands): {demands.Count} entries");
+            Console.WriteLine($"  noAdditionalConstraints: true");
+            Console.WriteLine($"  pathType: {pathType}");
+
+            try
+            {
+                var encodingHeuristic = heuristicEncoder.Encoding(
+                    topology,
+                    inputEqualityConstraints: demands,
+                    noAdditionalConstraints: true,
+                    pathType: pathType,
+                    selectedPaths: selectedPaths,
+                    historicInputConstraints: historicDemands);
+
+                Console.WriteLine("✓ Heuristic encoding completed");
+                Console.WriteLine($"  Encoding type: {encodingHeuristic.GetType().Name}");
+                var solverSolutionHeuristic = heuristicEncoder.Solver.Maximize(encodingHeuristic.MaximizationObjective);
+                var optimizationSolutionHeuristic = (TEOptimizationSolution)heuristicEncoder.GetSolution(solverSolutionHeuristic);
+
+                optimalEncoder.Solver.CleanAll();
+                var encodingOptimal = optimalEncoder.Encoding(topology, inputEqualityConstraints: demands,
+                    noAdditionalConstraints: true, pathType: pathType, selectedPaths: selectedPaths, historicInputConstraints: historicDemands);
+                var solverSolutionOptimal = optimalEncoder.Solver.Maximize(encodingOptimal.MaximizationObjective);
+                var optimizationSolutionOptimal = (TEOptimizationSolution)optimalEncoder.GetSolution(solverSolutionOptimal);
+                Console.WriteLine($"optimal-{solverN} = {optimizationSolutionOptimal.MaxObjective}, heuristic-{solverN}={optimizationSolutionHeuristic.MaxObjective}");
+                Debug.Assert(IsApproximately(hResult, optimizationSolutionHeuristic.MaxObjective, sensitivity));
+                Debug.Assert(IsApproximately(oResult, optimizationSolutionOptimal.MaxObjective, sensitivity));
+              }
+            catch (Exception ex)
+            {
+                Console.WriteLine("✗ ERROR in heuristicEncoder.Encoding:");
+                Console.WriteLine($"  Message: {ex.Message}");
+                Console.WriteLine($"  Type: {ex.GetType().Name}");
+                Console.WriteLine($"  Stack trace:");
+                Console.WriteLine(ex.StackTrace);
+                throw;
+            }
         }
 
         /// <summary>

@@ -1,0 +1,94 @@
+# Disable automatic triggers by specifying an empty trigger list
+name: build-remote-project
+trigger: none
+
+variables:
+  AZURE_SERVICE_CONNECTION: 'MSRHubConnectionForCI'
+
+parameters:
+  - name: git_url
+    type: string
+    default: 'https://github.com/microsoft/MetaOpt'
+    displayName: 'Git URL'
+
+  - name: branch
+    type: string
+    default: 'metaopt-main'
+    displayName: 'Branch'
+
+  - name: DOCKERFILE
+    type: string
+    default: 'Dockerfile'
+    displayName: 'Dockerfile location'
+
+  - name: BUILD_DIR
+    type: string
+    default: '.'
+    displayName: 'Build directory location'
+
+  - name: IMAGE_NAME
+    type: string
+    default: 'metaoptimize'
+    displayName: 'Image name'
+
+  - name: IMAGE_VERSION
+    type: string
+    default: 'latest'
+    displayName: 'Image version'
+
+  - name: msrhub_env_domain
+    type: string
+    default: 'calmrock-83796f44.westus2.azurecontainerapps.io'  # dev: calmrock-83796f44.westus2.azurecontainerapps.io - release: 'ashymushroom-0fac31e9.westus2.azurecontainerapps.io'
+    displayName: 'MSRHub Environment Domain'
+
+  - name: APP_REGISTRATION_IDENTIFIER_URI
+    type: string
+    default: 'api://msrhub'
+    displayName: 'MSRHub App Registration Identifier URI'
+
+jobs:
+- job: BuildProject
+  displayName: 'Build Project'
+  timeoutInMinutes: 360
+  pool:
+    vmImage: 'ubuntu-latest'
+  steps:
+  - task: AzureCLI@2
+    displayName: 'Clone Remote Repository'
+    inputs:
+      azureSubscription: $(AZURE_SERVICE_CONNECTION)
+      scriptType: 'bash'
+      scriptLocation: 'inlineScript'
+      workingDirectory: $(Build.SourcesDirectory)
+      inlineScript: |
+        set -xeu -o pipefail
+        tmp_build_dir="$(mktemp -d)"
+        pushd "${tmp_build_dir}"
+          PROJECT_DIR="${tmp_build_dir}/cloned_project"
+          mkdir -p "${PROJECT_DIR}"
+          pushd "${PROJECT_DIR}"
+            git clone --single-branch -b ${{ parameters.branch }} "${{ parameters.git_url }}" .
+          popd
+        popd
+        echo "export PROJECT_DIR=${PROJECT_DIR}" > $(Build.SourcesDirectory)/ado.env
+
+  - template: docker-build-steps.yaml
+    parameters:
+      IMAGE_NAME: ${{ parameters.IMAGE_NAME }}
+      IMAGE_VERSION: ${{ parameters.IMAGE_VERSION }}
+      DOCKERFILE: ${{ parameters.DOCKERFILE }}
+      BUILD_DIR: ${{ parameters.BUILD_DIR }}
+
+  - template: download-sdk-steps.yaml
+    parameters:
+      msrhub_env_domain: ${{ parameters.msrhub_env_domain }}
+      APP_REGISTRATION_IDENTIFIER_URI: ${{ parameters.APP_REGISTRATION_IDENTIFIER_URI }}
+
+  - template: push-image-steps.yaml
+    parameters:
+      msrhub_env_domain: ${{ parameters.msrhub_env_domain }}
+      IMAGE_NAME: ${{ parameters.IMAGE_NAME }}
+      IMAGE_VERSION: ${{ parameters.IMAGE_VERSION }}
+      APP_REGISTRATION_IDENTIFIER_URI: ${{ parameters.APP_REGISTRATION_IDENTIFIER_URI }}
+
+  - template: trivy-scanner-steps.yaml

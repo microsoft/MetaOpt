@@ -406,7 +406,7 @@ namespace MetaOptimize.Cli
                 var newPartition = topology.RandomPartition(opts.PopSlices);
                 randomPartitionList.Add(newPartition);
                 var newHeuristicEncoder = new PopEncoder<TVar, TSolution>(newSolver, maxNumPaths: opts.Paths, numPartitions: opts.PopSlices, demandPartitions: newPartition);
-                var encodingHeuristic = newHeuristicEncoder.Encoding(topology, demandEqualityConstraints: demands, noAdditionalConstraints: true);
+                var encodingHeuristic = newHeuristicEncoder.Encoding(topology, inputEqualityConstraints: demands, noAdditionalConstraints: true);
                 var solverSolutionHeuristic = newHeuristicEncoder.Solver.Maximize(encodingHeuristic.MaximizationObjective);
                 var optimizationSolutionHeuristic = (TEOptimizationSolution)newHeuristicEncoder.GetSolution(solverSolutionHeuristic);
                 var demandMet = optimizationSolutionHeuristic.MaxObjective;

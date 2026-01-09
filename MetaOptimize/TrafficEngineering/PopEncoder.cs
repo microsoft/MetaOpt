@@ -154,11 +154,21 @@ namespace MetaOptimize
         /// the multi-commodity flow problem.
         /// </summary>
         /// <returns>The constraints and maximization objective.</returns>
+        // public OptimizationEncoding<TVar, TSolution> Encoding(
+        //     Topology topology, Dictionary<(string, string), Polynomial<TVar>> preDemandVariables = null,
+        //     Dictionary<(string, string), double> demandEqualityConstraints = null, bool noAdditionalConstraints = false,
+        //     InnerRewriteMethodChoice innerEncoding = InnerRewriteMethodChoice.KKT,
+        //     PathType pathType = PathType.KSP, Dictionary<(string, string), string[][]> selectedPaths = null,
+        //     Dictionary<(int, string, string), double> historicInputConstraints = null,
+        //     int numProcesses = -1)
         public OptimizationEncoding<TVar, TSolution> Encoding(
-            Topology topology, Dictionary<(string, string), Polynomial<TVar>> preDemandVariables = null,
-            Dictionary<(string, string), double> demandEqualityConstraints = null, bool noAdditionalConstraints = false,
+            Topology topology,
+            Dictionary<(string, string), Polynomial<TVar>> preInputVariables = null,
+            Dictionary<(string, string), double> inputEqualityConstraints = null,
+            bool noAdditionalConstraints = false,
             InnerRewriteMethodChoice innerEncoding = InnerRewriteMethodChoice.KKT,
-            PathType pathType = PathType.KSP, Dictionary<(string, string), string[][]> selectedPaths = null,
+            PathType pathType = PathType.KSP,
+            Dictionary<(string, string), string[][]> selectedPaths = null,
             Dictionary<(int, string, string), double> historicInputConstraints = null,
             int numProcesses = -1)
         {
@@ -169,7 +179,7 @@ namespace MetaOptimize
             Debug.Assert(historicInputConstraints == null);
             this.Topology = topology;
             this.ReducedTopology = topology.SplitCapacity(this.NumPartitions);
-            InitializeVariables(preDemandVariables, demandEqualityConstraints);
+            InitializeVariables(preInputVariables, inputEqualityConstraints);
 
             // Create a new instance of the optimization encoding class for each partition.
             var encodings = new OptimizationEncoding<TVar, TSolution>[NumPartitions];

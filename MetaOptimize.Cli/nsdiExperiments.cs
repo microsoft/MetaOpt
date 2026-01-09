@@ -516,7 +516,7 @@ namespace MetaOptimize
                     var newPartition = topology.RandomPartition(numPartitions);
                     randomPartitionList.Add(newPartition);
                     var newHeuristicEncoder = new PopEncoder<GRBVar, GRBModel>(solver, maxNumPaths: numPaths, numPartitions: numPartitions, demandPartitions: newPartition);
-                    var encodingHeuristic = newHeuristicEncoder.Encoding(topology, demandEqualityConstraints: demands, noAdditionalConstraints: true);
+                    var encodingHeuristic = newHeuristicEncoder.Encoding(topology, inputEqualityConstraints: demands, noAdditionalConstraints: true);
                     var solverSolutionHeuristic = newHeuristicEncoder.Solver.Maximize(encodingHeuristic.MaximizationObjective);
                     var optimizationSolutionHeuristic = (TEMaxFlowOptimizationSolution)newHeuristicEncoder.GetSolution(solverSolutionHeuristic);
                     var demandMet = optimizationSolutionHeuristic.MaxObjective;

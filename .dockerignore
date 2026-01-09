@@ -1,0 +1,58 @@
+# Build outputs
+**/bin/
+**/obj/
+**/out/
+**/publish/
+
+# IDE and editor files
+.vs/
+.vscode/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+.idea/
+*.swp
+*.swo
+
+# NuGet
+**/packages/
+*.nupkg
+
+# Test results
+**/TestResults/
+*.trx
+
+# Logs and temp files
+*.log
+*.tmp
+*.temp
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Documentation (optional - comment out if you want docs in image)
+*.md
+!README-Docker.md
+
+# Docker files (don't need to copy these into the build)
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# Licenses (mounted at runtime)
+licenses/
+*.lic
+
+# Output directory (mounted at runtime)
+output/
+
+# Secrets
+*.env
+*.secret

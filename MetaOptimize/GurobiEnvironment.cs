@@ -1,7 +1,6 @@
 ﻿using System;
 using System.IO;
 using Gurobi;
-
 namespace MetaOptimize
 {
     internal class GurobiEnvironment
@@ -11,6 +10,9 @@ namespace MetaOptimize
         {
             get
             {
+                // Check for Gurobi license environment variables BEFORE creating environment
+                SolverFactory.ValidateLicenseConfiguration();
+
                 if (_env == null)
                 {
                     // for 8.1 and later
