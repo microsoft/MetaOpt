@@ -38,9 +38,6 @@ RUN dotnet publish MetaOptimize.Cli/MetaOptimize.Cli.csproj \
     -o /app/publish \
     --no-restore
 
-# =============================================================================
-# Runtime stage
-# =============================================================================
 FROM ${RUNTIME_IMAGE} AS runtime
 
 # Install required packages
@@ -63,11 +60,12 @@ RUN curl -L "https://packages.gurobi.com/11.0/gurobi${GUROBI_VERSION}_linux64.ta
     && mv /opt/gurobi1103 /opt/gurobi
 
 # Set Gurobi environment variables
-ENV GUROBI_HOME=/opt/gurobi
+ENV GUROBI_HOME=/opt/gurobi1103/linux64
 ENV PATH="${GUROBI_HOME}/bin:${PATH}"
 ENV LD_LIBRARY_PATH="${GUROBI_HOME}/lib"
+ENV GRB_LICENSE_FILE=/app/licenses/gurobi.lic
 ENV CLI_COMMAND="powershell"
-ENV APP_TITLE="Meta Optimize CLI" 
+ENV APP_TITLE="Meta Optimize CLI"
  
 # Create application directories
 WORKDIR /app

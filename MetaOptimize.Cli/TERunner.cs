@@ -288,13 +288,14 @@ namespace MetaOptimize.Cli
             }
 
             // Validation: verify solution with independent solvers
-            ValidateSolution(opts, topology, partitioning, partitionList, optimal, heuristic, demands);
+            ValidateSolution(solver, opts, topology, partitioning, partitionList, optimal, heuristic, demands);
         }
 
         /// <summary>
         /// Validates the solution using independent Gurobi solver instances.
         /// </summary>
-        private static void ValidateSolution(
+        private static void ValidateSolution<TVar, TSolution>(
+            ISolver<TVar, TSolution> solver,
             CliOptions opts,
             Topology topology,
             IDictionary<(string, string), int> partitioning,
@@ -305,31 +306,28 @@ namespace MetaOptimize.Cli
         {
             Console.WriteLine("Validating solution...");
 
-            var optGSolver = new GurobiBinary();
-            var optimalEncoderG = new TEMaxFlowOptimalEncoder<GRBVar, GRBModel>(
-                optGSolver, maxNumPaths: opts.Paths);
-
-            var gSolver = new GurobiBinary();
-            IEncoder<GRBVar, GRBModel> heuristicEncoderG;
+            var optimalEncoderG = new TEMaxFlowOptimalEncoder<TVar, TSolution>(
+                solver, maxNumPaths: opts.Paths);
+            IEncoder<TVar, TSolution> heuristicEncoder;
 
             switch (opts.Heuristic)
             {
                 case Heuristic.Pop:
-                    heuristicEncoderG = new PopEncoder<GRBVar, GRBModel>(
-                        gSolver, maxNumPaths: opts.Paths,
+                    heuristicEncoder = new PopEncoder<TVar, TSolution>(
+                        solver, maxNumPaths: opts.Paths,
                         numPartitions: opts.PopSlices,
                         demandPartitions: partitioning);
                     break;
 
                 case Heuristic.DemandPinning:
-                    heuristicEncoderG = new DirectDemandPinningEncoder<GRBVar, GRBModel>(
-                        gSolver, k: opts.Paths,
+                    heuristicEncoder = new DirectDemandPinningEncoder<TVar, TSolution>(
+                        solver, k: opts.Paths,
                         threshold: opts.DemandPinningThreshold * opts.DownScaleFactor);
                     break;
 
                 case Heuristic.ExpectedPop:
-                    heuristicEncoderG = new ExpectedPopEncoder<GRBVar, GRBModel>(
-                        gSolver, k: opts.Paths,
+                    heuristicEncoder = new ExpectedPopEncoder<TVar, TSolution>(
+                        solver, k: opts.Paths,
                         numSamples: opts.NumRandom,
                         numPartitionsPerSample: opts.PopSlices,
                         demandPartitionsList: partitionList);
@@ -343,8 +341,8 @@ namespace MetaOptimize.Cli
             }
 
             Utils.checkSolution(
-                topology, heuristicEncoderG, optimalEncoderG,
-                heuristic, optimal, demands, "gurobiCheck");
+                topology, heuristicEncoder, optimalEncoderG,
+                heuristic, optimal, demands, "SolverCheck");
 
             Console.WriteLine("Validation completed.");
         }

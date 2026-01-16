@@ -1,16 +1,14 @@
 # =============================================================================
 # MetaOptimize Docker Compose Configuration
 # =============================================================================
-# 
-# Supports four problem types:
-# - TrafficEngineering: Find worst-case demand patterns for routing heuristics
-# - BinPacking: Find adversarial item sizes that maximize FFD vs optimal gap
-# - PIFO: Find packet sequences that maximize scheduling inversions
-# - FailureAnalysis: Analyze network resilience under link failures
+#
+# Local development and testing only.
+# MSRHub users: use `dotnet run` directly on the hub.
 #
 # Usage:
 #   docker compose build
-#   docker compose run --rm <profile-name>
+#   docker compose run --rm te-pop
+#   docker compose run --rm binpacking
 #
 # =============================================================================
 
@@ -19,39 +17,29 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: msrhub.azurecr.io/metaoptimize:latest
-    container_name: metaoptimize
-    
+    image: metaoptimize:latest
     volumes:
       - ./Topologies:/app/Topologies:ro
       - ./output:/app/output
-      # Auto-mount license if exists (Windows)
-      - ${USERPROFILE}/gurobi.lic:/app/licenses/gurobi.lic:ro
-      # Auto-mount license if exists (Linux/Mac)
-      - ${HOME}/gurobi.lic:/app/licenses/gurobi.lic:ro
       - ./licenses:/app/licenses:ro
-    
     environment:
       - GRB_LICENSE_FILE=/app/licenses/gurobi.lic
       - GUROBI_THREADS=1
-    
     command: ["--help"]
 
-  # ==========================================================================
-  # Traffic Engineering Profiles
-  # ==========================================================================
-  
+# -----------------------------------------------------------------------------
+# Traffic Engineering Profiles
+# -----------------------------------------------------------------------------
+
   te-pop:
     extends: metaopt
     command:
       - "--problemType"
       - "TrafficEngineering"
-      - "--topologyFile"
-      - "simple.json"
       - "--heuristic"
       - "Pop"
       - "--solver"
-      - "Gurobi"
+      - "OrTools"
       - "--paths"
       - "2"
       - "--verbose"
@@ -61,54 +49,32 @@ services:
     command:
       - "--problemType"
       - "TrafficEngineering"
-      - "--topologyFile"
-      - "simple.json"
       - "--heuristic"
       - "DemandPinning"
       - "--solver"
       - "Gurobi"
-      - "--pinthreshold"
-      - "0.5"
       - "--paths"
       - "2"
+      - "--verbose"
 
-  te-primaldual:
+  te-primal:
     extends: metaopt
     command:
       - "--problemType"
       - "TrafficEngineering"
-      - "--topologyFile"
-      - "simple.json"
-      - "--heuristic"
-      - "DemandPinning"
-      - "--solver"
-      - "Gurobi"
-      - "--method"
-      - "Direct"
-      - "--innerencoding"
-      - "PrimalDual"
-      - "--demandlist"
-      - "0,5,10,15,20"
-
-  te-swan:
-    extends: metaopt
-    command:
-      - "--problemType"
-      - "TrafficEngineering"
-      - "--topologyFile"
-      - "Swan.json"
       - "--heuristic"
       - "Pop"
       - "--solver"
       - "Gurobi"
+      - "--method"
+      - "PrimalDual"
       - "--paths"
       - "2"
-      - "--slices"
-      - "2"
+      - "--verbose"
 
-  # ==========================================================================
-  # Bin Packing Profiles
-  # ==========================================================================
+# -----------------------------------------------------------------------------
+# Bin Packing Profiles
+# -----------------------------------------------------------------------------
 
   binpacking:
     extends: metaopt
@@ -117,58 +83,39 @@ services:
       - "BinPacking"
       - "--solver"
       - "Gurobi"
-      - "--numBins"
-      - "6"
       - "--numDemands"
-      - "9"
-      - "--numDimensions"
-      - "2"
-      - "--optimalBins"
-      - "3"
-      - "--ffMethod"
-      - "FFDSum"
-
-  binpacking-ff:
-    extends: metaopt
-    command:
-      - "--problemType"
-      - "BinPacking"
-      - "--solver"
-      - "Gurobi"
-      - "--numBins"
-      - "6"
-      - "--numDemands"
-      - "9"
-      - "--numDimensions"
-      - "2"
-      - "--optimalBins"
-      - "3"
-      - "--ffMethod"
-      - "FF"
-
-  binpacking-large:
-    extends: metaopt
-    command:
-      - "--problemType"
-      - "BinPacking"
-      - "--solver"
-      - "Gurobi"
-      - "--numBins"
-      - "10"
-      - "--numDemands"
-      - "15"
-      - "--numDimensions"
-      - "2"
-      - "--optimalBins"
       - "5"
-      - "--ffMethod"
-      - "FFDSum"
-      - "--timeout"
-      - "300"
+      - "--verbose"
 
-  # ==========================================================================
-  # PIFO Profiles
-  # ==========================================================================
+  binpacking-2d:
+    extends: metaopt
+    command:
+      - "--problemType"
+      - "BinPacking"
+      - "--solver"
+      - "Gurobi"
+      - "--numDemands"
+      - "5"
+      - "--numDimensions"
+      - "2"
+      - "--verbose"
+
+  binpacking-3d:
+    extends: metaopt
+    command:
+      - "--problemType"
+      - "BinPacking"
+      - "--solver"
+      - "Gurobi"
+      - "--numDemands"
+      - "4"
+      - "--numDimensions"
+      - "3"
+      - "--verbose"
+
+# -----------------------------------------------------------------------------
+# PIFO Profiles
+# -----------------------------------------------------------------------------
 
   pifo:
     extends: metaopt
@@ -177,36 +124,11 @@ services:
       - "PIFO"
       - "--solver"
       - "Gurobi"
-      - "--numPackets"
-      - "18"
-      - "--maxRank"
-      - "8"
-      - "--numQueues"
-      - "4"
-      - "--maxQueueSize"
-      - "12"
+      - "--verbose"
 
-  pifo-large:
-    extends: metaopt
-    command:
-      - "--problemType"
-      - "PIFO"
-      - "--solver"
-      - "Gurobi"
-      - "--numPackets"
-      - "24"
-      - "--maxRank"
-      - "10"
-      - "--numQueues"
-      - "6"
-      - "--maxQueueSize"
-      - "15"
-      - "--windowSize"
-      - "15"
-
-  # ==========================================================================
-  # Failure Analysis Profiles
-  # ==========================================================================
+# -----------------------------------------------------------------------------
+# Failure Analysis Profiles
+# -----------------------------------------------------------------------------
 
   failure:
     extends: metaopt
@@ -215,31 +137,4 @@ services:
       - "FailureAnalysis"
       - "--solver"
       - "Gurobi"
-      - "--useDefaultTopology"
-      - "true"
-      - "--maxNumFailures"
-      - "1"
-      - "--numExtraPaths"
-      - "1"
-      - "--failureProbThreshold"
-      - "0.25"
-
-  failure-multi:
-    extends: metaopt
-    command:
-      - "--problemType"
-      - "FailureAnalysis"
-      - "--solver"
-      - "Gurobi"
-      - "--useDefaultTopology"
-      - "true"
-      - "--maxNumFailures"
-      - "2"
-      - "--numExtraPaths"
-      - "2"
-      - "--failureProbThreshold"
-      - "0.1"
-      - "--innerencoding"
-      - "PrimalDual"
-      - "--demandlist"
-      - "0,5,10"
+      - "--verbose"

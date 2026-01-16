@@ -63,19 +63,19 @@ namespace MetaOptimize
             Console.WriteLine();
             if (hasTokenServer)
             {
-                Console.WriteLine($"Using Gurobi token server: {tokenServer}");
+                Console.WriteLine($"Using Gurobi token server");
             }
             else if (hasLicenseFile)
             {
-                Console.WriteLine($"Using Gurobi license file: {licenseFile}");
+                Console.WriteLine($"Using Gurobi license file");
             }
             else if (hasWls)
             {
-                Console.WriteLine($"Using Gurobi Web License Service (Access ID: {wlsAccessId})");
+                Console.WriteLine($"Using Gurobi Web License Service (Access ID:)");
             }
             else if (hasDefaultLicense)
             {
-                Console.WriteLine($"Using Gurobi license file from default location: {defaultLicensePath}");
+                Console.WriteLine($"Using Gurobi license file from default location");
             }
             Console.WriteLine();
         }

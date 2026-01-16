@@ -339,9 +339,6 @@ namespace MetaOptimize
             Dictionary<(int, string, string), double> historicDemands = null,
             double sensitivity = 0.001)
         {
-            // heuristicEncoder.Solver.CleanAll();
-            // var encodingHeuristic = heuristicEncoder.Encoding(topology, inputEqualityConstraints: demands,
-            //     noAdditionalConstraints: true, pathType: pathType, selectedPaths: selectedPaths, historicInputConstraints: historicDemands);
             Console.WriteLine();
             Console.WriteLine("------------------------------------------------------------");
             Console.WriteLine("INSIDE Utils.checkSolution");

@@ -83,7 +83,7 @@ namespace MetaOptimize.Cli
         ///   "links": [{"source": "a", "target": "b", "capacity": 10}, ...]
         /// }.
         /// </remarks>
-        [Option('f', "topologyFile", Default = "..\\Topologies\\simple.json", HelpText = "The location of the topology file (JSON format)")]
+        [Option('f', "topologyFile", Default = "Topologies/simple.json", HelpText = "The location of the topology file (JSON format)")]
         public string TopologyFile { get; set; }
 
         /// <summary>

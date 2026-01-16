@@ -13,7 +13,7 @@
             // "program": "${workspaceFolder}/MetaOptimize.Test/bin/Debug/net8.0/MetaOptimize.Test.dll",
             "program": "${workspaceFolder}/MetaOptimize.Cli/bin/Debug/net8.0/MetaOptimize.Cli.exe",
             "args": [],
-            "cwd": "${workspaceFolder}/MetaOptimize.Cli",
+            "cwd": "${workspaceFolder}",
             // For more information about the 'console' field, see https://aka.ms/VSCode-CS-LaunchJson-Console
             "console": "internalConsole",
             "stopAtEntry": false
