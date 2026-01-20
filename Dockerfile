@@ -64,7 +64,7 @@ ENV GUROBI_HOME=/opt/gurobi1103/linux64
 ENV PATH="${GUROBI_HOME}/bin:${PATH}"
 ENV LD_LIBRARY_PATH="${GUROBI_HOME}/lib"
 ENV GRB_LICENSE_FILE=/app/licenses/gurobi.lic
-ENV CLI_COMMAND="powershell"
+ENV CLI_COMMAND="bash"
 ENV APP_TITLE="Meta Optimize CLI"
  
 # Create application directories
